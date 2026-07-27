@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>эмено · визуальная грамматика сандхи</title>
+<style>
+  :root {
+    --stage: #363A44; --stage-2: #3E434F;
+    --ink: #E8E4D8; --ink-dim: #A7A99F; --ink-faint: #6E7178;
+    --line: rgba(232,228,216,0.12); --line-strong: rgba(232,228,216,0.22);
+    --c-stem: #C0E898; --c-guna: #F5D547; --c-vrddhi: #F0A24E;
+    --c-weak: #EDE7DA; --c-new: #7DCFCA; --c-ending: #F0BF88;
+    --serif: 'Georgia', 'Times New Roman', serif;
+    --sans: 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--stage); color: var(--ink); font-family: var(--serif); line-height: 1.6; padding: 48px 20px 80px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  .eyebrow { font-family: var(--sans); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px; }
+  h1 { font-size: 30px; font-weight: 400; line-height: 1.3; letter-spacing: -.01em; margin-bottom: 16px; }
+  h1 .dev { opacity: .75; font-size: 24px; }
+  .lede { font-size: 15.5px; color: var(--ink-dim); max-width: 620px; margin-bottom: 8px; }
+  .lede b { color: var(--ink); font-weight: 400; }
+
+  section { margin-top: 44px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); margin-bottom: 18px; }
+  .sec-num { font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--ink-faint); letter-spacing: .1em; }
+  .sec-head h2 { font-size: 19px; font-weight: 400; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+    background: var(--stage-2); transition: transform .15s ease, border-color .15s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+  .card .dot-row { display: flex; gap: 5px; margin-bottom: 10px; }
+  .card .dot { width: 9px; height: 9px; border-radius: 3px; }
+  .card .t { font-size: 16px; margin-bottom: 5px; }
+  .card .t .dev { color: var(--ink-dim); font-size: 15px; margin-left: 4px; }
+  .card .d { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
+  .card .status { display: inline-block; margin-top: 10px; font-family: var(--sans); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 9px; border-radius: 20px; }
+  .status.done { background: rgba(192,232,152,.12); color: var(--c-stem); border: 1px solid rgba(192,232,152,.28); }
+  .status.plan { background: rgba(167,169,159,.10); color: var(--ink-dim); border: 1px solid var(--line); }
+  .status.polish { background: rgba(240,162,78,.12); color: var(--c-vrddhi); border: 1px solid rgba(240,162,78,.28); }
+
+  .card.wide { grid-column: 1 / -1; }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
+  footer a { color: var(--ink-dim); }
+
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Систематизация санскритской грамматики</div>
+  <h1>эмено <span class="dev">— सन्धि</span><br>сандхи Эмено как визуальная грамматика</h1>
+  <p class="lede">Учебное приложение и набор изолированных 3D-демонстраций, показывающих операции сандхи из «Sanskrit Sandhi and Exercises» М. Б. Эмено (1958) — гуна, вриддхи, ослабление ступени, ассимиляция и другие. Меловые кубики, WebGL/Three.js, без сборки — каждый файл открывается прямо в браузере.</p>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Приложение</h2></div>
+    <div class="grid">
+      <a class="card wide" href="app/sanskrit-sandhi-app.html">
+        <div class="t">Сандхи Эмено <span class="dev">— тренажёр (v19)</span></div>
+        <div class="d">71 правило внешнего и внутреннего сандхи, алфавитная панель с семантическими группами, таблица гуна/вриддхи. Зона анимации пока пуста — сюда войдут эффекты после доводки.</div>
+        <span class="status plan">основной файл · в разработке</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Карта эффектов</h2></div>
+    <div class="grid">
+      <a class="card wide" href="effects/effects-map.html">
+        <div class="dot-row">
+          <span class="dot" style="background:var(--c-guna)"></span>
+          <span class="dot" style="background:var(--c-vrddhi)"></span>
+          <span class="dot" style="background:var(--c-weak)"></span>
+          <span class="dot" style="background:var(--c-new)"></span>
+        </div>
+        <div class="t">Взаимодействия कार्य <span class="dev">— полный перечень</span></div>
+        <div class="d">Полный перечень взаимодействий между буквами, встречающихся в упражнениях Эмено: цвет кодирует ступень гласного, движение — тип операции над сегментом. Статус реализации по каждой.</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Изолированные эффекты</h2></div>
+    <div class="grid">
+      <a class="card" href="effects/rule-guna-agnayas.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">Гуна <span class="dev">गुण</span></div>
+        <div class="d">agni- + as → agnayas. Полный сценарий: дальнодействие, гунирование, замена на a+y с параллельным показом «было/стало».</div>
+        <span class="status done">основной файл · готово</span>
+      </a>
+      <a class="card" href="effects/rule-vriddhi-u-au.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-vrddhi)"></span></div>
+        <div class="t">Вриддхи <span class="dev">वृद्धि</span></div>
+        <div class="d">u → au напрямую, минуя гуну. Двойной оборот и нарастание цвета — «гуна, доведённая дальше».</div>
+        <span class="status polish">цвета дорабатываются</span>
+      </a>
+      <a class="card" href="effects/rule-samprasarana-ya-i.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">Сампрасарана <span class="dev">सम्प्रसारण</span></div>
+        <div class="d">ya → i. Обратное вращение и обесцвечивание — зеркало вриддхи: ослабление, а не усиление.</div>
+        <span class="status polish">цвета дорабатываются</span>
+      </a>
+      <a class="card" href="effects/rule-assimilation-varga-t-d.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">Ассимиляция <span class="dev">आदेश</span></div>
+        <div class="d">t → d по звонкости. Куб как целая варга (противоположные грани — пары по звонкости), роли влияющая/поддающаяся (nimitta/sthānin).</div>
+        <span class="status polish">почти готово</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Материалы</h2></div>
+    <div class="grid">
+      <a class="card wide" href="reference/chalk-material-study.html">
+        <div class="t">Меловой куб <span class="dev">— материаловедческий этюд</span></div>
+        <div class="d">Процедурная генерация текстур мела для Three.js (зерно, фаски, вариации оттенка), без анимации — источник материального пайплайна для всех эффектов выше.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    Материалы систематизируют упражнения из M. B. Emeneau, <i>Sanskrit Sandhi and Exercises</i> (1958).<br>
+    Код прототипов — экспериментальный и не оптимизирован для продакшена.
+  </footer>
+
+</div>
+</body>
+</html>

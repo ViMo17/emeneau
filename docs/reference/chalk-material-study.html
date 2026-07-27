@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chalk Block v17 — Matte Surface</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #9A3E84; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ── Fixed surface parameters (UI removed per request) ────────────────────────
+const P = {
+  texDepth:    0.55,
+  bevelRound:  0.55,
+  gradSharp:   0.30,
+  cornerIrreg: 0.40,
+  powderAcc:   0.40,
+  surfSmooth:  0.35,
+};
+
+// ── OrbitControls ────────────────────────────────────────────────────────────
+class OrbitControls {
+  constructor(camera, domElement) {
+    this.camera = camera; this.domElement = domElement;
+    this.target = new THREE.Vector3();
+    this.enableDamping = true; this.dampingFactor = 0.07;
+    this.rotateSpeed = 0.8; this.minDistance = 2; this.maxDistance = 22;
+    this._spherical = new THREE.Spherical();
+    this._sphericalDelta = new THREE.Spherical();
+    this._scale = 1; this._isDragging = false; this._prevMouse = {x:0,y:0};
+    const offset = new THREE.Vector3().subVectors(camera.position, this.target);
+    this._spherical.setFromVector3(offset);
+    domElement.addEventListener('mousedown', e => { this._isDragging=true; this._prevMouse={x:e.clientX,y:e.clientY}; });
+    domElement.addEventListener('mousemove', e => {
+      if(!this._isDragging) return;
+      this._sphericalDelta.theta -= (e.clientX-this._prevMouse.x)*0.005*this.rotateSpeed;
+      this._sphericalDelta.phi   -= (e.clientY-this._prevMouse.y)*0.005*this.rotateSpeed;
+      this._prevMouse = {x:e.clientX,y:e.clientY};
+    });
+    domElement.addEventListener('mouseup', ()=>this._isDragging=false);
+    domElement.addEventListener('wheel', e=>{e.preventDefault();this._scale*=e.deltaY>0?1.08:0.92;this._scale=Math.max(0.5,Math.min(2,this._scale));},{passive:false});
+    domElement.addEventListener('contextmenu',e=>e.preventDefault());
+  }
+  update() {
+    this._spherical.theta += this._sphericalDelta.theta;
+    this._spherical.phi = Math.max(0.05,Math.min(Math.PI-0.05,this._spherical.phi+this._sphericalDelta.phi));
+    this._spherical.radius = Math.max(this.minDistance,Math.min(this.maxDistance,this._spherical.radius*this._scale));
+    this._scale=1;
+    if(this.enableDamping){this._sphericalDelta.theta*=(1-this.dampingFactor);this._sphericalDelta.phi*=(1-this.dampingFactor);}
+    this.camera.position.copy(this.target).add(new THREE.Vector3().setFromSpherical(this._spherical));
+    this.camera.lookAt(0,-0.1,0);
+  }
+}
+
+// ── Noise ─────────────────────────────────────────────────────────────────────
+function hash(x,y){let n=Math.sin(x*127.1+y*311.7)*43758.5453123;return n-Math.floor(n);}
+function smoothNoise(x,y){
+  const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;
+  const ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+  return hash(ix,iy)+(hash(ix+1,iy)-hash(ix,iy))*ux+(hash(ix,iy+1)-hash(ix,iy))*uy+(hash(ix+1,iy+1)-hash(ix+1,iy)-hash(ix,iy+1)+hash(ix,iy))*ux*uy;
+}
+function fbm(x,y,oct){let v=0,a=0.5,f=1;for(let i=0;i<oct;i++){v+=a*smoothNoise(x*f,y*f);a*=0.5;f*=2.1;}return v;}
+function mkRng(seed){
+  let s=(seed*6364136+1013904223)|0;
+  return ()=>{s=(Math.imul(s,1664525)+1013904223)|0;return((s>>>0)%100000)/100000;};
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CHALK TEXTURE — v17: matched directly against the chalk-stick reference
+//   No gloss, no glow, no translucency. Reference shows dense even pigment,
+//   fine matte grain, tiny scattered pores (never large blobs), faint
+//   pressure marks, no bright hotspots, no dark vignetting.
+// ════════════════════════════════════════════════════════════════════════════
+function paintChalkFace(sz, baseHex, faceName, seed, variant) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = sz;
+  const ctx = cv.getContext('2d');
+  const rand = mkRng(seed);
+
+  const texDepth   = P.texDepth;
+  const surfSmooth = P.surfSmooth;
+  const powderAcc  = P.powderAcc;
+  const gradSharp  = P.gradSharp;
+
+  const BR = ((baseHex>>16)&0xFF)/255;
+  const BG = ((baseHex>>8)&0xFF)/255;
+  const BB = (baseHex&0xFF)/255;
+  const wMix = 0.22;
+  const CR = BR + (1-BR)*wMix;
+  const CG = BG + (1-BG)*wMix;
+  const CB = BB + (1-BB)*wMix;
+
+  // ── PASS 1: Noise base — generated near target res, NOT smoothed on upscale.
+  // Previous version generated at 128px then bicubic-upscaled to 512, which
+  // blurred all the fine grain away. Now generates at 256 and uses nearest/
+  // no-smoothing blit so the pore/grain detail survives onto the cube face.
+  const NOISE_SZ = 256;
+  const noiseCv = document.createElement('canvas');
+  noiseCv.width = noiseCv.height = NOISE_SZ;
+  const nctx = noiseCv.getContext('2d');
+  const nimg = nctx.createImageData(NOISE_SZ, NOISE_SZ);
+  const ndat = nimg.data;
+  const poreFreq = 20 + (1-surfSmooth)*16;
+  const poreAmp  = 0.018 * texDepth;
+
+  for(let y=0;y<NOISE_SZ;y++){
+    for(let x=0;x<NOISE_SZ;x++){
+      const u=x/NOISE_SZ, v=y/NOISE_SZ;
+      const lo = 0.95 + 0.09*fbm(u*2.4+seed*0.4, v*2.4+seed*0.6, 3)*texDepth - 0.045;
+      const mi = 0.97 + 0.04*fbm(u*9+seed*1.1, v*9+seed*1.6, 2)*texDepth - 0.02;
+      const pore = smoothNoise(u*poreFreq+seed*3.1, v*poreFreq+seed*2.7);
+      const poreDip = pore < 0.30 ? -poreAmp*(1-(pore/0.30)) : 0;
+      const gr = 0.97 + 0.03*(rand()-0.5)*2.6*(1-surfSmooth*0.5);
+      let bright = Math.max(0.84, Math.min(1.04, lo*mi*gr + poreDip));
+      // mild contrast nudge — was 1.6x last round, which turned fine grain
+      // into visible dark blotches. Pulled back to a subtle push.
+      bright = 0.97 + (bright-0.97)*1.05;
+      const warmShift = (u - 0.5) * gradSharp * 0.04;
+      const r = Math.min(1, CR * bright + warmShift*0.01);
+      const g = Math.min(1, CG * bright);
+      const b = Math.min(1, CB * bright - warmShift*0.008);
+      const i=(y*NOISE_SZ+x)*4;
+      ndat[i]  =Math.round(Math.max(0,r)*255);
+      ndat[i+1]=Math.round(Math.max(0,g)*255);
+      ndat[i+2]=Math.round(Math.max(0,b)*255);
+      ndat[i+3]=255;
+    }
+  }
+  nctx.putImageData(nimg, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(noiseCv, 0, 0, NOISE_SZ, NOISE_SZ, 0, 0, sz, sz);
+
+  // ── PASS 2: Faint pressure marks — kept minimal ──────────────────────────────
+  const nScratch = Math.round(2 + (1-surfSmooth)*2);
+  for(let k=0;k<nScratch;k++){
+    const yPos = sz*(0.05 + k/(nScratch)*0.92 + (rand()-0.5)*0.025);
+    const isLight = rand() > 0.45;
+    const alpha = (0.008 + rand()*0.010) * (1 - surfSmooth*0.4);
+    const col = isLight ? `rgba(255,255,255,${alpha})` : `rgba(20,15,18,${alpha*0.8})`;
+    ctx.save();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 0.5 + rand()*0.7;
+    ctx.beginPath();
+    ctx.moveTo(-2, yPos);
+    const cp1x = sz*(0.2+rand()*0.25), cp2x = sz*(0.6+rand()*0.25);
+    const waviness = (1-surfSmooth)*6;
+    ctx.bezierCurveTo(cp1x, yPos+(rand()-0.5)*waviness, cp2x, yPos+(rand()-0.5)*waviness, sz+2, yPos+(rand()-0.5)*waviness*0.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── PASS 3: Bevel edge — noisy powder, not a clean glossy strip ─────────────
+  // Previous version filled a perfectly smooth linear-gradient white strip
+  // along each edge. Under directional light that reads as a glossy highlight
+  // rather than dust. Now the alpha is modulated by fbm noise per-pixel so
+  // the brightening breaks into uneven patches like real settled powder.
+  const bevelW = sz * (0.06 + powderAcc * 0.10);
+  const bevelAlpha = 0.04 + powderAcc * 0.07;
+  function paintNoisyBevel(gradFn, wRect) {
+    const bsz = Math.max(64, Math.round(sz/4));
+    const scale = sz/bsz;
+    const tmp = document.createElement('canvas');
+    tmp.width = tmp.height = bsz;
+    const tctx = tmp.getContext('2d');
+    const tdat = tctx.createImageData(bsz, bsz);
+    const dd = tdat.data;
+    for(let y=0;y<bsz;y++){
+      for(let x=0;x<bsz;x++){
+        const a = gradFn(x*scale,y*scale);
+        const i=(y*bsz+x)*4;
+        if(a<=0){ dd[i+3]=0; continue; }
+        const n = 0.75 + 0.3*smoothNoise(x*scale*0.06+seed*5, y*scale*0.06+seed*4);
+        dd[i]=255; dd[i+1]=255; dd[i+2]=255;
+        dd[i+3]=Math.round(Math.max(0,Math.min(255, a*255*n)));
+      }
+    }
+    tctx.putImageData(tdat,0,0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(tmp,0,0,bsz,bsz,0,0,sz,sz);
+  }
+  paintNoisyBevel((x,y)=> y<bevelW ? bevelAlpha*(1-y/bevelW) : 0);
+  paintNoisyBevel((x,y)=> y>sz-bevelW ? bevelAlpha*((y-(sz-bevelW))/bevelW) : 0);
+  paintNoisyBevel((x,y)=> x<bevelW ? bevelAlpha*(1-x/bevelW) : 0);
+  paintNoisyBevel((x,y)=> x>sz-bevelW ? bevelAlpha*((x-(sz-bevelW))/bevelW) : 0);
+
+  // ── PASS 4: Corner powder — subtle ──────────────────────────────────────────
+  const corners = [[0,0],[sz,0],[0,sz],[sz,sz]];
+  const cornerR = bevelW * 1.0;
+  const cornerAlpha = bevelAlpha * 0.5;
+  for(const [cx,cy] of corners){
+    const g = ctx.createRadialGradient(cx,cy,0, cx,cy,Math.max(1.5,cornerR));
+    g.addColorStop(0, `rgba(255,255,255,${cornerAlpha})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,sz,sz);
+  }
+
+  // ── PASS 5: Micro-chips — tiny, sparse ───────────────────────────────────────
+  const cornerIrreg = P.cornerIrreg;
+  const nChips = Math.round(cornerIrreg * 4);
+  for(let k=0;k<nChips;k++){
+    const cornerIdx = Math.floor(rand()*4);
+    const [ccx, ccy] = corners[cornerIdx];
+    const dirX = ccx === 0 ? 1 : -1;
+    const dirY = ccy === 0 ? 1 : -1;
+    const chipDist = bevelW * (0.2 + rand()*0.7);
+    const jitter = bevelW * 0.3;
+    const chipX = ccx + dirX*chipDist*(0.4+rand()*0.6) + (rand()-0.5)*jitter;
+    const chipY = ccy + dirY*chipDist*(0.4+rand()*0.6) + (rand()-0.5)*jitter;
+    const chipR = Math.max(1.5, 1.5 + rand()*4*cornerIrreg);
+    const chipAlpha = 0.05 + rand()*0.06*cornerIrreg;
+    const g = ctx.createRadialGradient(chipX,chipY,0, chipX,chipY,chipR);
+    g.addColorStop(0, `rgba(35,22,28,${chipAlpha})`);
+    g.addColorStop(1, 'rgba(35,22,28,0)');
+    ctx.fillStyle=g;
+    ctx.save();
+    ctx.translate(chipX,chipY);
+    ctx.rotate(rand()*Math.PI);
+    ctx.scale(1, 0.5+rand()*0.5);
+    ctx.beginPath();
+    ctx.arc(0,0,chipR,0,Math.PI*2);
+    ctx.restore();
+    ctx.fill();
+  }
+
+  // ── PASS 6: Pigment micro-zones — soft warm/cool drift, more visible now
+  // that the base palette and color pipeline are properly pastel/corrected.
+  for(let z=0;z<2;z++){
+    const cx=0.2+rand()*0.6, cy=0.2+rand()*0.6;
+    const r=(0.20+rand()*0.12)*sz;
+    const warm=rand()>0.5;
+    const col=warm?`rgba(235,215,180,0.035)`:`rgba(190,210,235,0.035)`;
+    const grd=ctx.createRadialGradient(cx*sz,cy*sz,0,cx*sz,cy*sz,r);
+    grd.addColorStop(0,col); grd.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,sz,sz);
+  }
+
+  // ── PASS 7: Soft diagonal tone gradient — a real chalk piece isn't one flat
+  // tone; the brick reference shows lighter and richer patches blending
+  // across a single piece. This blends a lightened tint of the base hue into
+  // a deeper tint of the same hue along a randomized diagonal.
+  {
+    const lighten=(v)=>v+(1-v)*0.40, deepen=(v)=>v*0.80;
+    const cL=[lighten(BR),lighten(BG),lighten(BB)].map(v=>Math.round(Math.max(0,Math.min(1,v))*255));
+    const cD=[deepen(BR),deepen(BG),deepen(BB)].map(v=>Math.round(Math.max(0,Math.min(1,v))*255));
+    const ang = rand()*Math.PI*2;
+    const dx = Math.cos(ang)*sz*0.7, dy = Math.sin(ang)*sz*0.7;
+    const cx0=sz/2-dx, cy0=sz/2-dy, cx1=sz/2+dx, cy1=sz/2+dy;
+    const dgrad = ctx.createLinearGradient(cx0,cy0,cx1,cy1);
+    dgrad.addColorStop(0, `rgba(${cL[0]},${cL[1]},${cL[2]},0.16)`);
+    dgrad.addColorStop(1, `rgba(${cD[0]},${cD[1]},${cD[2]},0.16)`);
+    ctx.fillStyle = dgrad;
+    ctx.fillRect(0,0,sz,sz);
+  }
+
+  return cv;
+}
+
+function makeGrainGrayscale(cv) {
+  const sz = cv.width;
+  const out = document.createElement('canvas');
+  out.width = out.height = sz;
+  const octx = out.getContext('2d');
+  octx.filter = 'grayscale(1) contrast(1.05)';
+  octx.drawImage(cv, 0, 0);
+  return out;
+}
+
+function buildChalkMaterials(baseColor, seed) {
+  const SZ = 512;
+  const faceInfo = [
+    {name:'side',   variant:0},
+    {name:'side',   variant:1},
+    {name:'top',    variant:0},
+    {name:'bottom', variant:2},
+    {name:'front',  variant:2},
+    {name:'front',  variant:3},
+  ];
+  return faceInfo.map((fi,idx)=>{
+    const cv = paintChalkFace(SZ, baseColor, fi.name, seed+idx*179+31, fi.variant);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    // Bump + roughness both derived from the same painted grain, so the
+    // micro-relief that catches light lines up exactly with the color
+    // variation instead of being a separate, disconnected texture.
+    const grainCv = makeGrainGrayscale(cv);
+    const bumpTex = new THREE.CanvasTexture(grainCv);
+    bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+    const roughTex = new THREE.CanvasTexture(grainCv);
+    roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      bumpMap: bumpTex,
+      bumpScale: 0.0025,
+      roughnessMap: roughTex,
+      roughness: 0.97,
+      metalness: 0.0,
+      envMapIntensity: 0,
+      fog: false,
+    });
+  });
+}
+
+// ── Chamfered geometry ─────────────────────────────────────────────────────────
+function makeChalkGeo(W, H, D, seed) {
+  const br = P.bevelRound;
+  const chamfer = 0.020 + br * 0.040;
+  const noiseAmt = 0.002 + P.cornerIrreg * 0.005;
+
+  const geo = new THREE.BoxGeometry(W,H,D, 48,48,48);
+  const pos = geo.attributes.position;
+  for(let v=0;v<pos.count;v++){
+    let x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
+    const hW=W/2, hH=H/2, hD=D/2;
+    const ox=Math.abs(x)-(hW-chamfer), oy=Math.abs(y)-(hH-chamfer), oz=Math.abs(z)-(hD-chamfer);
+    if(ox>0 && oy>0 && oz>0){
+      const cL=Math.sqrt(ox*ox+oy*oy+oz*oz);
+      const ex=cL-chamfer;
+      if(ex>0){
+        const pull = 0.50 + br*0.18;
+        x -= (ox/cL*Math.sign(x))*ex*pull;
+        y -= (oy/cL*Math.sign(y))*ex*pull;
+        z -= (oz/cL*Math.sign(z))*ex*pull;
+      }
+    } else if(ox>0 && oy>0){
+      const eL=Math.sqrt(ox*ox+oy*oy);
+      const ex=eL-chamfer;
+      if(ex>0){
+        x -= (ox/eL*Math.sign(x))*ex*(0.55+br*0.20);
+        y -= (oy/eL*Math.sign(y))*ex*(0.55+br*0.20);
+      }
+    } else if(ox>0 && oz>0){
+      const eL=Math.sqrt(ox*ox+oz*oz);
+      const ex=eL-chamfer;
+      if(ex>0){
+        x -= (ox/eL*Math.sign(x))*ex*(0.55+br*0.20);
+        z -= (oz/eL*Math.sign(z))*ex*(0.55+br*0.20);
+      }
+    } else if(oy>0 && oz>0){
+      const eL=Math.sqrt(oy*oy+oz*oz);
+      const ex=eL-chamfer;
+      if(ex>0){
+        y -= (oy/eL*Math.sign(y))*ex*(0.55+br*0.20);
+        z -= (oz/eL*Math.sign(z))*ex*(0.55+br*0.20);
+      }
+    }
+    const nv=(fbm(x*14+seed, y*14+seed*1.3, 4)-0.5)*noiseAmt;
+    pos.setXYZ(v, x+nv, y+nv*0.35, z+nv);
+  }
+  pos.needsUpdate=true;
+  geo.computeVertexNormals();
+  // Scatter the normals slightly so the chamfer edge doesn't behave like a
+  // perfectly smooth rounded surface that catches the key light as one
+  // clean glossy line — real chalk edges are chipped/irregular, not polished.
+  const norm = geo.attributes.normal;
+  for(let v=0;v<norm.count;v++){
+    const nx=norm.getX(v), ny=norm.getY(v), nz=norm.getZ(v);
+    const jx=(fbm(nx*30+seed,ny*30+seed*1.7,2)-0.5)*0.05;
+    const jy=(fbm(ny*30+seed*1.3,nz*30+seed*2.1,2)-0.5)*0.05;
+    const jz=(fbm(nz*30+seed*1.9,nx*30+seed*0.7,2)-0.5)*0.05;
+    const len=Math.hypot(nx+jx,ny+jy,nz+jz)||1;
+    norm.setXYZ(v,(nx+jx)/len,(ny+jy)/len,(nz+jz)/len);
+  }
+  norm.needsUpdate=true;
+  return geo;
+}
+
+// ── Scene setup ───────────────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled=false;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+// Horizontal FOV is held constant across window shapes (not vertical), so the
+// cube row keeps a consistent apparent size whether the window is narrow or
+// very wide. A fixed vertical FOV (the old approach) made a wide window's
+// horizontal FOV balloon, rendering the cubes tiny — at that scale, the
+// surface noise that reads as chalk grain at normal size instead read as
+// broken/jagged edges.
+const BASE_ASPECT = 1.3, BASE_VFOV_DEG = 38;
+const HALF_HFOV = Math.atan(Math.tan(BASE_VFOV_DEG*Math.PI/360) * BASE_ASPECT);
+function fovForAspect(aspect){
+  return 2*Math.atan(Math.tan(HALF_HFOV)/aspect) * 180/Math.PI;
+}
+const camera = new THREE.PerspectiveCamera(fovForAspect(window.innerWidth/window.innerHeight), window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 2.2, 11.5);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls._spherical.setFromVector3(new THREE.Vector3().subVectors(camera.position, controls.target));
+
+// ── Lighting — v3: only the cubes are lit now (ground/dome are unlit), so
+// this only needs to make the cubes read with form, not fight a background
+// color-match anymore. Colors neutralized further — warm ambient+goldenTop
+// were still tinting cool pastel cubes (teal/blue/green) toward olive/gray.
+const ambient = new THREE.AmbientLight(0xFFF6F8, 0.32);
+scene.add(ambient);
+
+const fill = new THREE.DirectionalLight(0xE4E6FF, 0.18);
+fill.position.set(6, 3, 7);
+scene.add(fill);
+
+const goldenTop = new THREE.DirectionalLight(0xFFE0B0, 0.05);
+goldenTop.position.set(0.4, 14, 1.5);
+scene.add(goldenTop);
+
+const key = new THREE.DirectionalLight(0xFFFCF8, 0.80);
+key.position.set(-3, 10, 6);
+scene.add(key);
+
+// ── Backdrop — v4: ONE continuous curved surface, not a flat floor matched
+// to a separate sphere dome. Three rounds of hand color-matching a lit/unlit
+// pair (and then an unlit pair) across two different geometries kept leaving
+// a visible boundary — chasing the exact camera angle/UV math by hand is
+// fragile. A real seamless photo backdrop is one curved sheet of paper, so
+// this builds that directly: flat floor → smooth quarter-circle cove →
+// vertical wall, as a single mesh with one continuous vertex-color gradient
+// along its own surface path. There is no second material to mismatch.
+const floorY  = -0.58;
+const coveR   = 6;
+const z1      = -6;           // cove starts well BEHIND the cube row (cubes
+                               // sit at z≈±0.55) — the old z1=3 put the curve
+                               // start only ~2.5 units past the cubes, and by
+                               // the time it rose through z=0 it had already
+                               // climbed into the cubes' own height range,
+                               // i.e. the backdrop geometry was intersecting
+                               // the cube geometry. This gives real clearance.
+const Lf      = 20;           // flat floor length (toward camera from z1)
+const Lw      = 36;           // flat wall height (above y2)
+const z2      = z1 - coveR;   // where the cove ends and the wall begins
+const y2      = floorY + coveR;
+const coveArc = coveR * Math.PI/2;
+const totalD  = Lf + coveArc + Lw;
+
+function pathYZ(d) {
+  if (d <= Lf) {
+    return [floorY, (z1 + Lf) - d];                      // flat floor
+  } else if (d <= Lf + coveArc) {
+    const phi = (d - Lf) / coveArc * (Math.PI/2);
+    return [y2 - coveR*Math.cos(phi), z1 - coveR*Math.sin(phi)]; // cove
+  } else {
+    return [y2 + (d - (Lf + coveArc)), z2];               // flat wall
+  }
+}
+
+// Radial gradient (not linear top-to-bottom): one center color, a shared
+// inner ring, then the sequence diverges depending on whether the point is
+// above or below the center.
+function srgbToLinear(c){ return c<=0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }
+function hexToLin(hex){
+  const v = parseInt(hex.replace('#',''),16);
+  return [((v>>16)&255)/255, ((v>>8)&255)/255, (v&255)/255].map(srgbToLinear);
+}
+
+// Center placed at d=14 — this is the exact same world-Z depth as the cube
+// row itself (floor formula z=14-d, so d=14 -> z=0). Radii compressed to the
+// actual visible d-range at this camera (computed: bottom-of-frame floor
+// point ≈ d=7.3, top-of-frame wall point ≈ d=29) — the previous radii (up to
+// 42) meant the whole frame only ever sampled the first one or two stops.
+const gCenterLX = 0, gCenterD = 14;
+const lxFalloffScale = 5; // keeps the gradient reading mostly vertical across the cube row's width
+
+const upStops = [   // going up toward the top of frame (room: ~15 units)
+  {r:0,    c:hexToLin('#f191bf')},
+  {r:2.5,  c:hexToLin('#e881b0')},
+  {r:6,    c:hexToLin('#df73a4')},
+  {r:10,   c:hexToLin('#bd5997')},
+  {r:15,   c:hexToLin('#b55595')},
+];
+const downStops = [ // going down toward the bottom of frame (room: ~7 units)
+  {r:0,    c:hexToLin('#f191bf')},
+  {r:2,    c:hexToLin('#e881b0')},
+  {r:4.2,  c:hexToLin('#d475c6')},
+  {r:6.7,  c:hexToLin('#dd79c1')},
+];
+function sampleStops(stops, r){
+  if (r<=stops[0].r) return stops[0].c;
+  for(let i=0;i<stops.length-1;i++){
+    if (r>=stops[i].r && r<=stops[i+1].r){
+      const lt=(r-stops[i].r)/(stops[i+1].r-stops[i].r);
+      const a=stops[i].c, b=stops[i+1].c;
+      return [a[0]+(b[0]-a[0])*lt, a[1]+(b[1]-a[1])*lt, a[2]+(b[2]-a[2])*lt];
+    }
+  }
+  return stops[stops.length-1].c;
+}
+function backdropColorAt(lx, d) {
+  const dx = lx - gCenterLX, dd = d - gCenterD;
+  const r = Math.sqrt((dx/lxFalloffScale)**2 + dd*dd);
+  return dd >= 0 ? sampleStops(upStops, r) : sampleStops(downStops, r);
+}
+
+// A few soft, randomly-placed color-shift spots (light-leak/bokeh feel) and
+// one soft darkened halo roughly behind the cube row — mirrors the reference,
+// where the backdrop isn't a perfectly clean gradient: it's a bit darker
+// right around the object, plus a few patches that read as a different tint.
+const darkHalo = { lx:0, d: gCenterD - 3, r: 5 };
+const spots = [];
+for (let i=0;i<5;i++){
+  spots.push({
+    lx: (Math.random()-0.5)*30,
+    d: 5 + Math.random()*26, // roughly the visible d-range (~7 to ~29)
+    r: 3 + Math.random()*5,
+    dc: [ (Math.random()-0.5)*0.07, (Math.random()-0.5)*0.07, (Math.random()-0.5)*0.07 ],
+  });
+}
+
+const bgGeo = new THREE.PlaneGeometry(70, totalD, 36, 160);
+const bgPos = bgGeo.attributes.position;
+const bgCol = new Float32Array(bgPos.count*3);
+for (let i=0;i<bgPos.count;i++){
+  const lx = bgPos.getX(i);
+  const d  = bgPos.getY(i) + totalD/2; // 0..totalD along the curved path
+  const [y,z] = pathYZ(d);
+  bgPos.setXYZ(i, lx, y, z);
+  let [r,g,b] = backdropColorAt(lx, d);
+
+  const dh = Math.hypot(lx-darkHalo.lx, d-darkHalo.d)/darkHalo.r;
+  const darkFactor = 1 - 0.16*Math.exp(-dh*dh*1.6);
+  r*=darkFactor; g*=darkFactor; b*=darkFactor;
+
+  for (const s of spots){
+    const sd = Math.hypot(lx-s.lx, d-s.d)/s.r;
+    const w = Math.exp(-sd*sd*2.2);
+    r += s.dc[0]*w; g += s.dc[1]*w; b += s.dc[2]*w;
+  }
+  r=Math.max(0,Math.min(1,r)); g=Math.max(0,Math.min(1,g)); b=Math.max(0,Math.min(1,b));
+
+  bgCol[i*3]=r; bgCol[i*3+1]=g; bgCol[i*3+2]=b;
+}
+bgPos.needsUpdate = true;
+bgGeo.setAttribute('color', new THREE.BufferAttribute(bgCol,3));
+const backdrop = new THREE.Mesh(bgGeo, new THREE.MeshBasicMaterial({ vertexColors:true, side: THREE.DoubleSide, fog:false }));
+scene.add(backdrop);
+
+// ── Fake soft contact shadows ────────────────────────────────────────────────
+// Real-time shadow mapping is dropped along with the lit ground (Basic
+// material can't receive mapped shadows anyway, and it was the other half of
+// the original "dull/incorrect shadows" complaint). A baked soft radial blob
+// under each cube reads as a contact shadow without any of that complexity.
+function makeShadowBlobTexture() {
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(S/2,S/2,0, S/2,S/2,S/2);
+  g.addColorStop(0,   'rgba(40,10,30,0.40)');
+  g.addColorStop(0.6, 'rgba(40,10,30,0.22)');
+  g.addColorStop(1,   'rgba(40,10,30,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,S,S);
+  const tx = new THREE.CanvasTexture(cv);
+  tx.encoding = THREE.sRGBEncoding;
+  return tx;
+}
+const shadowTex = makeShadowBlobTexture();
+
+// ── Pastel color palette — lightened/desaturated. The old hexes were vivid
+// enough that, once the color pipeline was corrected (sRGB output), they
+// displayed as their true saturated selves instead of the washed-out look
+// that was accidentally hiding how vivid they actually were.
+const COLORS = [
+  0x8ED4C8,
+  0xB0D98E,
+  0x8FC8DC,
+  0xC5B9E0,
+  0xEFAFC9,
+  0xF0C994,
+  0xF2ECDA,
+];
+
+const LAYOUT = [
+  {x:-3.60,y:0,z:0},{x:-2.40,y:0,z:0},{x:-1.20,y:0,z:0},{x:0,y:0,z:0},
+  {x:1.20,y:0,z:0},{x:2.40,y:0,z:0},{x:3.60,y:0,z:0}
+];
+
+const cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+
+LAYOUT.forEach((cfg, i) => {
+  const geo = makeChalkGeo(1.10, 1.10, 1.10, i*3.7);
+  const mats = buildChalkMaterials(COLORS[i], i*97+13);
+  const cube = new THREE.Mesh(geo, mats);
+  cube.position.set(cfg.x, cfg.y, cfg.z);
+  cubeGroup.add(cube);
+
+  const shadowMesh = new THREE.Mesh(
+    new THREE.CircleGeometry(0.82, 24),
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, fog: false })
+  );
+  shadowMesh.rotation.x = -Math.PI/2;
+  shadowMesh.position.set(cfg.x + 0.12, -0.577, cfg.z - 0.08);
+  scene.add(shadowMesh);
+});
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.fov = fovForAspect(camera.aspect);
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+(function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene,camera);
+})();
+</script>
+</body>
+</html>

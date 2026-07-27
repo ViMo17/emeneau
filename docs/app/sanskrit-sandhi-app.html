@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Санскрит</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #363A44;
+    font-family: 'Georgia', serif;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  #panel-sandhi {
+    flex: 0 0 368px;
+    width: 368px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 10px 12px;
+    gap: 6px;
+  }
+  #panel-alpha {
+    flex: 0 0 auto;
+    height: 100vh;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 10px 16px 10px;
+    gap: 8px;
+  }
+
+  /* ══ ЦЕНТР ══ */
+  #center {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 12px;
+    gap: 7px;
+    overflow: hidden;
+  }
+
+
+
+  /* ══ c5 — персиковые (висарга, назальные, взрывные 50–71) ══ */
+  .c5 {
+    background: #F0BF88;
+    box-shadow: 0 .64px 1.28px rgba(210,165,100,.8),0 8px 6px rgba(0,0,0,.22),inset 0 -.64px .32px rgba(140,80,10,.4);
+  }
+  .c5 .card-num { color: rgba(120,65,10,.50); }
+  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(100,50,5,.95); }
+
+  /* ══ Подсветка блока 17–29 ══ */
+  .card.c3.group-active {
+    background: #9E93B5 !important;
+    box-shadow: 0 .64px 1.28px rgba(110,95,155,.85),0 8px 6px rgba(0,0,0,.28),inset 0 -.64px .32px rgba(60,48,95,.48) !important;
+  }
+  .card.c3.primary-active {
+    background: #7060A0 !important;
+    box-shadow: 0 .64px 1.28px rgba(120,105,170,.9),0 8px 6px rgba(0,0,0,.32),inset 0 -.64px .32px rgba(65,48,108,.55) !important;
+  }
+  .card.c3.primary-active .card-num { color: rgba(48,34,82,.80) !important; }
+  .card.c3.card-21-primary {
+    background: #504078 !important;
+    box-shadow: 0 .64px 1.28px rgba(100,80,155,.9),0 8px 6px rgba(0,0,0,.34),inset 0 -.64px .32px rgba(55,35,105,.58) !important;
+  }
+
+  /* ══ Маркеры подгрупп в панели сандхи ══ */
+  .g-marker {
+    font-size: 7px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgba(205,218,228, 0.88);
+    padding: 5px 0 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .g-marker::before {
+    content: '';
+    width: 5px; height: 1px;
+    background: rgba(168,188,200, 0.45);
+    flex-shrink: 0;
+  }
+  .g-marker::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: rgba(168,188,200, 0.18);
+  }
+  .g-marker.sub {
+    font-size: 6.5px;
+    color: rgba(205,218,228, 0.68);
+    padding-left: 11px;
+  }
+  .g-marker.sub::before {
+    width: 8px;
+    background: rgba(168,188,200, 0.28);
+  }
+
+
+  /* ══ Прямоугольник правила (цвет = плашка правила, чуть светлее) ══ */
+  #rule-display {
+    background: transparent;
+    border: none;
+    padding: 8px 4px;
+  }
+  #rd-text-wrap {
+    border-radius: 16px;
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 0 0 auto;
+    height: 164px;
+  }
+
+
+  /* #rd-text на светлом фоне — тёмный текст */
+  #rd-text {
+    font-size: 22px;
+    font-family: 'Georgia', serif;
+    color: #1e1c18;
+    line-height: 1.50;
+  }
+
+  /* Цвета прямоугольника — чуть светлее соответствующих плашек */
+  .rd-bg-c1 {
+    background: #C0E898;
+    box-shadow: 0 1px 2px rgba(120,190,60,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(80,140,20,.22);
+  }
+  .rd-bg-c2 {
+    background: #9DE0DA;
+    box-shadow: 0 1px 2px rgba(60,175,168,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(8,110,105,.22);
+  }
+  .rd-bg-c3 {
+    background: #D8C8E8;
+    box-shadow: 0 1px 2px rgba(155,120,190,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(100,65,150,.22);
+  }
+  .rd-bg-c4 {
+    background: #F0C4D4;
+    box-shadow: 0 1px 2px rgba(200,110,150,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(160,55,95,.22);
+  }
+  .rd-bg-c5 {
+    background: #F8D4A0;
+    box-shadow: 0 1px 2px rgba(200,150,60,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(160,95,10,.22);
+  }
+
+
+  /* ══ Заглушка-контекст в левой панели ══ */
+  #group-stub {
+    flex: none;
+    min-height: 80px;
+    margin: 4px 0;
+    border-radius: 10px;
+    background: rgba(200,195,185, 0.08);
+    border: 1px solid rgba(200,195,185, 0.12);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  /* Тёмные оттенки цветов по классу правила */
+  #group-stub.stub-c1 { background: rgba(100,130,70, 0.22); border-color: rgba(140,175,100, 0.35); }
+  #group-stub.stub-c2 { background: rgba(55,115,110, 0.22); border-color: rgba(80,155,150, 0.35); }
+  #group-stub.stub-c3 { background: rgba(90,55,130, 0.30); border-color: rgba(130,90,180, 0.40); }
+  #group-stub.stub-c4 { background: rgba(150,50,85, 0.30); border-color: rgba(200,80,120, 0.40); }
+  #group-stub.stub-c5 { background: rgba(140,80,10, 0.30); border-color: rgba(190,130,40, 0.40); }
+  #stub-label {
+    font-size: 14px;
+    font-family: 'Georgia', serif;
+    color: rgba(240,230,215, 0.90);
+    line-height: 1.45;
+    white-space: pre-line;
+  }
+  #stub-sub {
+    font-size: 12px;
+    font-family: 'Georgia', serif;
+    color: rgba(210,220,235, 0.78);
+    line-height: 1.55;
+    white-space: pre-line;
+    padding-top: 7px;
+    border-top: 1px solid rgba(200,195,185, 0.18);
+  }
+
+
+  /* ── c5 · персиковый (50–71) ── */
+  .c5 {
+    background: #F0BF88;
+    box-shadow: 0 0.64px 1.28px rgba(210,165,100,.80), 0 8px 6px rgba(0,0,0,.22),
+                inset 0 -0.64px 0.32px rgba(140,80,10,.40);
+  }
+  .c5 .card-num { color: rgba(120,65,10,.50); }
+  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(100,50,5,.95); }
+
+  /* ── подсветка блока 17–29 ── */
+  .c3.g-active {
+    background: #7060A0 !important;
+    box-shadow: 0 0.64px 1.28px rgba(130,120,175,.85), 0 8px 6px rgba(0,0,0,.25),
+                inset 0 -0.64px 0.32px rgba(70,55,110,.50) !important;
+  }
+  .c3.g-active .card-num { color: rgba(48,35,85,.60) !important; }
+  /* ── подсветка карточки 21 как базы ── */
+  .c3.base-active {
+    background: #8E85B0 !important;
+    box-shadow: 0 0 0 2px rgba(110,95,160,.55),
+                0 8px 8px rgba(0,0,0,.30),
+                inset 0 -0.64px 0.32px rgba(60,45,100,.55) !important;
+  }
+  .c3.base-active .card-num { color: rgba(38,25,75,.70) !important; }
+
+  /* Зона 1/5 — заголовок + правило */
+  #rule-display {
+    flex: 0 0 185px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 0 4px 4px;
+    overflow: hidden;
+  }
+  #rd-empty {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #454540;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  #rd-num {
+    font-size: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(220,224,232,0.80);
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+  /* #rd-text now inside #rd-text-wrap — see rd-bg-* classes */
+
+  /* Зона 2 — примеры-пилюли */
+  #letter-picker {
+    flex: 0 0 auto;
+    background: rgba(230,225,210, 0.04);
+    border: 1px solid rgba(230,225,210, 0.08);
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    overflow-y: auto;
+    min-height: 52px;
+    max-height: 130px;
+  }
+  #lp-empty {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #3a3a36;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .lp-group-label {
+    font-size: 7px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+  #lp-group1-wrap, #lp-group2-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  #lp-group1, #lp-group2 {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  #lp-sep {
+    font-size: 22px;
+    color: #424240;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-weight: 300;
+    padding-top: 12px;
+  }
+  .lp-tile {
+    width: 36px;
+    height: 36px;
+    border-radius: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lp-tile:hover { transform: translateY(-4px) scale(1.10); }
+  .lp-tile .t-dv { font-size: 14px; line-height: 1; pointer-events: none; }
+  .lp-tile .t-tr { font-size: 6px; font-family: 'Helvetica Neue', sans-serif; margin-top: 1px; pointer-events: none; }
+
+  /* Зона анимации — скрыта, будет заново */
+  #animation-area { display: none !important; }
+  ._anim-placeholder-unused {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #363632;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* Зона 1/5 — упражнения */
+  #exercises-zone {
+    flex: 1 1 0;
+    min-height: 0;
+    background: rgba(230,225,210, 0.035);
+    border: 1px solid rgba(230,225,210, 0.08);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 7px;
+    overflow: hidden;
+  }
+  #ez-label {
+    font-size: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(220,224,232,0.78);
+    flex-shrink: 0;
+  }
+  #ez-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow-y: auto;
+    flex: 0 0 auto;
+    max-height: 100%;
+    align-content: flex-end;
+  }
+  #ez-chips::-webkit-scrollbar { width: 3px; }
+  #ez-chips::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+  #ez-empty {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #3a3a36;
+    letter-spacing: 0.10em;
+    font-style: italic;
+  }
+  .ex-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), opacity 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .ex-chip:hover { transform: translateY(-2px) scale(1.04); }
+  .ex-chip.c1 { background: rgba(100,130,70, 0.30); border: 1px solid rgba(140,175,100, 0.50); color: rgba(190,225,150,0.90); }
+  .ex-chip.c2 { background: rgba(55,115,110, 0.30); border: 1px solid rgba(80,155,150, 0.50); color: rgba(150,215,210,0.90); }
+  .ex-chip.c3 { background: rgba(90,55,130, 0.30); border: 1px solid rgba(130,90,180, 0.50); color: rgba(200,175,230,0.90); }
+  .ex-chip.c4 { background: rgba(150,50,85, 0.30); border: 1px solid rgba(200,80,120, 0.50); color: rgba(235,165,195,0.90); }
+  .ex-chip.c5 { background: rgba(140,80,10, 0.30); border: 1px solid rgba(190,130,40, 0.50); color: rgba(235,185,120,0.90); }
+
+  /* Пилюли примеров в зоне 2 */
+  .eg-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: 'Georgia', serif;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .eg-chip:hover { transform: translateY(-3px) scale(1.04); }
+  .eg-chip.active { transform: translateY(-3px) scale(1.04); }
+  .eg-chip.c1 { background: #A8D878; border: 1.5px solid #88C048; color: rgba(35,65,8,0.92); }
+  .eg-chip.c2 { background: #7DCFCA; border: 1.5px solid #50AFAA; color: rgba(5,50,45,0.92); }
+  .eg-chip.c3 { background: #C5B0D8; border: 1.5px solid #A088C0; color: rgba(48,22,72,0.92); }
+  .eg-chip.c4 { background: #E8A8C0; border: 1.5px solid #C87898; color: rgba(90,20,45,0.92); }
+  .eg-chip.c5 { background: #F0BF88; border: 1.5px solid #D09050; color: rgba(80,38,5,0.92); }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(220,224,232,0.85);
+    font-family: 'Helvetica Neue', sans-serif;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  :root {
+    --card: 40px;
+    --gap:  2px;
+  }
+
+  /* ══ САНДХИ ══ */
+  #sandhi-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex-shrink: 0;
+  }
+
+  /* Секция (группа карточек) */
+  .s-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Метка секции */
+  .s-label {
+    font-size: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    padding: 5px 0 3px 1px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .s-label span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+  }
+
+  /* Разделитель между секциями */
+  .s-divider {
+    height: 6px;
+    flex-shrink: 0;
+  }
+
+  .card-row {
+    position: relative;
+    height: var(--card);
+    flex-shrink: 0;
+    margin-bottom: var(--gap);
+  }
+  .card-row:last-child { margin-bottom: 0; }
+
+  .card {
+    position: absolute;
+    width:  var(--card);
+    height: var(--card);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    will-change: transform;
+    transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    bottom: -14px; left: -2px; right: -2px;
+    height: 14px;
+  }
+
+  .card-num {
+    font-size: 15px;
+    font-weight: 400;
+    font-family: 'Helvetica Neue', sans-serif;
+    line-height: 1;
+    pointer-events: none;
+    transition: font-size 0.22s cubic-bezier(.34,1.56,.64,1), color 0.18s ease;
+    letter-spacing: -0.02em;
+  }
+
+  .card.hovered {
+    z-index: 200 !important;
+    transform: translateY(-12px) scale(1.06) !important;
+  }
+  .card.pinned {
+    z-index: 300 !important;
+    transform: translateY(-15px) scale(1.09) !important;
+  }
+  .card.hovered .card-num,
+  .card.pinned  .card-num { font-size: 22px; }
+
+  /* Цвета сандхи — контрастные цифры */
+  .c1 {
+    background: #A8D878;
+    box-shadow: 0 0.64px 1.28px rgba(140,190,90,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(50,90,15,.40);
+  }
+  .c1 .card-num { color: rgba(50,90,15, 0.50); }
+  .c1.hovered .card-num, .c1.pinned .card-num { color: rgba(40,75,10, 0.95); }
+
+  .c2 {
+    background: #7DCFCA;
+    box-shadow: 0 0.64px 1.28px rgba(90,185,178,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(10,90,85,.40);
+  }
+  .c2 .card-num { color: rgba(10,65,60, 0.50); }
+  .c2.hovered .card-num, .c2.pinned .card-num { color: rgba(5,55,50, 0.95); }
+
+  .c3 {
+    background: #C5B0D8;
+    box-shadow: 0 0.64px 1.28px rgba(175,148,200,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(90,55,130,.40);
+  }
+  .c3 .card-num { color: rgba(70,40,100, 0.50); }
+  .c3.hovered .card-num, .c3.pinned .card-num { color: rgba(55,28,88, 0.95); }
+
+  .c4 {
+    background: #E8A8C0;
+    box-shadow: 0 0.64px 1.28px rgba(210,145,175,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(140,50,85,.40);
+  }
+  .c4 .card-num { color: rgba(130,40,70, 0.50); }
+  .c4.hovered .card-num, .c4.pinned .card-num { color: rgba(110,28,55, 0.95); }
+
+  /* ══ Поле цитаты ══ */
+  #quote-box {
+    flex-shrink: 0;
+    background: rgba(230,225,210, 0.10);
+    border: 1px solid rgba(230,225,210, 0.14);
+    border-radius: 8px;
+    padding: 9px 11px;
+    min-height: 44px;
+    max-height: 72px;
+    overflow-y: auto;
+  }
+  #quote-box::-webkit-scrollbar { width: 3px; }
+  #quote-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  #quote-num {
+    font-size: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 3px;
+  }
+  #quote-text {
+    font-size: 9px;
+    font-family: 'Georgia', serif;
+    color: #bbb;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  #quote-empty {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #555;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    padding-top: 6px;
+  }
+
+  /* ══ Гуна / Вриддхи ══ */
+  #guna-box {
+    flex: 1 1 auto;
+    min-height: 90px;
+    overflow: hidden;
+    background: rgba(200,188,158, 0.10);
+    border: 1px solid rgba(200,188,158, 0.26);
+    border-radius: 10px;
+    padding: 9px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .guna-title {
+    font-size: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(225,215,190, 0.92);
+    flex-shrink: 0;
+  }
+  .guna-subtitle {
+    font-size: 7px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(225,215,190, 0.72);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .guna-note {
+    font-size: 7px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-style: italic;
+    color: rgba(225,215,190, 0.55);
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .guna-table {
+    border-collapse: collapse;
+    flex-shrink: 0;
+  }
+  .guna-table td {
+    font-size: 9px;
+    padding: 2px 5px;
+    text-align: center;
+    color: rgba(220,210,190, 0.72);
+    border: 1px solid rgba(200,188,158, 0.14);
+    font-family: 'Georgia', serif;
+  }
+  .gt-h {
+    font-family: 'Helvetica Neue', sans-serif !important;
+    font-size: 7px !important;
+    letter-spacing: 0.06em;
+    color: rgba(225,215,190, 0.75) !important;
+    text-transform: uppercase;
+  }
+  .gt-r {
+    font-family: 'Helvetica Neue', sans-serif !important;
+    font-size: 7.5px !important;
+    color: rgba(225,215,190, 0.75) !important;
+    text-align: right !important;
+    padding-right: 7px !important;
+  }
+
+  /* ══ АЛФАВИТ ══ */
+  #alpha-desc {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #alpha-wrap {
+    flex: none;
+    display: grid;
+    flex-shrink: 0;
+    grid-template-columns: 58px repeat(5, var(--card));
+    gap: var(--gap);
+    align-items: center;
+    flex-shrink: 0;
+    }
+
+  .gap-row {
+    grid-column: 1 / -1;
+    height: 6px;
+  }
+
+  .row-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding-right: 4px;
+    gap: 1px;
+    height: var(--card);
+    user-select: none;
+  }
+  .row-label .rl-main {
+    font-size: 11px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.04em;
+    color: rgba(225,228,235,0.88);
+    text-align: right;
+  }
+  .row-label .rl-sub {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: rgba(190,195,205,0.65);
+    text-align: right;
+  }
+
+  .lc {
+    width:  var(--card);
+    height: var(--card);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
+    position: relative;
+    z-index: 1;
+  }
+  .lc::after {
+    content: '';
+    position: absolute;
+    bottom: -5px; left: -2px; right: -2px;
+    height: 8px;
+  }
+  .lc .dv {
+    font-size: 16px;
+    line-height: 1.1;
+    pointer-events: none;
+    transition: font-size 0.22s cubic-bezier(.34,1.56,.64,1), color 0.18s ease;
+  }
+  .lc .tr {
+    font-size: 7px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.03em;
+    pointer-events: none;
+    margin-top: 1px;
+    transition: color 0.18s ease;
+  }
+
+  .lc.hovered {
+    z-index: 200 !important;
+    transform: translateY(-12px) scale(1.06) !important;
+  }
+  .lc.pinned {
+    z-index: 300 !important;
+    transform: translateY(-15px) scale(1.09) !important;
+  }
+  .lc.hovered .dv, .lc.pinned .dv { font-size: 22px; }
+
+  /* ── Подсветка при активном правиле ── */
+
+  /* G0 и G1 — без выдвижения, насыщенный фон, белый увеличенный текст */
+  .lc.rule-hl-0 .dv,
+  .lc.rule-hl-1 .dv { font-size: 24px !important; color: rgba(255,255,255,0.97) !important; }
+  .vel.rule-hl-0, .vel.rule-hl-1 { background: #6A9E4A !important; }
+  .pal.rule-hl-0, .pal.rule-hl-1 { background: #4E9E99 !important; }
+  .ret.rule-hl-0, .ret.rule-hl-1 { background: #8A72A8 !important; }
+  .den.rule-hl-0, .den.rule-hl-1 { background: #B06688 !important; }
+  .lab.rule-hl-0, .lab.rule-hl-1 { background: #C08040 !important; }
+  .dim.rule-hl-0, .dim.rule-hl-1 { background: #A8A490 !important; }
+  .pal-s.rule-hl-0, .pal-s.rule-hl-1 { background: #4E9E99 !important; }
+  .lab-s.rule-hl-0, .lab-s.rule-hl-1 { background: #C08040 !important; }
+
+  /* G2 — насыщенный фон, чёрный увеличенный текст */
+  .lc.rule-hl-2 .dv { font-size: 24px !important; color: rgba(0,0,0,0.85) !important; }
+  .vel.rule-hl-2 { background: #6A9E4A !important; }
+  .pal.rule-hl-2 { background: #4E9E99 !important; }
+  .ret.rule-hl-2 { background: #8A72A8 !important; }
+  .den.rule-hl-2 { background: #B06688 !important; }
+  .lab.rule-hl-2 { background: #C08040 !important; }
+  .dim.rule-hl-2 { background: #A8A490 !important; }
+  .pal-s.rule-hl-2 { background: #4E9E99 !important; }
+  .lab-s.rule-hl-2 { background: #C08040 !important; }
+  .lc-empty { width: var(--card); height: var(--card); }
+
+  /* Цвета алфавита */
+  .vel { background:#A8D878; box-shadow:0 0.64px 1.28px rgba(140,190,90,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(50,90,15,.40); }
+  .vel .dv{color:rgba(50,90,15,.50);} .vel .tr{color:rgba(50,90,15,.50);}
+  .vel.hovered .dv,.vel.pinned .dv{color:rgba(40,75,10,.92);} .vel.hovered .tr,.vel.pinned .tr{color:rgba(40,75,10,.80);}
+
+  .pal { background:#7DCFCA; box-shadow:0 0.64px 1.28px rgba(90,185,178,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(10,90,85,.40); }
+  .pal .dv{color:rgba(10,65,60,.50);} .pal .tr{color:rgba(10,65,60,.50);}
+  .pal.hovered .dv,.pal.pinned .dv{color:rgba(5,55,50,.92);} .pal.hovered .tr,.pal.pinned .tr{color:rgba(5,55,50,.80);}
+
+  .ret { background:#C5B0D8; box-shadow:0 0.64px 1.28px rgba(175,148,200,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(90,55,130,.40); }
+  .ret .dv{color:rgba(70,40,100,.50);} .ret .tr{color:rgba(70,40,100,.50);}
+  .ret.hovered .dv,.ret.pinned .dv{color:rgba(55,28,88,.92);} .ret.hovered .tr,.ret.pinned .tr{color:rgba(55,28,88,.80);}
+
+  .den { background:#E8A8C0; box-shadow:0 0.64px 1.28px rgba(210,145,175,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(140,50,85,.40); }
+  .den .dv{color:rgba(130,40,70,.50);} .den .tr{color:rgba(130,40,70,.50);}
+  .den.hovered .dv,.den.pinned .dv{color:rgba(110,28,55,.92);} .den.hovered .tr,.den.pinned .tr{color:rgba(110,28,55,.80);}
+
+  .lab { background:#F0BF88; box-shadow:0 0.64px 1.28px rgba(210,165,100,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(140,80,10,.40); }
+  .lab .dv{color:rgba(120,65,10,.50);} .lab .tr{color:rgba(120,65,10,.50);}
+  .lab.hovered .dv,.lab.pinned .dv{color:rgba(100,50,5,.92);} .lab.hovered .tr,.lab.pinned .tr{color:rgba(100,50,5,.80);}
+
+  .dim { background:#EDE8D8; box-shadow:0 0.64px 1.28px rgba(200,195,175,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(100,90,55,.40); }
+  .dim .dv{color:rgba(80,75,55,.50);} .dim .tr{color:rgba(80,75,55,.50);}
+  .dim.hovered .dv,.dim.pinned .dv{color:rgba(65,60,40,.92);} .dim.hovered .tr,.dim.pinned .tr{color:rgba(65,60,40,.80);}
+
+  .pal-s { background:#7DCFCA; box-shadow:0 0.64px 1.28px rgba(90,185,178,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(10,90,85,.40); }
+  .pal-s .dv{color:rgba(8,55,50,.50);} .pal-s .tr{color:rgba(8,55,50,.50);}
+  .pal-s.hovered .dv,.pal-s.pinned .dv{color:rgba(5,45,40,.92);} .pal-s.hovered .tr,.pal-s.pinned .tr{color:rgba(5,45,40,.80);}
+
+  .lab-s { background:#F0BF88; box-shadow:0 0.64px 1.28px rgba(210,165,100,.80),0 8px 6px rgba(0,0,0,.22),inset 0 -0.64px 0.32px rgba(140,80,10,.40); }
+  .lab-s .dv{color:rgba(100,55,8,.50);} .lab-s .tr{color:rgba(100,55,8,.50);}
+  .lab-s.hovered .dv,.lab-s.pinned .dv{color:rgba(80,42,5,.92);} .lab-s.hovered .tr,.lab-s.pinned .tr{color:rgba(80,42,5,.80);}
+
+  /* ══ Аудио-панель ══ */
+  #audio-panel {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
+  }
+  #audio-panel.visible { height: 36px; }
+  #audio-label { font-size:14px; font-family:'Georgia',serif; color:#ccc; min-width:20px; text-align:center; }
+  #audio-trans { font-size:10px; font-family:'Helvetica Neue',sans-serif; color:#888; letter-spacing:0.05em; min-width:18px; }
+  #audio-placeholder {
+    display:flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:7px;
+    background:rgba(255,255,255,0.06);
+    border:1px dashed rgba(255,255,255,0.14);
+  }
+  #audio-placeholder svg { opacity:0.4; }
+  #audio-placeholder span { font-size:8px; font-family:'Helvetica Neue',sans-serif; letter-spacing:0.08em; color:#666; text-transform:uppercase; }
+
+  /* ══ Tooltip ══ */
+  .tooltip {
+    position: fixed;
+    background: #1a1a1a;
+    color: #e8e8e8;
+    font-size: 11px;
+    font-family: 'Helvetica Neue', sans-serif;
+    padding: 7px 12px;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 220px;
+    line-height: 1.5;
+    z-index: 999;
+    white-space: pre-wrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom: none;
+    border-top-color: #1a1a1a;
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="root">
+
+  <!-- ══ ЛЕВАЯ ПАНЕЛЬ: САНДХИ ══ -->
+  <div id="panel-sandhi">
+    <span class="panel-title">Правила сандхи</span>
+    <div id="sandhi-body"></div>
+
+    <!-- Заглушка-контекст между карточками и гуна -->
+    <div id="group-stub">
+      <div id="stub-label"></div>
+      <div id="stub-sub" style="display:none"></div>
+    </div>
+
+    <div id="guna-box">
+      <div class="guna-title">Гуна · Вриддхи</div>
+      <table class="guna-table">
+        <tr>
+          <td class="gt-h"></td>
+          <td class="gt-h">a</td><td class="gt-h">i·ī</td>
+          <td class="gt-h">u·ū</td><td class="gt-h">ṛ·ṝ</td>
+          <td class="gt-h">ḷ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">слаб</td>
+          <td>a</td><td>i</td><td>u</td><td>ṛ</td><td>ḷ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">гуна</td>
+          <td>a</td><td>e</td><td>o</td><td>ar</td><td>al</td>
+        </tr>
+        <tr>
+          <td class="gt-r">вридд</td>
+          <td>ā</td><td>āi</td><td>āu</td><td>ār</td><td>āl</td>
+        </tr>
+      </table>
+      <div class="guna-note">Вриддхи → гуна: никогда</div>
+      <div class="guna-subtitle">Обратные</div>
+      <table class="guna-table">
+        <tr>
+          <td class="gt-h"></td>
+          <td class="gt-h">i</td><td class="gt-h">u</td>
+          <td class="gt-h">ṛ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">слаб</td>
+          <td>i</td><td>u</td><td>ṛ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">гуна</td>
+          <td>ya</td><td>va</td><td>ra</td>
+        </tr>
+        <tr>
+          <td class="gt-r">вридд</td>
+          <td>yā</td><td>vā</td><td>rā</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ ЦЕНТР ══ -->
+  <div id="center">
+
+    <!-- 1/5 — полный текст правила -->
+    <div id="rule-display">
+      <div id="rd-empty">← выберите правило</div>
+      <div id="rd-num"  style="display:none"></div>
+      <div id="rd-text-wrap" style="display:none"><div id="rd-text"></div></div>
+    </div>
+
+    <!-- Зона 2 — примеры-пилюли -->
+    <div id="letter-picker">
+      <span style="font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>
+    </div>
+
+    <!-- 2/5 — анимация слияния -->
+    <div id="animation-area">
+      <div id="anim-empty">← выберите пример выше</div>
+      <div id="anim-wrap" style="display:none;flex-direction:column;align-items:center;gap:12px">
+        <div id="anim-tiles" style="position:relative"></div>
+        <button id="anim-play-btn" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 20px">▶ запустить анимацию</button>
+      </div>
+    </div>
+
+    <!-- 1/5 — упражнения к правилу -->
+    <div id="exercises-zone">
+      <div id="ez-label">Упражнения</div>
+      <div id="ez-chips">
+        <span id="ez-empty">← выберите правило</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ ПРАВАЯ ПАНЕЛЬ: АЛФАВИТ ══ -->
+  <div id="panel-alpha">
+    <span class="panel-title">Звуки санскрита</span>
+    <div id="alpha-wrap"></div>
+    <div id="alpha-desc"></div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ═══════════════════ ДАННЫЕ САНДХИ ═══════════════════ */
+const SECTIONS = [
+  {
+    id: 'internal',
+    label: 'Внутренние сандхи · гласные и согласные',
+    color: '#A8D878',
+    cards: [
+      /* ── Гласные 1–7 ── */
+      { n:1,  g:'c1', hint:"а/ā + дифтонг → долгий дифтонг (W127)",
+        emeno:"Сочетание a или ā с дифтонгом заменяется одной морфо-фонемой (звуком), соответствующим долгим дифтонгом (W127). Например: deva- «бог» + au (окончание du. N.Acc.V.) → devau «(оба) бога»." },
+      { n:2,  g:'c1', hint:"а/ā + простой (кроме а/ā) → guṇa добавляемого (W127)",
+        emeno:"Сочетание a или ā с простым гласным (кроме a, ā) заменяется на guṇa добавляемого гласного (W127). Например: bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»." },
+      { n:3,  g:'c1', hint:"дифтонг + гласный → а/ā + полугласный (W131)",
+        emeno:"Дифтонг перед гласным заменяется на краткий или долгий a (в зависимости от того, долгий или краткий был дифтонг) и соответствующим полугласным (W131). Например: agni- «огонь» + guṇa + -as → agnayas «огни»; nau- «лодка» + ā → nāvā «лодкой»." },
+      { n:4,  g:'c1', hint:"i/u односложного корня/основы + гласный → iy/uv (W129a)",
+        emeno:"Финальный краткий или долгий i и u односложного корня или основы перед гласным заменяется на iy, uv соответственно (W129a). Правило также применимо для суффикса -nu- основы настоящего времени. Например: strī- «женщина» + ā → striyā «женщиной»; bhū- «земля» + ā → bhuvā «землёй»." },
+      { n:5,  g:'c1', hint:"конечный ṛ: после губной → ur/ūr; иначе → ir/īr (W242)",
+        emeno:"Финальный звук ṛ корня или односложной основы (кроме nṛ- «человек») после губного согласного и перед гласным → ur, не перед гласным → ūr; после остальных согласных перед гласным → ir, не перед гласным → īr (W242). Например: pṛ- «город» + ā → purā «городом»; kṛ- «рассыпать» + ati → kirati «рассыпает», + yate → kīryate «рассыпается»." },
+      { n:6,  g:'c1', hint:"r, i/u (вне пр.4) + иной гласный → полугласный (W129)",
+        emeno:"Краткий ṛ и другие виды кратких и долгих i и u, не попадающих под действие правила 4, перед всеми гласными заменяются соответствующими полугласными (W129). Например: pitṛ- «отец» + os → pitros «(двух) отцов»; juhu- «возливать» + ati → juhvati «возливают»." },
+      { n:7,  g:'c1', hint:"два одинаковых простых гласных → долгий (W126)",
+        emeno:"Сочетание простого гласного с таким же по качеству (в долгих или кратких вариантах) заменяется единой соответствующей морфофонемой (W126). Например: a (аугмент) + as- «быть» + īt → āsīt «был»; u + ucus → ūcus «говорили»." },
+      /* ── Согласные 8–40 ── */
+      { n:8,  g:'c2', hint:"конечный r + взрывной (часть основы) — без пр.9 (W150b)",
+        emeno:"На конце слова сочетание r + смычный не подчиняется правилу 9, если смычный является частью основы (W150b). Например: suhārd «друг» + s → suhārd → suhārt (31)." },
+      { n:9,  g:'c2', hint:"конечный кластер → первая согл.; остальные исч. (W150)",
+        emeno:"Если на конце слова оказывается сочетание согласных, то остаётся только первый из них (W150), который потом в предложении взаимодействует со следующим словом по внешним сандхам. Например: bharant- «несущий» + s → bharan «несущий»." },
+      { n:10, g:'c2', hint:"ch после гласного → cch (W227)",
+        emeno:"Звук ch, попадая между двух гласных, заменяется на cch (W227). Например: gach- «идти» + ati → gacchati «идёт»." },
+      { n:11, g:'c2', hint:"m перед v или m → n (W212a)",
+        emeno:"Звук m перед v или m заменяется на v (W212a). Например: agam- + va → aganva «шли (мы оба)»; + ma → aganma «шли (мы)»." },
+      { n:12, g:'c2', hint:"s между двумя смычными → 0 (W233c-f)",
+        emeno:"Звук s, попадая между двух смычных, исчезает (W233c-f). Например: acchid- + s-ta → acchitta «отрезал»." },
+      { n:13, g:'c2', hint:"s перед окончаниями → ḥ (W111a)",
+        emeno:"Звук s перед окончаниями заменяется на ḥ (W111a). Например: havis- «жертва» + su → haviḥ + su → haviḥsu «в жертвах»." },
+      { n:14, g:'c2', hint:"s перед s (определённые формы) → t (W167)",
+        emeno:"В определённых формах s перед s заменяется на t (W167). Например: vas- «обитать» + syati → vatsyati «будет жить»." },
+      { n:15, g:'c2', hint:"s перед dh → 0 (W166)",
+        emeno:"Звук s перед dh заменяется нулём (W166). Например: śās- «учить» + dhi → śādhi «учи»." },
+      { n:16, g:'c2', hint:"h корня han-: при выпадении гласного → gh (W2161)",
+        emeno:"Звук h в корне han- «гнать» заменяется на gh, если корневой гласный a исчезает по морфологическим правилам (W2161). Например: han + anti → ghnanti «гонят»." },
+      { n:17, g:'c3', hint:"h в nah- «связывать» → dh (W223g)",
+        emeno:"Звук h в корне nah- «связывать» рассматривается как dh (W223g). Например: nah- + syati → nadh- + syati → (31, 33) natsyati «свяжет»." },
+      { n:18, g:'c3', hint:"h в d-корнях, uṣṇih-, druh-, snih-, muh- → gh (W222a)",
+        emeno:"Звук h рассматривается как gh в корнях, начинающихся с d, в существительном uṣṇih- и опционально в корнях druh-, snih-, muh- (W222a). Например: duh- «доить» + -ta- → dugdha- «доеная»." },
+      { n:19, g:'c3', hint:"h + t/th/dh → ḍh + удлинение; иначе → k/ṭ",
+        emeno:"Обычно звук h подчиняется следующим правилам: (a) h → ḍh при сочетании с t, th, dh; гласные a, i, u перед h удлиняются; vah-, sah- меняют a на o. (b) h перед остальными согласными или нулём → k при спряжении, ṭ при склонении. Например: lih- + ta → līḍha «лизаный»; lih- + syati → lekṣyati «будет лизать»." },
+      { n:20, g:'c3', hint:"kṣ в jakṣ- «есть» → gh (W221a, 233f)",
+        emeno:"Сочетание kṣ в глаголе jakṣ- «есть» рассматривается как gh (W221a, 233f). Например: jakṣ- + ta → jagdha- «съеденный»." },
+      { n:21, g:'c3', hint:"прочие kṣ: перед 0/s → k; в именных → ṭ; перед t → ṣ (W229b-c)",
+        emeno:"Обычно сочетание kṣ подчиняется следующим правилам (W229b-c): (a) перед нулём или s → k в гл. формах; (b) → ṭ в именных формах; (c) перед t → ṣ; (d) перед остальными согласными → ṭ. Например: takṣ- + syati → takṣyati; takṣ- + ta → taṣṭa-." },
+      { n:22, g:'c3', hint:"ch (только от prach- «просить») — как kṣ",
+        emeno:"Аналогично ch (единственно возможные примеры — с корнем prach- «просить»). Например: prakṣyati «спросит»; pṛṣṭvā «спросив»." },
+      { n:23, g:'c3', hint:"śc (только от vraśc- «разрубать») — как kṣ (W221b)",
+        emeno:"Аналогично śc (единственно возможные примеры — с корнем vraśc- «разрубать», W221b). Например: vrakṣyati «отрежет»; vṛṣṭvā «отрезав»." },
+      { n:24, g:'c3', hint:"ṣ — как kṣ (W226)",
+        emeno:"Аналогично ṣ (W226). Например: dviṣ- «враждовать»: dvekṣyati «будет враждовать»; dviṭ «враг» (N.sg.); dviṣṭa- «ненавистный»." },
+      { n:25, g:'c3', hint:"ś — как kṣ; diś/dṛś/mṛś/spṛś → k в конечной позиции (W218)",
+        emeno:"Аналогично ś (W218), но в корнях diś-, dṛś-, mṛś-, spṛś- и опционально naś- звук ś → k, когда он последний или при склонении перед окончаниями с s и bh (W218a). Например: viś- «племя» — viṭsu; diś- «направление» — dikṣu." },
+      { n:26, g:'c3', hint:"j (bhrāj-, mṛj-, yaj-, rāj-, sṛj-, parivrāj-) — как kṣ",
+        emeno:"Аналогично (с kṣ) для j в корнях bhṛj-, bhrāj-, mṛj-, yaj-, rāj-, sṛj- и сущ. parivrāj-. Но не в ṛtvij- и sraj-. Например: yakṣyati «совершит жертвоприношение»; parivrāṭ «нищий» (N.sg.); mṛṣṭvā «натерев»." },
+      { n:27, g:'c3', hint:"jh → k (W220b; правило без примеров!)",
+        emeno:"Звук jh рассматривается как k (W220b; правило без примеров!)." },
+      { n:28, g:'c3', hint:"c → k (W217)",
+        emeno:"Звук c обычно рассматривается как k (W217). Например: vac- «говорить»: vakṣyati «скажет»; ukta- «сказано»." },
+      { n:29, g:'c3', hint:"j → g (кроме пр.26); перед назальными суффиксами (упр. 15)",
+        emeno:"Звук j обычно (помимо правила 26) рассматривается как g, а также перед некоторыми суффиксами, начинающимися с назального звука (см. упражнение 15). Например: yuj- «соединять»: yokṣyati «соединит»; yukta- «запряжён»." },
+      { n:30, g:'c2', hint:"t/th → звонк. придых. зубной после всех звонк. придых. (W160)",
+        emeno:"Звуки t и th заменяются на звонкие придыхательные зубные смычные после всех звонких придыхательных смычных (W160). Например: budh- «бдеть» + -ta- → buddha- «пробуждённый» (см. 33); labh- + -tṛ- → labdhṛ- «получатель»." },
+      { n:31, g:'c2', hint:"звонкий смычный перед глухим/паузой → глухой (W141, 159)",
+        emeno:"Звонкие смычные согласные перед глухими согласными или нулём становятся соответствующими глухими (W141, 159). Например: vid- «знать»: vetsi «знаешь»; budh- + syate → bhotsyate «будет бдеть»." },
+      { n:32, g:'c2', hint:"глухой смычный перед звонким → звонкий (W159)",
+        emeno:"Глухой смычный перед звонким заменяется соответствующим звонким смычным (W159). Например: śak- «мочь» + dhi → śagdhi «помоги»; diś- + bhyas → digbhyas «со сторон»." },
+      { n:33, g:'c2', hint:"придыхательный + смычный/шипящий/пауза → непридых. (W141, 153)",
+        emeno:"Придыхательный смычный перед смычным, шипящим или нулём теряет придыхание (W141, 153). Например: likh- «писать» + s → citralik «художник»; budh- + syate → bhotsyate «проснётся»." },
+      { n:34, g:'c2', hint:"Закон Бартоломэ: придыхание переходит на нач. согл. корня (W155)",
+        emeno:"В определённых корнях при потере придыхания конечным согласным (правило 33), придыхание переходит на первый согласный корня (W155). Корни: dah-, dih-, duh-, druh-, dṛmp-, guh-, bandh-, bādh-, budh-. Например: adhok «подоен»; bhotsyate «проснётся»; dogdhi «дои»." },
+      { n:35, g:'c2', hint:"назальный + шипящий → анусвара (W204)",
+        emeno:"Назальный согласный перед шипящими заменятся анусварой (W204). Например: man- «мнить»: maṃsyate «подумает»." },
+      { n:36, g:'c2', hint:"s → ṣ после гласного (не а), k, r, l — правило RUKI (W180-3)",
+        emeno:"Звук s после всех гласных, кроме a и ā, и после k, r, l меняется на ṣ (W180-3). Правило не применяется, если s последний или после него r. Например: agni- + su → agniṣu «среди огней»; vāk- + su → vākṣu «среди голосов»." },
+      { n:37, g:'c2', hint:"n → ṇ после r/ṣ/ṛ/ṝ без промеж. зубных/нёбных (W189)",
+        emeno:"Звук n после r, ṣ, ṛ, ṝ переходит в ṇ, если после него гласный, полугласный или назальный (W189). Правило не применяется при наличии промежуточного средненёбного, церебрального или зубного (кроме y). Например: nara- + nām → narāṇām «у людей»; brahman- + ya → brahmaṇya «благочестивый»." },
+      { n:38, g:'c2', hint:"после церебрального: зубной смычный/носовой → церебральный (W197-8)",
+        emeno:"Зубной смычный и назальный после церебральных (но не смычный после r) переходит в соответствующий церебральный (W197-8). Например: dviṣ- + ta → dviṣṭa «ненавидимый»; ji- + snu → jiṣṇu- «победитель»." },
+      { n:39, g:'c2', hint:"назальный + смычный → назальный того же ряда (W212)",
+        emeno:"Назальный звук перед смычным заменяется на тот назальный, который соответствует месту произношения смычного (W212). Например: yuj- + -n- + mas → yuñjmas «соединяем»; yu-n-gdhi → yuṅgdhi «соедини»." },
+      { n:40, g:'c2', hint:"n после средненёбного → ñ (W201)",
+        emeno:"Звук n заменяется на ñ после средненёбных звуков (W201). Например: yaj- + -na- → yajña «жертвоприношение»." },
+    ]
+  },
+  {
+    id: 'external',
+    label: 'Внешние сандхи · гласные и согласные',
+    color: '#C5B0D8',
+    cards: [
+      /* ── Гласные 41–49 ── */
+      { n:41, g:'c4', hint:"прагрхья: нет сандхи после -ī/-ū/-e дв.ч., amī, межд. (W138)",
+        emeno:"После окончаний двойственного числа -ī, -ū, -e, после формы N. pl. m местоимения amī, после междометий из одного гласного правила сандхи не применяются (prāgṛhya; W138, P1.1.11-19). Например: yajete ubhau «оба совершают жертвоприношение»." },
+      { n:42, g:'c4', hint:"а/ā + дифтонг → долгий дифтонг (W127, P6.1.104; ср. пр.1)",
+        emeno:"Сочетание a или ā с дифтонгом заменяется одной морфофонемой, соответствующей долгому дифтонгу (W127, P6.1.104; ср. правило 1). Например: tatra eti → tatraiti «туда идёт»." },
+      { n:43, g:'c4', hint:"а/ā + простой (кроме а/ā) → guṇa добавляемого (W127, P6.1.87; ср. пр.2)",
+        emeno:"Сочетание a или ā с простым гласным (кроме a, ā) заменяется на guṇa добавляемого гласного (ср. правило 2; W127, P6.1.87). Например: tatra «туда» + īhate «стремится» → tatrehate; tathā + uktam → tathoktam «так сказано»; brahma- + ṛṣi → brahmarṣi." },
+      { n:44, g:'c4', hint:"два одинаковых гласных → долгий (W126, P6.1.101; ср. пр.7)",
+        emeno:"Сочетание одинаковых простых гласных в долгих и кратких вариациях заменяется единым долгим гласным (ср. правило 7; W126, P6.1.101). Например: tatra + asti → tatrāsti «там есть»; asti + iha → astīha «здесь есть»." },
+      { n:45, g:'c4', hint:"простой + иной гласный → полугласный (W129, P6.1.77)",
+        emeno:"Во всех прочих случаях простой гласный перед другим простым гласным заменяется на соответствующий полугласный (W129, P6.1.77). Например: asti «есть» + atra «здесь» → astyatra; iti «так» + uktam «сказано» → ityuktam." },
+      { n:46, g:'c4', hint:"после краткого дифтонга нач. а → 0 (аваграха; W135, P6.1.109)",
+        emeno:"После кратких дифтонгов звук a заменяется нулём (avagraha '; W135, P6.1.109). Например: vane «в лесу» + asti → vane'sti «есть в лесу»." },
+      { n:47, g:'c4', hint:"-e + гласный (не а) → -a; -ai + гласный → -ā (W133, P6.1.78)",
+        emeno:"Звук e перед всеми гласными, кроме a, и звук ai перед всеми гласными заменяются на a и ā соответственно (W133, P6.1.78, 8.3.19). Например: vane + iha → vana iha «здесь в лесу»; tasmai + atra → tasmā atra «ему сюда»." },
+      { n:48, g:'c4', hint:"-o + гласный (не а) → -av; -au + гласный → -āv (W134b)",
+        emeno:"Звук o перед всеми гласными, кроме a, и звук au перед всеми гласными заменяются на av и āv соответственно (W134b). Например: tau «они оба» + atra «здесь» → tāvatra «они оба здесь»." },
+      { n:49, g:'c4', hint:"ch → cch после ā, mā и кратких гласных (P6.1.74; ср. пр.10)",
+        emeno:"Звук ch заменяется на cch после приставки ā, отрицания mā и кратких гласных (P6.1.74); после долгих гласных — опционально (ср. правило 10). Например: tava «у тебя» + chāyā «тень» → tava cchāyā «твоя тень»." },
+      /* ── Висарга 50–59 ── */
+      { n:50, g:'c5', hint:"-as + а → -o + аваграха (W175a, P6.1.113; ср. пр.46)",
+        emeno:"Сочетание финального -as с начальным a-: -as → -o, а a- → аваграха (ср. правило 46; W175a, P6.1.113). Например: devas «бог» + asti → devo'sti «бог есть»." },
+      { n:51, g:'c5', hint:"-as + гласный (не а) → -a (s исч.)",
+        emeno:"Финальное -as трансформируется в -a перед всеми гласными, кроме a-. Например: devas + āste → deva āste «бог сидит»; devas + iha → deva iha «бог здесь»." },
+      { n:52, g:'c5', hint:"-s в sas и eṣas → 0 перед согл. (W176a, P6.1.132)",
+        emeno:"Финальный -s у местоимений sas «он, тот» и eṣas «этот» (m N. sg.) исчезает перед всеми согласными (W176a, P6.1.132). Например: sas gacchati → sa gacchati «он идёт»; eṣas brāhmaṇaḥ → eṣa brāhmaṇaḥ «этот брахман»." },
+      { n:53, g:'c5', hint:"-as/-aḥ перед звонк. согл. → -o (W175a, P6.1.114)",
+        emeno:"Во всех остальных случаях -as и -aḥ (ср. правило 13) перед звонкими согласными заменяется на -o (W175a, P6.1.114). Например: devas gacchati → devo gacchati «бог идёт»; manaḥ + bhis → manobhis «мыслями»." },
+      { n:54, g:'c5', hint:"-s в bhos → 0 перед звонкими (W174b, P8.3.17)",
+        emeno:"Звук -s слова bhos «эй, послушай» исчезает перед звонкими звуками (W174b, P8.3.17). Например: bhos bhos deva → bho bho deva «Эй! Эй бог!»." },
+      { n:55, g:'c5', hint:"-ās + звонкий → -ā (s исч.; W177)",
+        emeno:"Финальный -ās переходит в -ā перед всеми звонкими звуками (W177). Например: devās āsate → devā āsate «боги сидят»." },
+      { n:56, g:'c5', hint:"-s/-r + r → 0; предш. краткий гласный → долгий (W179)",
+        emeno:"Если второй компонент начинается с r, то финальные -s и -r первого исчезают; если перед ними был краткий гласный, то он удлиняется (W179, P8.3.15, 6.3.111). Например: agniḥ + rocate → agnī rocate «огонь светит»; punar + rocate → punā rocate «снова светит»." },
+      { n:57, g:'c5', hint:"-s/-r → висарга; затем пр.58–59 (W170a, 178a; P8.3.15)",
+        emeno:"Во всех остальных случаях финальные -s и -r заменяются висаргой, и применяются правила 58, 59 (W170a, 178a; P8.3.15). Например: agnis → agniḥ «огонь» (m N. sg.); punar → punaḥ «снова»." },
+      { n:58, g:'c5', hint:"висарга + звонкий → r (W174, P8.2.66)",
+        emeno:"Висарга перед звонкими звуками переходит в -r (W174, P8.2.66). Например: agniḥ + asti → agnirasti «огонь есть»; punaḥ + gacchati → punargacchati «снова идёт»." },
+      { n:59, g:'c5', hint:"висарга + глух. нёб./цер./зубн. → сибилянт (W170c; P8.3.38-39)",
+        emeno:"Висарга перед глухими средненёбными (c, ch), церебральными (ṭ, ṭh) и зубными (t, th) смычными переходит в соответствующий шипящий (W170c, 178a; P8.3.38-39). Например: tataḥ + ca → tataśca «и оттого»; cakṣuḥ + te → cakṣuste «твой глаз»." },
+      /* ── Носовые 60–65 ── */
+      { n:60, g:'c5', hint:"-m + согл. → анусвара ṃ (W213i; P8.3.23)",
+        emeno:"Звук -m перед согласными переходит в анусвару ṃ (W213i; P8.3.23). Например: devam «бога» + paśyati → devaṃ paśyati «видит бога»." },
+      { n:61, g:'c5', hint:"конечный носовой после кратк. гласного + гласный → удвоение (W210; P8.3.32)",
+        emeno:"После простого краткого гласного финальный средненёбный (ñ), церебральный (ṇ) или зубной (n) назальный удваивается, если следующий компонент начинается с гласного (W210; P8.3.32). Например: hasan «смеющийся» + agacchat «шёл» → hasannagacchat «шёл смеющийся»." },
+      { n:62, g:'c5', hint:"-n + глух. нёб./цер./зубн. → ṃ + сибилянт (W208; P8.3.7)",
+        emeno:"Финальный -n перед глухими средненёбными (c, ch), церебральными (ṭ, ṭh) и зубными (t, th) смычными переходит в анусвару и соответствующий шипящий (W208; P8.3.7). Например: aśvān + corayati → aśvāṃścorayati «ворует коней»; bhavān + tvarati → bhavāṃstvarati «господин торопится»." },
+      { n:63, g:'c5', hint:"-n + звонк. нёб./цер./зубн. → ñ/ṇ/n (W202b; P8.3.24)",
+        emeno:"Финальный -n перед звонкими средненёбными (j, jh), церебральными (ḍ, ḍh) и зубными (d, dh) смычными переходит в соответствующий назальный (ñ, ṇ, n; W202b, 205b; P8.3.24, 8.4.59). Например: devān + jayati «побеждает» → devāñjayati «побеждает богов»." },
+      { n:64, g:'c5', hint:"-n + ś → ñch (W203, P8.3.31)",
+        emeno:"Сочетание -n + ś- соединяется в ñch (W203, P8.3.31). Например: devān + śṛṇoti «слышит» → devāñchṛṇoti «слышит богов»." },
+      { n:65, g:'c5', hint:"-n + l → ṃl; l удваивается (W206)",
+        emeno:"Финальный -n перед l- заменяется на анусвару, а l удваивается (W206). Например: aśvān + labhate «получает» → aśvāṃllabhate «получает коней»." },
+      /* ── Взрывные 66–71 ── */
+      { n:66, g:'c5', hint:"-t + ś → -t + ch (W203; P8.4.63)",
+        emeno:"После -t звук -ś меняется на ch- (W203; P8.4.63 и др.). Например: tat + śṛṇoti → tat chṛṇoti → (67) tacchṛṇoti «он слышит»." },
+      { n:67, g:'c5', hint:"-t + нёб./цер. глухой → c/ṭ (W202a, 199a; P8.4.40-41)",
+        emeno:"Звук -t перед средненёбным или ретрофлексным смычным меняется на глухой смычный соответственно (на ṭ или c; W202a, 199a; P8.4.40-41). Например: tat + ca → tacca «и то»; tat + ṭīkā → taṭṭīkā «комментарий того»; tat + jalam → tajjalam «та вода» (см. правило 71)." },
+      { n:68, g:'c5', hint:"-t + l → -l (W162; P8.4.60)",
+        emeno:"Звук -t перед -l меняется на -l (W162; P8.4.60). Например: tat + labhate → tallabhate «получает то»." },
+      { n:69, g:'c5', hint:"смычный + носовой → носовой того же ряда (W161; P8.4.45)",
+        emeno:"Смычный перед назальным меняется на назальный, соответствующий месту произношения первоначального смычного (W161; P8.4.45). Например: vāk «голос» + mama «у меня» → vāṅmama «мой голос»; tat + mitram «друг» → tanmitram «тот друг»." },
+      { n:70, g:'c5', hint:"смычный + h → звонк. придых. того же ряда (W163; P8.4.62)",
+        emeno:"Звук h- после смычного меняется на звонкий придыхательный, соответствующий по месту произношения первому смычному (W163, P8.4.62). Например: tat + hiraṇyam «золото» → tat + dhiraṇyam → taddhiraṇyam «то золото»." },
+      { n:71, g:'c5', hint:"глухой смычный + звонкий → звонкий непридых. (W157c, 159; P8.2.39)",
+        emeno:"Всякий глухой смычный перед звонким звуком изменяется в соответствующий звонкий непридыхательный смычный (W157c, 159; P8.2.39). Это правило применимо и к правилам 67 и 70. Например: vāk + asti → vāgasti «голос есть»; ap- «вода» + ja «рождённый» → abja «рождённый в воде, лотос»." },
+    ]
+  }
+];
+
+
+/* ═══════════════════ ОБЩЕЕ ═══════════════════ */
+const CARD = 40;
+const GAP  = 2;
+const PER_ROW = 8;
+
+let pinnedCardS = null;
+let pinnedCardA = null;
+let lastMouseX = 0, lastMouseY = 0, lastMouseT = 0;
+
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(card, hint) {
+  tooltip.textContent = hint;
+  tooltip.classList.add('show');
+  const rect = card.getBoundingClientRect();
+  const tw = tooltip.offsetWidth;
+  let left = rect.left + rect.width / 2 - tw / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+  tooltip.style.left = left + 'px';
+  tooltip.style.top  = (rect.top - tooltip.offsetHeight - 10 + window.scrollY) + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playFlip() {
+  /* звук временно отключён — заглушка, изменим позже */
+}
+
+document.addEventListener('mousemove', e => {
+  const now = Date.now(), dt = now - lastMouseT;
+  if (dt < 16) return;
+  lastMouseX = e.clientX; lastMouseY = e.clientY; lastMouseT = now;
+  /* пин не снимается при движении мыши */
+});
+
+document.addEventListener('click', () => {
+  /* пин сандхи снимается только кликом на другую карточку, не на фон */
+  if (pinnedCardA) { pinnedCardA.classList.remove('pinned','hovered'); pinnedCardA = null; hideAudioPanel(); hideTooltip(); }
+});
+
+/* ═══════════════════ ЦИТАТА ═══════════════════ */
+const quoteBox   = document.getElementById('quote-box');
+const quoteEmpty = document.getElementById('quote-empty');
+const quoteNum   = document.getElementById('quote-num');
+const quoteText  = document.getElementById('quote-text');
+
+function showQuote(n, hint) {
+  quoteEmpty.style.display = 'none';
+  quoteNum.style.display   = 'block';
+  quoteText.style.display  = 'block';
+  quoteNum.textContent  = 'Правило ' + n;
+  quoteText.textContent = hint;
+}
+function hideQuote() {
+  quoteEmpty.style.display = 'block';
+  quoteNum.style.display   = 'none';
+  quoteText.style.display  = 'none';
+}
+
+/* ═══════════════════ ПРИМЕРЫ К ПРАВИЛАМ (доп. к встроенным в текст) ═══════════════════ */
+const EXAMPLES = {};
+
+/* ═══════════════════ УПРАЖНЕНИЯ ═══════════════════ */
+/* Ключ = номер правила, значение = массив номеров упражнений из Эмено. */
+const EXERCISES = {
+  1:  [1,2,3,6,9],
+  2:  [1,2,3,6,9],
+  3:  [1,2,3,6,9],
+  4:  [1,2,3,5,6,9,16,17,18,19],
+  5:  [1,3,5,6,8,9,16,17,18,19],
+  6:  [3,6,7,8,16,17,18,19],
+  7:  [3,7,8,16,17],
+  8:  [4,5,6,7,8,9,16,17,18,19],
+  9:  [4,5],
+  10: [6,7,9,10],
+  13: [7],
+  14: [5,7,14,19,22,25],
+  15: [5,7,14,22,25],
+  16: [5,16,17],
+  17: [5,10,16,17,18,19],
+  18: [5,10,18],
+  19: [5,10,19,22,25,26],
+  20: [5,10,19,22,26],
+  21: [5,10,19,25,26],
+  22: [19,22,25,26],
+  23: [19,22,25,26],
+  24: [7,19,24,25,26],
+  25: [7,19,24,25,26],
+  26: [7,19,24,25,26],
+  28: [10,15,19,20,24,25,26],
+  29: [15],
+  30: [5,10],
+  31: [4,5,10,15,16,17,18,19,25],
+  32: [5,10],
+  33: [5,10,15,19,22,25],
+  34: [5,10],
+  35: [8],
+  36: [7,16,17,26],
+  37: [8,11],
+  38: [7,10,15],
+  39: [10,15],
+  40: [10,15],
+  41: [11],
+  42: [11,12,13],
+  43: [11,12,13],
+  44: [11,12,13],
+  45: [11,12,13],
+  46: [11,12,13],
+  47: [11,12,13],
+  48: [11,12,13],
+  49: [14],
+  50: [12,13],
+  51: [12,13],
+  52: [12,13],
+  53: [12,13],
+  54: [12,13],
+  55: [12,13],
+  56: [12,13],
+  57: [12,13],
+  58: [12,13],
+  59: [12,13],
+  60: [11,12,13],
+  61: [13],
+  62: [13],
+  63: [13],
+  64: [13],
+  65: [13],
+  66: [14],
+  67: [14],
+  68: [14],
+  69: [14],
+  70: [14],
+  71: [14],
+};
+
+/* ═══════════════════ ЦЕНТР ═══════════════════ */
+const rdEmpty    = document.getElementById('rd-empty');
+const rdNum      = document.getElementById('rd-num');
+const rdText     = document.getElementById('rd-text');
+const rdTextWrap  = document.getElementById('rd-text-wrap');
+const groupStub   = document.getElementById('group-stub');
+const stubLabel   = document.getElementById('stub-label');
+const stubSub     = document.getElementById('stub-sub');
+
+const lpPicker   = document.getElementById('letter-picker');
+const ezLabel    = document.getElementById('ez-label');
+const ezChips    = document.getElementById('ez-chips');
+
+/* ═══════════════════ ПОДСВЕТКА АЛФАВИТА ПО ПРАВИЛУ ═══════════════════ */
+let _currentAlphaHL = [];
+
+function highlightRuleAlpha(ruleN) {
+  clearRuleAlpha();
+  const sets = RULE_ALPHA[ruleN];
+  if (!sets) return;
+  (sets[0] || []).forEach(id => {
+    const el = document.getElementById('ac-' + id);
+    if (el) { el.classList.add('rule-hl-0'); console.log('G0 added to', 'ac-'+id, el); }
+    else console.warn('G0 NOT FOUND: ac-'+id);
+  });
+  (sets[1] || []).forEach(id => {
+    const el = document.getElementById('ac-' + id);
+    if (el && !el.classList.contains('rule-hl-0')) el.classList.add('rule-hl-1');
+  });
+  (sets[2] || []).forEach(id => {
+    const el = document.getElementById('ac-' + id);
+    if (el && !el.classList.contains('rule-hl-0') && !el.classList.contains('rule-hl-1'))
+      el.classList.add('rule-hl-2');
+  });
+}
+
+function clearRuleAlpha() {
+  document.querySelectorAll('.rule-hl-0,.rule-hl-1,.rule-hl-2').forEach(el =>
+    el.classList.remove('rule-hl-0','rule-hl-1','rule-hl-2'));
+}
+
+/* ═══════════════════ ПАРСИНГ ПРАВИЛ ═══════════════════ */
+function parseEmeno(emeno) {
+  const sep = emeno.indexOf('Например:');
+  if (sep === -1) return { rule: emeno.trim(), examples: [] };
+  const ruleText = emeno.slice(0, sep).trim();
+  const exText   = emeno.slice(sep + 'Например:'.length).trim();
+  const wMatch = ruleText.match(/\([^)]*[WP]\d[^)]*\)/g) || [];
+  const wRefs  = wMatch.map(w => w.replace(/^\(|\)$/g,'')).join('; ');
+  const ruleClean = ruleText.replace(/\s*\([^)]*[WP]\d[^)]*\)/g, '').trim();
+  const examples = exText ? exText.split(/;\s+/).map(e => e.trim()).filter(Boolean) : [];
+  return { rule: ruleClean, wRefs, examples };
+}
+
+/* ═══════════════════ ЦЕНТРАЛЬНЫЕ ПАНЕЛИ ═══════════════════ */
+function showCenter(cd) {
+  const parsed = parseEmeno(cd.emeno);
+
+  highlightRuleAlpha(cd.n);
+
+  rdEmpty.style.display    = 'none';
+  rdNum.style.display      = 'block';
+  rdNum.textContent        = 'ПРАВИЛО ' + cd.n + '  ·  ' + getRuleType(cd.n).toUpperCase();
+  rdTextWrap.className     = 'rd-bg-' + cd.g;
+  rdTextWrap.style.display = 'block';
+  rdText.style.display     = 'block';
+  rdText.textContent       = parsed.rule;
+
+  updateStub(cd, parsed.wRefs);
+
+  lpPicker.innerHTML = '';
+  const exData = EXAMPLES[cd.n] || [];
+  if (exData.length === 0 && parsed.examples.length === 0) {
+    const ph = document.createElement('span');
+    ph.style.cssText = 'font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;';
+    ph.textContent = '— примеры не добавлены —';
+    lpPicker.appendChild(ph);
+  } else {
+    exData.forEach(ex => {
+      const chip = document.createElement('span');
+      chip.className = 'eg-chip ' + cd.g;
+      chip.textContent = ex.desc;
+      chip.addEventListener('click', () => {
+        lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+      lpPicker.appendChild(chip);
+    });
+    parsed.examples.forEach(txt => {
+      const cleanTxt = txt.replace(/\.$/, '').trim();
+      const alreadyCovered = exData.some(e => e.desc && cleanTxt.includes(e.desc.split('→')[0].trim()));
+      if (!alreadyCovered) {
+        const chip = document.createElement('span');
+        chip.className = 'eg-chip ' + cd.g;
+        chip.textContent = cleanTxt;
+        lpPicker.appendChild(chip);
+      }
+    });
+  }
+
+  ezLabel.textContent = 'Упражнения · Правило ' + cd.n;
+  ezChips.innerHTML = '';
+  const exList = EXERCISES[cd.n] || [];
+  if (exList.length === 0) {
+    const ph = document.createElement('span');
+    ph.id = 'ez-empty';
+    ph.textContent = '— упражнения не добавлены —';
+    ezChips.appendChild(ph);
+  } else {
+    exList.forEach(ex => {
+      const chip = document.createElement('span');
+      chip.className = 'ex-chip ' + cd.g;
+      chip.textContent = 'Упр. ' + ex;
+      chip.title = 'Упражнение ' + ex + ' · ' + getRuleType(cd.n);
+      chip.addEventListener('click', e => { e.stopPropagation(); });
+      ezChips.appendChild(chip);
+    });
+  }
+}
+
+function hideCenter() {
+  clearRuleAlpha();
+  rdEmpty.style.display    = 'block';
+  rdNum.style.display      = 'none';
+  rdText.style.display     = 'none';
+  rdTextWrap.style.display = 'none';
+  updateStub(null);
+  lpPicker.innerHTML = '<span style="font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>';
+  ezLabel.textContent = 'Упражнения';
+  ezChips.innerHTML   = '<span id="ez-empty">← выберите правило</span>';
+}
+
+function getRuleType(n) {
+  if (n <= 7)  return 'Внутренние сандхи · Гласные';
+  if (n <= 40) return 'Внутренние сандхи · Согласные';
+  if (n <= 49) return 'Внешние сандхи · Гласные';
+  if (n <= 59) return 'Висарга сандхи';
+  if (n <= 65) return 'Внешние сандхи · Носовые';
+  return 'Внешние сандхи · Взрывные';
+}
+/* ═══════════════════ ПОДСВЕТКА АЛФАВИТА ПО ПРАВИЛУ ═══════════════════ */
+
+/* Карта: номер правила → [звуки эффект-1, звуки эффект-2 (опц.)]
+   эффект-1 = rule-hl  (подъём + масштаб)
+   эффект-2 = rule-hl-2 (подъём + brightness, для «подвергающихся» в пр.39) */
+const RULE_ALPHA = {
+   1: [[], ['e','ai','o','au','a','ā'], []],
+   2: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['e','o','ra','la']],
+   3: [[], ['e','ai','o','au','a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['ya','ra','la','va']],
+   4: [[], ['i','ī','u','ū'], ['ya','va']],
+   5: [[], ['ṛ'], ['ra','u','ū']],
+   6: [[], ['ṛ','i','ī','u','ū'], ['ya','ra','la','va']],
+   7: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], []],
+   8: [[], ['ra'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
+   9: [[], [], []],
+  10: [[], ['cha'], []],
+  11: [[], ['ma'], ['va']],
+  12: [[], ['sa'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
+  13: [[], ['sa'], ['ḥ']],
+  14: [[], ['sa'], ['ta']],
+  15: [[], ['sa'], ['dha']],
+  16: [[], ['ha'], ['gha']],
+  17: [[], ['ha'], ['dha']],
+  18: [[], ['ha'], ['gha']],
+  19: [[], [], []],
+  20: [[], ['ka','ṣa'], ['gha']],
+  21: [[], [], ['ka','ṣa','ṭa','ta','sa']],
+  22: [[], [], []],
+  23: [[], [], ['śa','ca','ka','ṭa','ṣa']],
+  24: [[], [], ['ṣa','ka','ṭa','ta']],
+  25: [[], [], []],
+  26: [[], [], []],
+  27: [[], ['jha'], ['ka']],
+  28: [[], ['ca'], ['ka']],
+  29: [[], [], []],
+  30: [['gha','jha','ḍha','dha','bha'], ['kha','cha','ṭha','tha','pha'], []],
+  31: [['ga','gha','ja','jha','ḍa','ḍha','da','dha','ba','bha'], [], ['ka','ca','ṭa','ta','pa']],
+  32: [['ka','kha','ca','cha','ṭa','ṭha','ta','tha','pa','pha'], [], ['ga','ja','ḍa','da','ba']],
+  33: [['gha','jha','ṭha','tha','bha'], ['kha','cha','ṭha','tha','pha'], ['ka','ca','ṭa','ta','pa','śa','ṣa','sa']],
+  34: [[], ['gha','jha','ḍha','dha','bha'], ['ka','ca','ṭa','ta','pa']],
+  35: [[], ['ṅa','ña','ṇa','na','ma'], ['śa','ṣa','sa','ṃ']],
+  36: [['sa'], ['i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au','ka','ra','la'], ['ṣa']],
+  37: [['na'], ['ra','ṣa','ṛ','ṝ'], ['ṇa']],
+  38: [['ta','tha','da','dha','na'], ['ṭa','ṭha','ḍa','ḍha','ṇa'], ['ṭa','ṭha','ḍa','ḍha','ṇa']],
+  39: [[], [], []],
+  40: [['na'], ['ca','ja'], ['ña']],
+  41: [[], ['i','ī','u','ū','e'], []],
+  42: [[], ['e','ai','o','au','a','ā'], []],
+  43: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['e','o','ra','la']],
+  44: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], []],
+  45: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['ya','ra','la','va']],
+  46: [[], ['e','ai','o','au','a'], []],
+  47: [[], ['e','ai'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','o','au']],
+  48: [[], ['o','au'], ['va','a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai']],
+  49: [[], [], []],
+  50: [[], ['sa','a'], ['o']],
+  51: [[], ['sa','a'], ['ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au']],
+  52: [[], ['sa'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
+  53: [[], ['sa','a'], ['ḥ','o','ga','ja','ḍa','da','ba']],
+  54: [[], ['sa'], ['ba','ha']],
+  55: [[], ['sa','ā'], ['ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
+  56: [[], ['sa','ra'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū']],
+  57: [[], ['sa','ra'], ['ḥ']],
+  58: [[], ['ḥ'], ['ra','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
+  59: [[], [], []],
+  60: [[], ['ma'], ['ṃ']],
+  61: [[], ['ṅa','ña','ṇa','na','ma'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au']],
+  62: [[], ['na'], ['ṃ','śa','ṣa','sa','ca','ṭa','ta']],
+  63: [[], ['na'], ['ña','ṇa','ja','ḍa','da']],
+  64: [[], ['na'], ['ña','śa','cha']],
+  65: [[], ['na'], ['ma','la','ṃ']],
+  66: [[], ['ta','śa'], ['cha']],
+  67: [[], ['ta'], ['ca','ṭa','cha','ṭha']],
+  68: [[], ['ta'], ['la']],
+  69: [[], [], []],
+  70: [['ha'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha'], ['gha','jha','ḍha','dha','bha']],
+  71: [['ka','kha','ca','cha','ṭa','ṭha','ta','tha','pa','pha'], [], ['ga','ja','ḍa','da','ba']],
+}
+const RULE_GROUP = {};
+for (let i = 17; i <= 29; i++) RULE_GROUP[i] = 'g1';
+const RULE_SUBGROUP = {};
+for (let i = 21; i <= 26; i++) RULE_SUBGROUP[i] = 'sg1';
+const GROUP_INFO = {
+  g1:  '▸ Блок 17–29 · перед нулём и перед всеми согласными, кроме полугласных и назальных',
+};
+const SUBGROUP_INFO = {
+  sg1: '▸ Группа 21–26 · аналогично kṣ',
+};
+
+
+
+
+/* ═══ Заглушка левой панели ═══ */
+function updateStub(cd, wRefs) {
+  const stub = document.getElementById('group-stub');
+  if (!cd) {
+    stubLabel.textContent = '';
+    stubSub.style.display = 'none';
+    stub.className = '';
+    return;
+  }
+  /* Цветной фон по классу правила */
+  stub.className = 'stub-' + cd.g;
+  const n = cd.n;
+  const typeLabel = getRuleType(n);
+  /* Основная подпись: тип сандхи + Whitney */
+  const wText = wRefs ? '  ·  Whitney ' + wRefs : '';
+  stubLabel.textContent = typeLabel + wText;
+
+  if (n >= 17 && n <= 29) {
+    stubSub.textContent  = 'Правила 17–29 применяются перед нулём и перед всеми согласными, кроме полугласных и назальных.';
+    stubSub.style.display = 'block';
+    if (n >= 20 && n <= 26) {
+      stubSub.textContent += '\nГруппа 20–26 · kṣ и аналогичные: пр. 21 — норма для kṣ · пр. 20 — исключение jakṣ- → gh · пр. 22–26 — ch, śc, ṣ, ś, j';
+    }
+  } else {
+    stubSub.style.display = 'none';
+  }
+}
+
+/* ═══ Реестр карточек + подсветка групп ═══ */
+const CARD_ELS = {};
+
+function applyGroupHighlight(cd) {
+  if (cd.n >= 20 && cd.n <= 26) {
+    for (let i = 20; i <= 26; i++)
+      if (CARD_ELS[i]) CARD_ELS[i].classList.add('primary-active');
+    if (CARD_ELS[21]) CARD_ELS[21].classList.add('card-21-primary');
+  }
+}
+function clearGroupHighlight() {
+  for (let i = 20; i <= 26; i++)
+    if (CARD_ELS[i]) CARD_ELS[i].classList.remove('primary-active','card-21-primary');
+}
+
+const body = document.getElementById('sandhi-body');
+
+SECTIONS.forEach((sec, si) => {
+  if (si > 0) {
+    const div = document.createElement('div');
+    div.className = 's-divider';
+    body.appendChild(div);
+  }
+
+  const lbl = document.createElement('div');
+  lbl.className = 's-label';
+  const dots = sec.id === 'internal'
+    ? `<span style="background:#A8D878"></span><span style="background:#7DCFCA"></span><span class="last-dot" style="background:#C5B0D8"></span>`
+    : `<span style="background:#E8A8C0"></span><span class="last-dot" style="background:#F0BF88"></span>`;
+  lbl.innerHTML = `${dots}${sec.label}`;
+  body.appendChild(lbl);
+
+  const section = document.createElement('div');
+  section.className = 's-section';
+
+  const ROW_W = PER_ROW * CARD + (PER_ROW-1) * GAP;
+  let rowBuf = [];
+
+  function buildCard(cd, colPos) {
+    const card = document.createElement('div');
+    card.className = `card ${cd.g}`;
+    CARD_ELS[cd.n] = card;
+    card.style.left   = (colPos * (CARD + GAP)) + 'px';
+    card.style.zIndex = colPos + 1;
+    const numEl = document.createElement('span');
+    numEl.className = 'card-num';
+    numEl.textContent = cd.n;
+    card.appendChild(numEl);
+    card.addEventListener('mouseenter', e => {
+      if (pinnedCardS && pinnedCardS !== card) return;
+      card.classList.add('hovered');
+      playFlip();
+      lastMouseX = e.clientX; lastMouseY = e.clientY; lastMouseT = Date.now();
+    });
+    card.addEventListener('mouseleave', () => {
+      if (card === pinnedCardS) return;
+      card.classList.remove('hovered');
+      hideTooltip();
+    });
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      if (pinnedCardS === card) return; /* повторный клик — пин остаётся */
+      if (pinnedCardS) pinnedCardS.classList.remove('pinned','hovered');
+      card.classList.remove('hovered');
+      card.classList.add('pinned');
+      pinnedCardS = card;
+      showCenter(cd);
+      lastMouseX = e.clientX; lastMouseY = e.clientY; lastMouseT = Date.now();
+    });
+    return card;
+  }
+
+  function flushRow() {
+    if (!rowBuf.length) return;
+    const rowEl = document.createElement('div');
+    rowEl.className = 'card-row';
+    rowEl.style.width  = ROW_W + 'px';
+    rowEl.style.height = CARD + 'px';
+    rowBuf.forEach((cd, i) => rowEl.appendChild(buildCard(cd, i)));
+    section.appendChild(rowEl);
+    rowBuf = [];
+  }
+
+  sec.cards.forEach(cd => {
+    rowBuf.push(cd);
+    if (rowBuf.length === PER_ROW) flushRow();
+  });
+  flushRow();
+
+  body.appendChild(section);
+});
+
+/* ═══════════════════ АЛФАВИТ ═══════════════════ */
+const ALPHA_ROWS = [
+  { label:'гласные', sub:'स्वर', cells:[
+    {dv:'अ',tr:'a',  cls:'vel',  hint:'краткий велярный a'},
+    {dv:'इ',tr:'i',  cls:'pal',  hint:'краткий нёбный i'},
+    {dv:'ऋ',tr:'ṛ',  cls:'ret',  hint:'слоговой ṛ'},
+    {dv:'ऌ',tr:'ḷ',  cls:'den',  hint:'слоговой ḷ (зубной)'},
+    {dv:'उ',tr:'u',  cls:'lab',  hint:'краткий губной u'},
+  ]},
+  { label:'', sub:'', cells:[
+    {dv:'आ',tr:'ā',  cls:'vel',  hint:'долгий ā'},
+    {dv:'ई',tr:'ī',  cls:'pal',  hint:'долгий ī'},
+    {dv:'ॠ',tr:'ṝ',  cls:'ret',  hint:'долгий слоговой ṝ'},
+    null,
+    {dv:'ऊ',tr:'ū',  cls:'lab',  hint:'долгий ū'},
+  ]},
+  { label:'', sub:'', cells:[
+    {dv:'ं', tr:'ṃ',  cls:'dim',  hint:'анусвара — носовой призвук'},
+    {dv:'ए',tr:'e',  cls:'pal-s',hint:'дифтонг e (a+i)'},
+    null, null,
+    {dv:'ओ',tr:'o',  cls:'lab-s',hint:'дифтонг o (a+u)'},
+  ]},
+  { label:'', sub:'', cells:[
+    {dv:'ः', tr:'ḥ',  cls:'dim',  hint:'висарга — придыхание на паузе'},
+    {dv:'ऐ',tr:'ai', cls:'pal-s',hint:'дифтонг ai'},
+    null, null,
+    {dv:'औ',tr:'au', cls:'lab-s',hint:'дифтонг au'},
+  ]},
+  { gap: true },
+  { label:'глухой', sub:'अघोष', cells:[
+    {dv:'क',tr:'ka', cls:'vel', hint:'велярный глухой ka'},
+    {dv:'च',tr:'ca', cls:'pal', hint:'нёбный глухой ca'},
+    {dv:'ट',tr:'ṭa', cls:'ret', hint:'церебральный глухой ṭa'},
+    {dv:'त',tr:'ta', cls:'den', hint:'зубной глухой ta'},
+    {dv:'प',tr:'pa', cls:'lab', hint:'губной глухой pa'},
+  ]},
+  { label:'гл.прид.', sub:'अघोष-ह', cells:[
+    {dv:'ख',tr:'kha',cls:'vel', hint:'велярный глухой придыхательный kha'},
+    {dv:'छ',tr:'cha',cls:'pal', hint:'нёбный глухой придыхательный cha'},
+    {dv:'ठ',tr:'ṭha',cls:'ret', hint:'церебральный глухой придыхательный ṭha'},
+    {dv:'थ',tr:'tha',cls:'den', hint:'зубной глухой придыхательный tha'},
+    {dv:'फ',tr:'pha',cls:'lab', hint:'губной глухой придыхательный pha'},
+  ]},
+  { label:'звонкий', sub:'घोष', cells:[
+    {dv:'ग',tr:'ga', cls:'vel', hint:'велярный звонкий ga'},
+    {dv:'ज',tr:'ja', cls:'pal', hint:'нёбный звонкий ja'},
+    {dv:'ड',tr:'ḍa', cls:'ret', hint:'церебральный звонкий ḍa'},
+    {dv:'द',tr:'da', cls:'den', hint:'зубной звонкий da'},
+    {dv:'ब',tr:'ba', cls:'lab', hint:'губной звонкий ba'},
+  ]},
+  { label:'зв.прид.', sub:'घोष-ह', cells:[
+    {dv:'घ',tr:'gha',cls:'vel', hint:'велярный звонкий придыхательный gha'},
+    {dv:'झ',tr:'jha',cls:'pal', hint:'нёбный звонкий придыхательный jha'},
+    {dv:'ढ',tr:'ḍha',cls:'ret', hint:'церебральный звонкий придыхательный ḍha'},
+    {dv:'ध',tr:'dha',cls:'den', hint:'зубной звонкий придыхательный dha'},
+    {dv:'भ',tr:'bha',cls:'lab', hint:'губной звонкий придыхательный bha'},
+  ]},
+  { label:'носовой', sub:'अनुनासिक', cells:[
+    {dv:'ङ',tr:'ṅa',cls:'vel', hint:'велярный носовой ṅa'},
+    {dv:'ञ',tr:'ña',cls:'pal', hint:'нёбный носовой ña'},
+    {dv:'ण',tr:'ṇa',cls:'ret', hint:'церебральный носовой ṇa'},
+    {dv:'न',tr:'na', cls:'den', hint:'зубной носовой na'},
+    {dv:'म',tr:'ma', cls:'lab', hint:'губной носовой ma'},
+  ]},
+  { gap: true },
+  { label:'полугл.', sub:'अन्तस्थ', cells:[
+    null,
+    {dv:'य',tr:'ya', cls:'pal', hint:'нёбный полугласный ya'},
+    {dv:'र',tr:'ra', cls:'ret', hint:'церебральный полугласный ra'},
+    {dv:'ल',tr:'la', cls:'den', hint:'зубной полугласный la'},
+    {dv:'व',tr:'va', cls:'lab', hint:'губной полугласный va'},
+  ]},
+  { label:'сибил.', sub:'ऊष्मन्', cells:[
+    null,
+    {dv:'श',tr:'śa', cls:'pal', hint:'нёбный сибилянт śa'},
+    {dv:'ष',tr:'ṣa', cls:'ret', hint:'церебральный сибилянт ṣa'},
+    {dv:'स',tr:'sa', cls:'den', hint:'зубной сибилянт sa'},
+    {dv:'ह',tr:'ha', cls:'dim', hint:'гортанный ha — стоит особняком'},
+  ]},
+];
+
+const audioPanel = document.createElement('div');
+audioPanel.id = 'audio-panel';
+audioPanel.innerHTML = `
+  <span id="audio-label"></span>
+  <span id="audio-trans"></span>
+  <div id="audio-placeholder">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    </svg>
+    <span>аудио</span>
+  </div>`;
+
+function showAudioPanel(cell) {
+  document.getElementById('audio-label').textContent = cell.dv;
+  document.getElementById('audio-trans').textContent = cell.tr;
+  audioPanel.classList.add('visible');
+}
+function hideAudioPanel() { audioPanel.classList.remove('visible'); }
+
+const wrap = document.getElementById('alpha-wrap');
+const alphaDesc = document.getElementById('alpha-desc');
+alphaDesc.appendChild(audioPanel);
+
+ALPHA_ROWS.forEach(row => {
+  if (row.gap) {
+    const g = document.createElement('div'); g.className = 'gap-row'; wrap.appendChild(g); return;
+  }
+  const lbl = document.createElement('div');
+  lbl.className = 'row-label';
+  if (row.label) lbl.innerHTML = `<span class="rl-main">${row.label}</span><span class="rl-sub">${row.sub}</span>`;
+  wrap.appendChild(lbl);
+
+  row.cells.forEach(cell => {
+    if (!cell) {
+      const e = document.createElement('div'); e.className = 'lc-empty'; wrap.appendChild(e); return;
+    }
+    const card = document.createElement('div');
+    card.className = `lc ${cell.cls}`;
+    /* Согласные показываем без inherent-а: ka→k, kha→kh, ṭha→ṭh и т.д.
+       Гласные (a, ā, ai, au, ṛ…) и спецзнаки (ṃ, ḥ) не трогаем. */
+    const disp = (cell.tr.endsWith('a') && cell.tr.length > 1) ? cell.tr.slice(0, -1) : cell.tr;
+    const fontSize = '16px';
+    card.innerHTML = `<span class="dv" style="font-family:'Helvetica Neue',sans-serif;font-size:${fontSize};letter-spacing:-0.03em">${disp}</span>`;
+    card.id = 'ac-' + cell.tr;
+    card.addEventListener('mouseenter', e => {
+      if (pinnedCardA && pinnedCardA !== card) return;
+      card.classList.add('hovered'); showTooltip(card, cell.hint); playFlip();
+      lastMouseX=e.clientX; lastMouseY=e.clientY; lastMouseT=Date.now();
+    });
+    card.addEventListener('mouseleave', () => {
+      if (card === pinnedCardA) return;
+      card.classList.remove('hovered'); hideTooltip();
+    });
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      if (pinnedCardA === card) {
+        card.classList.remove('pinned','hovered'); pinnedCardA=null; hideTooltip(); hideAudioPanel();
+      } else {
+        if (pinnedCardA) pinnedCardA.classList.remove('pinned','hovered');
+        card.classList.remove('hovered'); card.classList.add('pinned');
+        pinnedCardA = card; showTooltip(card, cell.hint); showAudioPanel(cell);
+        lastMouseX=e.clientX; lastMouseY=e.clientY; lastMouseT=Date.now();
+      }
+    });
+    wrap.appendChild(card);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Санскритские взаимодействия · карта эффектов</title>
+<style>
+  :root {
+    --stage: #363A44;
+    --stage-2: #3E434F;
+    --ink: #E8E4D8;
+    --ink-dim: #A7A99F;
+    --ink-faint: #6E7178;
+    --line: rgba(232,228,216,0.12);
+    --line-strong: rgba(232,228,216,0.22);
+
+    --c-stem:   #C0E898;
+    --c-guna:   #F5D547;
+    --c-vrddhi: #F0A24E;
+    --c-weak:   #EDE7DA;
+    --c-new:    #7DCFCA;
+    --c-ending: #F0BF88;
+
+    --serif: 'Georgia', 'Times New Roman', serif;
+    --sans: 'Helvetica Neue', 'Arial', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--stage);
+    color: var(--ink);
+    font-family: var(--serif);
+    line-height: 1.6;
+    padding: 48px 20px 80px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ── шапка ── */
+  header { margin-bottom: 46px; }
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 30px;
+    font-weight: 400;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  h1 .dev { font-size: 26px; opacity: 0.8; }
+  .lede {
+    font-size: 15.5px;
+    color: var(--ink-dim);
+    max-width: 620px;
+  }
+  .lede b { color: var(--ink); font-weight: 400; }
+
+  /* ── легенда осей ── */
+  .axes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 32px 0 8px;
+  }
+  .axis-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: var(--stage-2);
+  }
+  .axis-card .k {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 7px;
+  }
+  .axis-card .v { font-size: 15px; }
+  .axis-card .v .accent { color: var(--c-guna); }
+  .axis-card .v .accent2 { color: var(--c-new); }
+
+  /* ── секции ── */
+  section { margin-top: 40px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line-strong);
+    margin-bottom: 6px;
+  }
+  .sec-num {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+  }
+  .sec-head h2 { font-size: 20px; font-weight: 400; }
+  .sec-sub {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── строка-эффект ── */
+  .row {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+
+  .swatch {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.28);
+  }
+  .swatch::after {
+    content: attr(data-glyph);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 16px;
+    color: rgba(20,20,24,0.62);
+  }
+  .swatch.split { overflow: hidden; }
+  .swatch.split .h2 {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 50%;
+  }
+
+  .body .term {
+    font-size: 17px;
+    margin-bottom: 3px;
+  }
+  .body .term .dev {
+    color: var(--ink-dim);
+    font-size: 16px;
+    margin-left: 4px;
+  }
+  .body .where {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    margin-bottom: 11px;
+  }
+  .effect {
+    font-size: 14.5px;
+    color: var(--ink);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+  }
+  .effect .step {
+    background: var(--stage-2);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 3px 11px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .effect .arr { color: var(--ink-faint); font-size: 13px; }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--sans);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px 3px 8px;
+    border-radius: 20px;
+    margin-top: 12px;
+  }
+  .tag::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .tag.done {
+    background: rgba(192,232,152,0.12);
+    color: var(--c-stem);
+    border: 1px solid rgba(192,232,152,0.28);
+  }
+  .tag.done::before { background: var(--c-stem); }
+  .tag.plan {
+    background: rgba(167,169,159,0.10);
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+  }
+  .tag.plan::before { background: var(--ink-faint); }
+
+  footer {
+    margin-top: 52px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-faint);
+    line-height: 1.7;
+  }
+  footer b { color: var(--ink-dim); font-weight: 400; }
+
+  @media (max-width: 620px) {
+    .axes { grid-template-columns: 1fr; }
+    h1 { font-size: 25px; }
+    .sec-sub { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Систематизация сандхи · грамматика Панини</div>
+    <h1>Карта взаимодействий <span class="dev">— कार्य</span><br>из правил Панини в упражнениях Эмено</h1>
+    <p class="lede">У Эмено правила даны единообразно, но за ними стоят <b>разные операции Панини</b>. Чтобы кубики не сливались в один жест, кодируем взаимодействие по двум независимым осям: <b>цвет</b> несёт ступень гласного, <b>движение</b> — тип операции.</p>
+
+    <div class="axes">
+      <div class="axis-card">
+        <div class="k">Ось 1 — цвет</div>
+        <div class="v">Ступень гласного: <span class="accent">насыщение</span> при усилении, обесцвечивание при ослаблении.</div>
+      </div>
+      <div class="axis-card">
+        <div class="k">Ось 2 — движение</div>
+        <div class="v">Тип операции: оборот — замена, <span class="accent2">обратный</span> оборот — ослабление, и т. д.</div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Ступени гласного</h2>
+      <span class="sec-sub">аблаут · цвет + оборот вперёд</span>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-guna)" data-glyph="e"></div>
+      <div class="body">
+        <div class="term">Гуна <span class="dev">गुण</span></div>
+        <div class="where">Эмено 6, 8, 10, 12, 24 · P. 7.3.84 · i→e, u→o, ṛ→ar</div>
+        <div class="effect">
+          <span class="step">желтеет</span><span class="arr">→</span>
+          <span class="step">оборот</span><span class="arr">→</span>
+          <span class="step">гуна</span>
+        </div>
+        <span class="tag done">реализовано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-vrddhi)" data-glyph="ai"></div>
+      <div class="body">
+        <div class="term">Вриддхи <span class="dev">वृद्धि</span></div>
+        <div class="where">Эмено 10, 16–18, 26 · P. 7.2.114–115 · a→ā, i→ai, u→au, ṛ→ār</div>
+        <div class="effect">
+          <span class="step">желтеет</span><span class="arr">→</span>
+          <span class="step">оборот</span><span class="arr">→</span>
+          <span class="step">оранжевеет</span><span class="arr">→</span>
+          <span class="step">оборот</span><span class="arr">→</span>
+          <span class="step">вриддхи</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-weak)" data-glyph="i"></div>
+      <div class="body">
+        <div class="term">Слабая ступень · сампрасарана <span class="dev">सम्प्रसारण</span></div>
+        <div class="where">Эмено 9, 14, 19, 20, 22 · P. 6.1.108 · ya→i, va→u, ra→ṛ</div>
+        <div class="effect">
+          <span class="step">обратный оборот</span><span class="arr">→</span>
+          <span class="step">белеет</span><span class="arr">→</span>
+          <span class="step">слабая ступень</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Операции над сегментами</h2>
+      <span class="sec-sub">не аблаут · своё движение</span>
+    </div>
+
+    <div class="row">
+      <div class="swatch split" style="background: var(--c-stem)" data-glyph="n">
+        <div class="h2" style="background: var(--c-ending)"></div>
+      </div>
+      <div class="body">
+        <div class="term">Замена согласного · ассимиляция <span class="dev">आदेश</span></div>
+        <div class="where">Эмено, правила 22–73 · висарга, n→ṇ (P. 8.4.1), s→ṣ (P. 8.3.59), звонкость</div>
+        <div class="effect">
+          <span class="step">пол-оборота (90°)</span><span class="arr">+</span>
+          <span class="step">перекрас в цвет соседа</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-stem); opacity: 0.4" data-glyph="s"></div>
+      <div class="body">
+        <div class="term">Выпадение <span class="dev">लोप</span></div>
+        <div class="where">Эмено 14; правила 42, 52 · сброс носового (añj→akta), s между стопами</div>
+        <div class="effect">
+          <span class="step">бледнеет</span><span class="arr">→</span>
+          <span class="step">уходит вниз сквозь пол</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-stem)" data-glyph="da"></div>
+      <div class="body">
+        <div class="term">Удвоение · редупликация <span class="dev">द्वित्व</span></div>
+        <div class="where">Эмено 5, 9, 16–18, 21–23 · перфект, десидератив, интенсив; P. 6.1.1</div>
+        <div class="effect">
+          <span class="step">отпочковывает копию вбок</span><span class="arr">+</span>
+          <span class="step">деаспирация / палатализация редупликанта</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-new)" data-glyph="a"></div>
+      <div class="body">
+        <div class="term">Аугмент <span class="dev">आगम</span></div>
+        <div class="where">Эмено 23 (аорист a-), 10 (вставка -ī-) · P. 6.4.71, iṭ</div>
+        <div class="effect">
+          <span class="step">новый кубик вклинивается</span><span class="arr">→</span>
+          <span class="step">раздвигает соседей</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="swatch" style="background: var(--c-guna)" data-glyph="ā"></div>
+      <div class="body">
+        <div class="term">Удлинение <span class="dev">दीर्घ</span></div>
+        <div class="where">Эмено 7; правила 17, 43 · компенсаторное удлинение при потере согласного</div>
+        <div class="effect">
+          <span class="step">пульс</span><span class="arr">+</span>
+          <span class="step">горизонтальное растяжение глифа</span>
+        </div>
+        <span class="tag plan">запланировано</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Как читать статус.</b> «реализовано» — эффект уже собран в прототипе agni + as → agnayas. «запланировано» — механика описана, но ещё не в коде. По мере готовности отмечаем здесь.
+  </footer>
+
+</div>
+</body>
+</html>
