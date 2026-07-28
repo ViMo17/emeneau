@@ -1,14 +1,14 @@
-# эмено
+# M.B. Emeneau
 
 Visual grammar for Sanskrit sandhi, rendered as chalk-cube animations.
 
-**→ [Смотреть демо](https://vimo17.github.io/emeno/)** *(появится после включения GitHub Pages, см. ниже)*
+**→ [Смотреть демо](https://vimo17.github.io/emeneau/)**
 
 ---
 
 ## Что это
 
-Учебное приложение для изучения санскритской сандхи по «Sanskrit Sandhi and Exercises» М. Б. Эмено (1958) — сборнику практических правил и упражнений на внешнее и внутреннее сандхи. Кубики мела в WebGL/Three.js визуализируют, что физически происходит со звуком в каждом правиле: усиливается, ослабляется, ассимилируется, выпадает.
+Учебное приложение для изучения санскритской грамматики по «Sanskrit Sandhi and Exercises» М. Б. Эмено, Б.А. ван Нотен (1968) — сборнику практических правил и упражнений по освоению фонетических принципов санскрита. Кубики мела в WebGL/Three.js визуализируют, что физически происходит со звуком в каждом правиле: усиливается, ослабляется, ассимилируется, выпадает.
 
 ## Два основных файла
 
@@ -64,4 +64,4 @@ docs/                              ← публикуется через GitHub 
 
 ## Как включить GitHub Pages
 
-Settings → Pages → Source: `Deploy from a branch` → Branch: `main`, папка `/docs` → Save. Через минуту сайт появится по адресу `https://vimo17.github.io/emeno/`.
+Settings → Pages → Source: `Deploy from a branch` → Branch: `main`, папка `/docs` → Save. Через минуту сайт появится по адресу `https://vimo17.github.io/emeneau/`.
