@@ -88,6 +88,10 @@
 <script type="module">
 import * as THREE from 'three';
 
+// Направление вращения — согласовано с остальными демо: «усиление» идёт
+// по часовой (CW=-1), «ослабление» — в противоположную сторону (-CW).
+const CW = -1;
+
 const P = {
   texDepth:    0.55,
   bevelRound:  0.55,
@@ -553,10 +557,11 @@ function update(elapsed){
   }
 
   // ОДИН оборот в обратную сторону — «отматывание назад» к слабой ступени
+  // (противоположно «усиливающим» эффектам, которые идут по часовой)
   if (elapsed >= T.spinStart && elapsed <= T.spinStart + T.spinDur){
     const t = clamp01((elapsed - T.spinStart)/T.spinDur);
     cube.position.y = REST_Y + Math.sin(t*Math.PI)*0.34;
-    cube.rotation.y = -t * Math.PI * 2;       // ЗНАК МИНУС — обратное вращение
+    cube.rotation.y = -CW * t * Math.PI * 2;  // противоход усиливающим эффектам
     if (!flags.toWeak && t >= T.iAt){
       flags.toWeak = true;
       cube.material = matI;                    // бледная ya → белая i
@@ -566,6 +571,7 @@ function update(elapsed){
   }
   if (elapsed > T.spinStart + T.spinDur && elapsed < T.settleStart){
     tagGrade.classList.remove('show');
+    cube.rotation.y = 0; // снимаем накопленную погрешность конца оборота
   }
 
   // итог: короткое «оседание» — ступень опустилась

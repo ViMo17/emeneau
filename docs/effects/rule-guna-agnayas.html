@@ -259,6 +259,10 @@ import * as THREE from 'three';
    процедурного мелового текстурирования. Здесь трогается только то, что ниже
    помечено как НОВОЕ (сцена, раскадровка, леттеринг). */
 
+// Направление вращения для всех «оборотных» эффектов — по часовой стрелке
+// (подтверждено на демо ассимиляции). Если понадобится — меняется одной строкой.
+const CW = -1;
+
 const P = {
   texDepth:    0.55,
   bevelRound:  0.55,
@@ -806,11 +810,9 @@ function setCaption(html){
 
 let playT0 = null;
 let flags = {};
-let touchImpactSpawned = false;
 
 function resetScene(){
   flags = {};
-  touchImpactSpawned = false;
   document.getElementById('caption-text').style.opacity = 1;
   document.getElementById('caption-text').innerHTML = '&nbsp;';
   [tagGuna, tagAlpha, tagAlphaA, tagAlphaE].forEach(t=>t.classList.remove('show'));
@@ -908,9 +910,11 @@ function update(elapsed){
     if (elapsed < T.gunaStart) ie.mesh.rotation.z = 0;
   }
 
-  // ── ШАГ 3: гунирование i → e. Подскок + один оборот; в середине движения
-  // кубик переключается с жёлтого (i) на бирюзовый (e) — тот же цвет,
-  // что у y: e физически «содержит» a+y, и цвет это подсказывает заранее. ──
+  // ── ШАГ 3: гунирование i → e. Подскок + один оборот по часовой стрелке;
+  // в середине движения кубик переключается с жёлтого (i) на бирюзовый (e).
+  // На время оборота i отъезжает чуть вправо — слева впритык стоит n
+  // (зазор 0.05), а по диагонали куб «выступает» дальше своей плоской
+  // грани и на повороте задевал бы соседа. ──
   if (elapsed >= T.gunaStart && elapsed <= T.gunaStart + T.gunaDur){
     if (!flags.gunaTagShown){
       flags.gunaTagShown = true;
@@ -920,12 +924,20 @@ function update(elapsed){
       document.getElementById('cell-g-e').classList.add('hl');
     }
     const t = clamp01((elapsed - T.gunaStart)/T.gunaDur);
+    const clearance = Math.sin(t*Math.PI) * 0.35;
+    ie.mesh.position.x = slotX(ie.slot) + clearance;
     ie.mesh.position.y = REST_Y + Math.sin(t*Math.PI) * 0.34;
-    ie.mesh.rotation.y = t * Math.PI * 2;
+    ie.mesh.rotation.y = CW * t * Math.PI * 2;
     if (!flags.gunaLabelSwap && t >= 0.5){
       flags.gunaLabelSwap = true;
       ie.mesh.material = ie.matsC; // жёлтое i → бирюзовое e (тот же цвет, что y)
     }
+  }
+  if (elapsed > T.gunaStart + T.gunaDur && elapsed < T.approach2Start){
+    // на последнем кадре оборота t редко попадает ровно в 1 — снимаем
+    // накопленную погрешность явно, чтобы куб не «застывал» под углом
+    ie.mesh.rotation.y = 0;
+    ie.mesh.position.x = slotX(ie.slot);
   }
   if (elapsed > T.gunaStart + T.gunaDur){
     if (!flags.gunaTagHide){ flags.gunaTagHide = true; tagGuna.classList.remove('show'); }
@@ -946,11 +958,6 @@ function update(elapsed){
       const to = slotX(c.slot) - TOUCH_SHIFT;
       c.mesh.position.x = lerp(from, to, te);
     });
-    if (!touchImpactSpawned && t >= 1){
-      touchImpactSpawned = true;
-      spawnImpact();
-      shakeUntil = elapsed + 260;
-    }
   }
 
   // ── ШАГ 5: по контакту — вся подстановка разом. e поднимается вверх-влево
@@ -1075,19 +1082,6 @@ function update(elapsed){
   }
 }
 
-function spawnImpact(){
-  const midX = (slotX(3) + slotX(4)) / 2;
-  const p = project(new THREE.Vector3(midX, REST_Y, 0));
-  const ring = document.createElement('div');
-  ring.className = 'impact-ring';
-  ring.style.left = p.x + 'px';
-  ring.style.top = (p.y - 30) + 'px';
-  labelsEl.appendChild(ring);
-  setTimeout(()=>ring.remove(), 600);
-}
-
-let shakeUntil = 0;
-
 function project(vec3){
   const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
   const v = vec3.clone().project(camera);
@@ -1138,16 +1132,7 @@ function frame(now){
     const elapsed = now - playT0;
     update(Math.min(elapsed, T.total + 200));
   }
-  if (now < shakeUntil){
-    const k = (shakeUntil-now)/260;
-    camera.position.set(
-      camBase.x + (Math.random()-0.5)*0.05*k,
-      camBase.y + (Math.random()-0.5)*0.04*k,
-      camBase.z
-    );
-  } else {
-    camera.position.copy(camBase);
-  }
+  camera.position.copy(camBase);
   updateTags();
   updateShadows();
   renderer.render(scene, camera);

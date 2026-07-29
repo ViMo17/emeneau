@@ -10,7 +10,7 @@
     --ink: #E8E4D8; --ink-dim: #A7A99F; --ink-faint: #6E7178;
     --line: rgba(232,228,216,0.12); --line-strong: rgba(232,228,216,0.22);
     --c-stem: #C0E898; --c-guna: #F5D547; --c-vrddhi: #F0A24E;
-    --c-weak: #EDE7DA; --c-new: #7DCFCA; --c-ending: #F0BF88;
+    --c-weak: #EDE7DA; --c-new: #7DCFCA; --c-ending: #F0BF88; --c-trigger: #E0876F;
     --serif: 'Georgia', 'Times New Roman', serif;
     --sans: 'Helvetica Neue', Arial, sans-serif;
   }
@@ -89,31 +89,43 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">03</span><h2>Изолированные эффекты</h2></div>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Эффекты</h2></div>
     <div class="grid">
       <a class="card" href="effects/rule-guna-agnayas.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
         <div class="t">Гуна <span class="dev">गुण</span></div>
-        <div class="d">agni- + as → agnayas. Полный сценарий: дальнодействие, гунирование, замена на a+y с параллельным показом «было/стало».</div>
+        <div class="d">agni- + as → agnayas. Дальнодействие → гунирование → e зависает и блёкнет, ожидая замены → a + y прилетают из алфавита → импульс-озеленение.</div>
         <span class="status done">основной файл · готово</span>
       </a>
-      <a class="card" href="effects/rule-vriddhi-u-au.html">
+      <a class="card" href="effects/rule-vriddhi-stauti.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-vrddhi)"></span></div>
         <div class="t">Вриддхи <span class="dev">वृद्धि</span></div>
-        <div class="d">u → au напрямую, минуя гуну. Двойной оборот и нарастание цвета — «гуна, доведённая дальше».</div>
-        <span class="status polish">цвета дорабатываются</span>
+        <div class="d">stu- + -ti → stauti «он восхваляет» (Эмено, упр. 10). Дальнодействие, сразу оранжевеет (жёлтого здесь нет — вриддхи минует гуну), двойной оборот по часовой на дистанции, лишь потом сближение.</div>
+        <span class="status done">реализовано</span>
       </a>
-      <a class="card" href="effects/rule-samprasarana-ya-i.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
-        <div class="t">Сампрасарана <span class="dev">सम्प्रसारण</span></div>
-        <div class="d">ya → i. Обратное вращение и обесцвечивание — зеркало вриддхи: ослабление, а не усиление.</div>
-        <span class="status polish">цвета дорабатываются</span>
+      <a class="card" href="effects/rule-samprasarana-yaj-tvaa.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-trigger)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">Ослабление <span class="dev">सम्प्रसारण</span></div>
+        <div class="d">yaj- + -tvā → iṣṭvā «принеся жертву» (Эмено, упр. 19). Влияет весь суффикс -tvā целиком (признак «kit», три звука пульсируют синхронно) — обратный оборот, ya → i целиком белое, в финале всё слово зеленеет.</div>
+        <span class="status done">реализовано</span>
       </a>
       <a class="card" href="effects/rule-assimilation-varga-t-d.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
         <div class="t">Ассимиляция <span class="dev">आदेश</span></div>
-        <div class="d">t → d по звонкости. Куб как целая варга (противоположные грани — пары по звонкости), роли влияющая/поддающаяся (nimitta/sthānin).</div>
-        <span class="status polish">почти готово</span>
+        <div class="d">t → d по звонкости. Куб как целая варга (противоположные грани — пары по звонкости), роли влияющая/поддающаяся, поворот на 180° по часовой.</div>
+        <span class="status done">реализовано</span>
+      </a>
+      <a class="card" href="effects/rule-vriddhi-u-au.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-vrddhi)"></span></div>
+        <div class="t">Вриддхи <span class="dev">— изолированный жест</span></div>
+        <div class="d">u → au в отрыве от слова, первый черновик жеста. Сохранён как отдельный этюд.</div>
+        <span class="status plan">черновик</span>
+      </a>
+      <a class="card" href="effects/rule-samprasarana-ya-i.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">Ослабление <span class="dev">— изолированный жест</span></div>
+        <div class="d">ya → i в отрыве от слова, первый черновик жеста. Сохранён как отдельный этюд.</div>
+        <span class="status plan">черновик</span>
       </a>
     </div>
   </section>
@@ -129,7 +141,7 @@
   </section>
 
   <footer>
-    Материалы систематизируют упражнения из M. B. Emeneau, <i>Sanskrit Sandhi and Exercises</i> (1958).<br>
+    Материалы систематизируют упражнения из M. B. Emeneau, B. A. van Nooten, <i>Sanskrit Sandhi and Exercises</i> (2nd rev. ed., 1968).<br>
     Код прототипов — экспериментальный и не оптимизирован для продакшена.
   </footer>
 

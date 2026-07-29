@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ассимиляция по звонкости · t → d · куб-варга</title>
+<title>Ослабление в слове · yaj- + -tvā → iṣṭvā</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #363A44; font-family: 'Georgia', serif; color: #e8e4d8; }
-  #page { max-width: 760px; margin: 28px auto; padding: 0 16px 40px; }
+  #page { max-width: 900px; margin: 28px auto; padding: 0 16px 40px; }
 
   #rule-chip {
-    background: #9FC7C2;
-    box-shadow: 0 1px 2px rgba(60,110,105,.28), 0 6px 14px rgba(0,0,0,.18), inset 0 -1px .5px rgba(40,90,85,.22);
+    background: #D9DEE4;
+    box-shadow: 0 1px 2px rgba(90,100,115,.28), 0 6px 14px rgba(0,0,0,.18), inset 0 -1px .5px rgba(70,80,95,.22);
     border-radius: 14px; padding: 12px 18px; margin-bottom: 14px;
   }
-  #rule-chip .num { font-size: 9px; font-family: 'Helvetica Neue', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: rgba(20,60,55,.62); margin-bottom: 4px; }
-  #rule-chip .txt { font-size: 16px; color: #10201e; line-height: 1.45; }
+  #rule-chip .num { font-size: 9px; font-family: 'Helvetica Neue', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: rgba(50,60,75,.6); margin-bottom: 4px; }
+  #rule-chip .txt { font-size: 16px; color: #1c2028; line-height: 1.45; }
 
   #stage { position: relative; width: 100%; height: 360px; border-radius: 18px; overflow: hidden; background: #363A44; }
   #viewport { position: absolute; inset: 0; }
@@ -31,11 +31,36 @@
   }
   .tag-float.show { opacity: 1; transform: translate(-50%,-130%); }
 
+  .role-badge {
+    position: absolute; transform: translate(-50%,-100%);
+    font-family: 'Helvetica Neue', sans-serif; white-space: nowrap;
+    border-radius: 20px; padding: 3px 10px; opacity: 0; transition: opacity .3s ease;
+    font-size: 10px; letter-spacing: .06em;
+  }
+  .role-badge .rt { text-transform: uppercase; letter-spacing: .1em; }
+  .role-badge .dev { font-family: 'Georgia', serif; opacity: .8; margin-left: 4px; }
+  .role-badge.show { opacity: 1; }
+  .role-badge.trigger { color: #1c2028; background: rgba(244,175,151,.9); border: 1px solid rgba(244,175,151,.5); }
+  .role-badge.target  { color: #e8e4d8; background: rgba(20,20,26,.55); border: 1px solid rgba(232,228,216,.22); }
+
+  .wave-ring {
+    position: absolute; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px;
+    border-radius: 50%; border: 2px solid rgba(244,175,151,.9);
+    box-shadow: 0 0 10px 1px rgba(244,175,151,.35); pointer-events: none;
+    animation: waveTravel var(--wave-dur,.8s) cubic-bezier(.25,.65,.4,1) forwards;
+  }
+  @keyframes waveTravel {
+    0%   { transform: translate(0,0) scale(.35); opacity: 0; }
+    12%  { opacity: .95; }
+    70%  { opacity: .55; }
+    100% { transform: translate(var(--dx,0),var(--dy,0)) scale(1.9); opacity: 0; }
+  }
+
   .influence-arrow {
     position: absolute;
     height: 2px;
     transform-origin: 0 50%;
-    background: linear-gradient(90deg, rgba(125,207,202,0) 0%, rgba(125,207,202,0.8) 35%, rgba(125,207,202,0.8) 100%);
+    background: linear-gradient(90deg, rgba(244,175,151,0) 0%, rgba(244,175,151,0.8) 35%, rgba(244,175,151,0.8) 100%);
     opacity: 0;
     transition: opacity .4s ease;
     pointer-events: none;
@@ -47,46 +72,9 @@
     width: 0; height: 0;
     border-top: 6px solid transparent;
     border-bottom: 6px solid transparent;
-    border-left: 9px solid rgba(125,207,202,0.85);
+    border-left: 9px solid rgba(244,175,151,0.85);
     transform: translateY(-50%);
   }
-
-  /* ролевые бейджи: влияющая (nimitta) и поддающаяся (sthānin) */
-  .role-badge {
-    position: absolute; transform: translate(-50%,-100%);
-    font-family: 'Helvetica Neue', sans-serif; white-space: nowrap;
-    border-radius: 20px; padding: 3px 10px; opacity: 0; transition: opacity .3s ease;
-    font-size: 10px; letter-spacing: .06em;
-  }
-  .role-badge .rt { text-transform: uppercase; letter-spacing: .1em; }
-  .role-badge .dev { font-family: 'Georgia', serif; opacity: .8; margin-left: 4px; }
-  .role-badge.show { opacity: 1; }
-  .role-badge.trigger { color: #143c38; background: rgba(125,207,202,.9); border: 1px solid rgba(125,207,202,.5); }
-  .role-badge.target  { color: #e8e4d8; background: rgba(20,20,26,.55); border: 1px solid rgba(232,228,216,.22); }
-
-  /* волна-пульс влияния (влияющая → поддающаяся) */
-  .wave-ring {
-    position: absolute; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px;
-    border-radius: 50%; border: 2px solid rgba(125,207,202,.9);
-    box-shadow: 0 0 10px 1px rgba(125,207,202,.35); pointer-events: none;
-    animation: waveTravel var(--wave-dur,.8s) cubic-bezier(.25,.65,.4,1) forwards;
-  }
-  @keyframes waveTravel {
-    0%   { transform: translate(0,0) scale(.35); opacity: 0; }
-    12%  { opacity: .95; }
-    70%  { opacity: .55; }
-    100% { transform: translate(var(--dx,0),var(--dy,0)) scale(1.9); opacity: 0; }
-  }
-
-  /* класс-строка варги: показывает все 4 боковые грани + носовую */
-  #varga { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: flex-end; font-family: 'Helvetica Neue', sans-serif; }
-  #varga .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: .38; transition: opacity .3s ease, transform .3s ease; }
-  #varga .cell.on { opacity: 1; transform: translateY(-2px); }
-  #varga .cell .dot { width: 13px; height: 13px; border-radius: 4px; box-shadow: inset 0 -1px 2px rgba(0,0,0,.2); }
-  #varga .cell .form { font-family: 'Georgia', serif; font-size: 15px; }
-  #varga .cell .lab { font-size: 7.5px; letter-spacing: .06em; text-transform: uppercase; color: rgba(225,215,190,.65); text-align: center; }
-  #varga .nasal { margin-left: 6px; padding-left: 10px; border-left: 1px solid rgba(232,228,216,.14); }
-  #varga .th-pair { margin-left: 6px; padding-left: 10px; border-left: 1px solid rgba(232,228,216,.14); }
 
   #caption { margin-top: 16px; text-align: center; font-size: 20px; min-height: 30px; opacity: 1; transition: opacity .25s ease; }
   #caption .gloss { font-family: 'Helvetica Neue', sans-serif; font-size: 11px; letter-spacing: .06em; color: rgba(230,225,210,.55); display: block; margin-top: 3px; }
@@ -100,29 +88,37 @@
   }
   #replay-btn:hover { background: rgba(230,225,210,.16); transform: translateY(-2px); }
   #replay-btn:active { transform: translateY(0) scale(.97); }
+
+  #legend {
+    display: flex; justify-content: center; gap: 18px; margin-top: 14px;
+    font-family: 'Helvetica Neue', sans-serif; font-size: 9.5px; letter-spacing: .05em; color: rgba(220,224,232,.55);
+  }
+  #legend span { display: inline-flex; align-items: center; gap: 5px; }
+  #legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 </style>
 </head>
 <body>
 <div id="page">
+
   <div id="rule-chip">
-    <div class="num">Ассимиляция по звонкости · आदेश · правило Эмено 34, 57</div>
-    <div class="txt">Куб — весь дентальный ряд (варга). Противоположные грани — пара по звонкости: t↔d (перёд/зад), th↔dh (право/лево), сверху носовой n. Озвончение t → d — поворот на 180° к противоположной грани. dh влияет (nimitta), t поддаётся (sthānin).</div>
+    <div class="num">Ослабление в слове · सम्प्रसारण · Эмено, упр. 19 (корень 15)</div>
+    <div class="txt">yaj- «приносить жертву» + герундий -tvā → сампрасарана: ya в корне переходит в i, слабую ступень: iṣṭvā «принеся жертву» (j+t → ṣṭ — отдельная ассимиляция, здесь не показана). -tvā — это три звука (t, v, ā), три кубика; но влияет суффикс целиком — он «kit» в системе Панини, — поэтому все три горят синхронно. Влияющая (nimitta) — весь -tvā, корневое ya — поддающаяся (sthānin).</div>
   </div>
 
   <div id="stage">
     <div id="viewport"></div>
     <div id="labels-layer"></div>
-    <div id="varga">
-      <div class="cell" id="vc-t"><span class="dot" style="background:#C0E898"></span><span class="form">t</span><span class="lab">глух</span></div>
-      <div class="cell" id="vc-d"><span class="dot" style="background:#7DCFCA"></span><span class="form">d</span><span class="lab">звон</span></div>
-      <div class="cell th-pair" id="vc-th"><span class="dot" style="background:#C0E898"></span><span class="form">th</span><span class="lab">глух·прид</span></div>
-      <div class="cell" id="vc-dh"><span class="dot" style="background:#7DCFCA"></span><span class="form">dh</span><span class="lab">звон·прид</span></div>
-      <div class="cell nasal" id="vc-n"><span class="dot" style="background:#C9A8E0"></span><span class="form">n</span><span class="lab">носов</span></div>
-    </div>
   </div>
 
   <div id="caption"><span id="caption-text">&nbsp;</span></div>
   <div id="controls"><button id="replay-btn">▶ запустить анимацию</button></div>
+
+  <div id="legend">
+    <span><i style="background:#C0E898"></i> ya (корень, полная ступень)</span>
+    <span><i style="background:#EDE7DA"></i> i (слабая ступень)</span>
+    <span><i style="background:#E0876F"></i> t · v · ā (герундий, три звука)</span>
+  </div>
+
 </div>
 
 <script type="importmap">
@@ -130,15 +126,6 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-// Направление вращения для всех «оборотных» эффектов — по часовой стрелке
-// (как видит зритель камеры). Если на экране окажется наоборот — это
-// единственная строка, которую нужно поменять (-1 на 1).
-const CW = -1;
-
-// цвет колец-пульса на грани dh — формат "R,G,B", меняется одной строкой
-// (от #9FC7C2 — фон плашки правила/тон dh, — сделан ярче и насыщеннее)
-const PULSE_RING_COLOR = '150,229,220';
-
 const P = {
   texDepth:    0.55,
   bevelRound:  0.55,
@@ -471,7 +458,7 @@ function makeShadowBlobTexture() {
 }
 
 
-/* ═══════════════════════════ СЦЕНА: куб-варга + роли (влияющая/поддающаяся) ═══════════════════════════ */
+/* ═══════════════════════════ СЦЕНА: полный сценарий ослабления — yaj- + -tvā → iṣṭvā ═══════════════════════════ */
 
 const viewportEl = document.getElementById('viewport');
 const labelsEl = document.getElementById('labels-layer');
@@ -487,9 +474,9 @@ viewportEl.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-const camBase = new THREE.Vector3(0, 0.7, 8.6);
+const camBase = new THREE.Vector3(0, 1.1, 8.6);
 camera.position.copy(camBase);
-camera.lookAt(0, -0.15, 0);
+camera.lookAt(0, -0.3, 0);
 
 scene.add(new THREE.AmbientLight(0xFFF6F8, 0.42));
 const fill = new THREE.DirectionalLight(0xE4E6FF, 0.20); fill.position.set(6,3,7); scene.add(fill);
@@ -504,7 +491,7 @@ function makeGroundTexture(){
   const tx=new THREE.CanvasTexture(cv); tx.encoding=THREE.sRGBEncoding; return tx;
 }
 const groundMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(16,7),
+  new THREE.PlaneGeometry(14,7),
   new THREE.MeshBasicMaterial({ map: makeGroundTexture(), transparent:true, depthWrite:false, fog:false })
 );
 groundMesh.rotation.x = -Math.PI/2;
@@ -513,16 +500,24 @@ scene.add(groundMesh);
 
 const shadowTex = makeShadowBlobTexture();
 
-const CUBE_SIZE = 1.35;
-const FLOOR_Y = -0.9;
+// Направление вращения — согласовано с остальными демо: «усиление» идёт по
+// часовой (CW=-1), «ослабление» — в противоположную сторону (-CW).
+const CW = -1;
+
+// цвет колец-пульса на грани влияющей (t) — ярче собственного холодного
+// серого тона, та же техника, что и в остальных демо
+const PULSE_RING_COLOR = '244,175,151';
+
+const CUBE_SIZE = 1.0;
+const FLOOR_Y = -1.05;
 const REST_Y = FLOOR_Y + CUBE_SIZE/2;
-const SLOT = 1.45;
+const SLOT = 1.05;
+function slotX(i){ return (i - 1.5) * SLOT; } // центр между слотами 1 (t) и 2 (v)
 
-const COL_VLESS  = 0xC0E898; // глухой — зелёный
-const COL_VOICED = 0x7DCFCA; // звонкий — бирюзовый
-const COL_NASAL  = 0xC9A8E0; // носовой — лавандовый
+const COL_FULL   = 0xC0E898; // полная ступень (ya) — зелёная
+const COL_WEAK   = 0xEDE7DA; // слабая ступень (i) — мелово-белая
+const COL_SUFFIX = 0xE0876F; // -t-, -v-, -ā — тёплый красный (три разных звука влияющего суффикса)
 
-// ── один материал одной грани (мел + опц. глиф) ──
 function faceMat(color, seed, faceName, variant, glyph){
   const SZ = 512;
   const cv = paintChalkFace(SZ, color, faceName, seed, variant);
@@ -534,9 +529,7 @@ function faceMat(color, seed, faceName, variant, glyph){
   return new THREE.MeshStandardMaterial({ map:tex, bumpMap:bumpTex, bumpScale:0.0025, roughnessMap:roughTex, roughness:0.97, metalness:0, envMapIntensity:0, fog:false });
 }
 
-// грань с «пульсом под буквой»: кольцо запекается в саму текстуру, между
-// мелом и буквой — поэтому буква остаётся читаемой при любом радиусе кольца,
-// а не потому что кольцо просто бледное. Перерисовывается каждый кадр.
+// грань с «пульсом под буквой» — как на dh/t2 в других демо
 function buildPulseFace(color, seed, faceName, variant, glyph){
   const SZ = 512;
   const cv = paintChalkFace(SZ, color, faceName, seed, variant);
@@ -545,14 +538,13 @@ function buildPulseFace(color, seed, faceName, variant, glyph){
   const roughTex = new THREE.CanvasTexture(grainCv); roughTex.wrapS=roughTex.wrapT=THREE.RepeatWrapping;
   const baseCv = document.createElement('canvas');
   baseCv.width = baseCv.height = SZ;
-  baseCv.getContext('2d').drawImage(cv, 0, 0); // чистый мел, без кольца и без буквы — эталон для перерисовки
+  baseCv.getContext('2d').drawImage(cv, 0, 0);
   if (glyph) paintGlyph(cv, glyph);
   const tex = new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding; tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
   const material = new THREE.MeshStandardMaterial({ map:tex, bumpMap:bumpTex, bumpScale:0.0025, roughnessMap:roughTex, roughness:0.97, metalness:0, envMapIntensity:0, fog:false });
   return { material, canvas: cv, baseCanvas: baseCv, texture: tex, glyph };
 }
 
-// radiusFrac — доля от полуширины грани (0..1); null — без кольца (чистое состояние)
 function redrawPulseFace(pf, radiusFrac, alpha){
   const sz = pf.canvas.width;
   const ctx = pf.canvas.getContext('2d');
@@ -574,28 +566,9 @@ function redrawPulseFace(pf, radiusFrac, alpha){
   pf.texture.needsUpdate = true;
 }
 
-/* Дентальная варга на одном кубе. Порядок материалов BoxGeometry:
-   [0]+X(правая) [1]−X(левая) [2]+Y(верх) [3]−Y(низ) [4]+Z(перёд) [5]−Z(зад).
-   Раскладка по парам звонкости на противоположных гранях:
-     перёд(+Z) = t,  зад(−Z) = d   → пара по ЗВОНКОСТИ, поворот 180°
-     право(+X) = th, лево(−X) = dh → придыхательная пара (места закреплены,
-        но в правиле t↔d НЕ участвуют — грани оставляем пустыми, без букв)
-     верх(+Y) = носовой n (тоже пусто в этом правиле)
-   Поворот вокруг вертикали не зеркалит и не переворачивает букву. */
-function buildDentalVarga(seed){
-  return [
-    faceMat(COL_VLESS,  seed+10, 'side',   0, null), // +X правая  (th — место есть, буквы нет)
-    faceMat(COL_VOICED, seed+20, 'side',   1, null), // −X левая   (dh — место есть, буквы нет)
-    faceMat(COL_NASAL,  seed+30, 'top',    0, null), // +Y верх    (n  — место есть, буквы нет)
-    faceMat(COL_VLESS,  seed+40, 'bottom', 2, null), // −Y низ
-    faceMat(COL_VLESS,  seed+50, 'front',  2, 't'),  // +Z перёд   — t
-    faceMat(COL_VOICED, seed+60, 'front',  3, 'd'),  // −Z зад     — d (озвончённая, 180°)
-  ];
-}
-
 function makeShadowFor(x){
   const sh = new THREE.Mesh(
-    new THREE.CircleGeometry(0.78, 24),
+    new THREE.CircleGeometry(0.62, 20),
     new THREE.MeshBasicMaterial({ map: shadowTex, transparent:true, depthWrite:false, fog:false })
   );
   sh.rotation.x = -Math.PI/2;
@@ -604,53 +577,88 @@ function makeShadowFor(x){
   return sh;
 }
 
-// поддающаяся (sthānin): куб-варга t. Поворот +90° Y покажет грань d.
-const geoT = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 11);
-const cubeT = new THREE.Mesh(geoT, buildDentalVarga(300));
-scene.add(cubeT);
-const shT = makeShadowFor(-SLOT/2);
+// поддающаяся (sthānin): корневое ya. Состояния — весь кубик целиком
+// перекрашивается на каждом шаге, не одна грань: зелёное ya (полная
+// ступень, часть слова) → бледное ya (заряд) → белое i (слабая ступень) →
+// зелёное i (итог: слово снова единое).
+const geoYa = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 11);
+const matYaFull   = buildChalkMaterials(COL_FULL,     301, 'ya');
+const matYaWFull  = buildChalkMaterials(0xD3DAC8,     302, 'ya');
+const matIFull    = buildChalkMaterials(COL_WEAK,     303, 'i');
+const matIGreenFull = buildChalkMaterials(COL_FULL,   304, 'i');
+const cubeYa = new THREE.Mesh(geoYa, matYaFull);
+scene.add(cubeYa);
 
-// влияющая (nimitta): dh, сама не меняется. Сигналит кольцом, запечённым
-// на передней грани под буквой — растёт от четверти грани до края, гаснет,
-// повторяется, пока dh активно влияет; после — останавливается.
-const dhFrontPF = buildPulseFace(COL_VOICED, 405, 'front', 2, 'dh');
-const geoDh = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 12);
-const cubeDh = new THREE.Mesh(geoDh, [
-  faceMat(COL_VOICED, 401, 'side', 0, null),
-  faceMat(COL_VOICED, 402, 'side', 1, null),
-  faceMat(COL_VOICED, 403, 'top', 0, null),
-  faceMat(COL_VOICED, 404, 'bottom', 2, null),
-  dhFrontPF.material,
-  faceMat(COL_VOICED, 406, 'front', 3, null),
-]);
-scene.add(cubeDh);
-const shDh = makeShadowFor(SLOT/2);
+// влияющая (nimitta): -tvā — это ТРИ звука (t, v, ā), три кубика. Но сам
+// признак, который запускает ослабление («суффикс — kit»), принадлежит
+// суффиксу ЦЕЛИКОМ, а не одному ближайшему звуку — поэтому кольцо-пульс
+// горит на всех трёх сразу, одной фазой, а не только на t.
+function buildPulseCube(seed, glyph){
+  const pf = buildPulseFace(COL_SUFFIX, seed+5, 'front', 2, glyph);
+  const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
+  const matsRed = [
+    faceMat(COL_SUFFIX, seed+1, 'side', 0, null),
+    faceMat(COL_SUFFIX, seed+2, 'side', 1, null),
+    faceMat(COL_SUFFIX, seed+3, 'top', 0, null),
+    faceMat(COL_SUFFIX, seed+4, 'bottom', 2, null),
+    pf.material,
+    faceMat(COL_SUFFIX, seed+6, 'front', 3, null),
+  ];
+  const matsGreen = buildChalkMaterials(COL_FULL, seed*97+13, glyph); // итог: слово снова единое
+  const mesh = new THREE.Mesh(geo, matsRed);
+  scene.add(mesh);
+  return { mesh, pulse: pf, matsRed, matsGreen };
+}
 
-const LEFT_X  = -SLOT/2;
-const RIGHT_X =  SLOT/2;
+const tCube = buildPulseCube(400, 't');
+const vCube = buildPulseCube(410, 'v');
+const aCube = buildPulseCube(420, 'ā');
+const cubeT = tCube.mesh; // используется в волнах/стрелке как ближайшая к корню точка
 
-// ролевые бейджи + подпись операции
+// слоты: 0=ya, 1=t, 2=v, 3=ā (в покое — вплотную, единое слово)
+const suffixCubes = [
+  { mesh: tCube.mesh, slot: 1, shadow: makeShadowFor(slotX(1)), pulse: tCube.pulse, matsRed: tCube.matsRed, matsGreen: tCube.matsGreen },
+  { mesh: vCube.mesh, slot: 2, shadow: makeShadowFor(slotX(2)), pulse: vCube.pulse, matsRed: vCube.matsRed, matsGreen: vCube.matsGreen },
+  { mesh: aCube.mesh, slot: 3, shadow: makeShadowFor(slotX(3)), pulse: aCube.pulse, matsRed: aCube.matsRed, matsGreen: aCube.matsGreen },
+];
+const shYa = makeShadowFor(slotX(0));
+
+const NEAR_OFFSET = 0;    // «1 кубик от соседа» — расстояние по умолчанию
+const TOUCH_SHIFT = SLOT; // вплотную = сдвиг на 1 слот влево от NEAR
+
+const tagOp = document.createElement('div'); tagOp.className='tag-float'; labelsEl.appendChild(tagOp);
 const badgeTrigger = document.createElement('div'); badgeTrigger.className='role-badge trigger';
 badgeTrigger.innerHTML = '<span class="rt">влияющая</span><span class="dev">निमित्त</span>';
 labelsEl.appendChild(badgeTrigger);
-const influenceArrow = document.createElement('div'); influenceArrow.className='influence-arrow';
-labelsEl.appendChild(influenceArrow);
 const badgeTarget = document.createElement('div'); badgeTarget.className='role-badge target';
 badgeTarget.innerHTML = '<span class="rt">поддаётся</span><span class="dev">स्थानिन्</span>';
 labelsEl.appendChild(badgeTarget);
-const tagOp = document.createElement('div'); tagOp.className='tag-float'; labelsEl.appendChild(tagOp);
+const influenceArrow = document.createElement('div'); influenceArrow.className='influence-arrow';
+labelsEl.appendChild(influenceArrow);
 
-/* ── таймлайн ── */
+/* ── таймлайн ──
+   ya падает; t, v, ā падают следом, сразу на «1 кубик» от ya (группой).
+   Роли и кольцо-пульс — только на t (ближайшем к корню). Волны t → ya,
+   ya бледнеет по факту долёта. Ослабление — на дистанции (обратный оборот,
+   ya → i); импульс на t держится всю операцию и гаснет только вместе с
+   остановкой оборота. Лишь потом t-v-ā одной группой придвигаются вплотную. */
 const T = {
-  dropStart: 0, dropStagger: 180, dropDur: 700,
-  rolesStart: 1500,                   // проявляются роли: кольцо-пульс у влияющей, бейджи, стрелка
-  influenceStart: 2200, influenceDur: 900, // волны от dh к t (медленнее, чтобы взгляд успевал)
-  turnStart: 3500, turnDur: 1800,     // t поворачивается на 180° (ещё медленнее)
-  colorAt: 0.55,                      // доля поворота, на которой грань d уже смотрит вперёд
-  settleStart: 5600, settleDur: 900,
-  total: 6000,
+  dropStart: 0, dropStagger: 150, dropDur: 700,
+  endStart: 1350, endStagger: 120, endDur: 700, // t, v, ā падают следом за ya
+
+  rolesStart: 2500,
+  influenceStart: 2900, influenceDur: 900,
+  whiteDelay: 560,
+
+  spinStart: 4100, spinDur: 1300,
+  iAt: 0.55,
+
+  approach2Start: 5700, approach2Dur: 650,
+
+  settleStart: 6600, settleDur: 500,
+  total: 7300,
 };
-const PULSE_PERIOD = 1700; // период одного цикла кольца под буквой dh
+const PULSE_PERIOD = 1700;
 
 function clamp01(t){ return Math.max(0, Math.min(1, t)); }
 function lerp(a,b,t){ return a+(b-a)*t; }
@@ -668,9 +676,28 @@ function setCaption(html){
   captionEl.style.opacity = 0;
   setTimeout(()=>{ captionEl.innerHTML = html; captionEl.style.opacity = 1; }, 180);
 }
-function setVarga(id){
-  ['vc-t','vc-th','vc-d','vc-dh','vc-n'].forEach(r=>document.getElementById(r).classList.remove('on'));
-  if (id) document.getElementById(id).classList.add('on');
+
+let playT0 = null;
+let flags = {};
+let pulseActive = true;
+
+function resetScene(){
+  flags = {};
+  pulseActive = true;
+  captionEl.style.opacity = 1; captionEl.innerHTML = '&nbsp;';
+  [tagOp, badgeTrigger, badgeTarget, influenceArrow].forEach(el=>el.classList.remove('show'));
+  document.querySelectorAll('.wave-ring').forEach(n=>n.remove());
+
+  cubeYa.material = matYaFull;
+  cubeYa.position.set(slotX(0), 6 + Math.random()*2, 0);
+  cubeYa.rotation.set(0,0,0);
+
+  suffixCubes.forEach(c=>{
+    c.mesh.material = c.matsRed;
+    c.mesh.position.set(slotX(c.slot) + NEAR_OFFSET + TOUCH_SHIFT, 6 + Math.random()*2, 0);
+    c.mesh.rotation.set(0,0,0);
+    redrawPulseFace(c.pulse, null, 0);
+  });
 }
 
 function project(v3){
@@ -678,6 +705,7 @@ function project(v3){
   const v = v3.clone().project(camera);
   return { x:(v.x*0.5+0.5)*w, y:(-v.y*0.5+0.5)*h };
 }
+
 function spawnWave(fromV, toV, dur){
   const pA=project(fromV), pB=project(toV);
   const ring=document.createElement('div'); ring.className='wave-ring';
@@ -689,138 +717,159 @@ function spawnWave(fromV, toV, dur){
   setTimeout(()=>ring.remove(), dur+80);
 }
 
-let playT0 = null;
-let flags = {};
-let pulseActive = true;
-
-function resetScene(){
-  flags = {};
-  cubeT.material = buildDentalVarga(300); // свежий набор (порядок граней тот же)
-  cubeT.position.set(LEFT_X, 5.5, 0);
-  cubeT.rotation.set(0,0,0);
-  cubeDh.position.set(RIGHT_X, 5.8, 0);
-  cubeDh.rotation.set(0,0,0);
-  influenceArrow.classList.remove('show');
-  redrawPulseFace(dhFrontPF, null, 0);
-  pulseActive = true;
-  badgeTrigger.classList.remove('show');
-  badgeTarget.classList.remove('show');
-  tagOp.classList.remove('show');
-  setVarga(null);
-  document.querySelectorAll('.wave-ring').forEach(n=>n.remove());
-  captionEl.style.opacity = 1; captionEl.innerHTML = '&nbsp;';
-}
-
 function update(elapsed){
-  // падение
+  // падение ya
   {
-    const tt = clamp01((elapsed - T.dropStart)/T.dropDur);
-    cubeT.position.y = (elapsed < T.dropStart) ? 5.5 : lerp(5.5, REST_Y, easeOutBounce(tt));
-    const td = clamp01((elapsed - (T.dropStart+T.dropStagger))/T.dropDur);
-    cubeDh.position.y = (elapsed < T.dropStart+T.dropStagger) ? 5.8 : lerp(5.8, REST_Y, easeOutBounce(td));
+    const ty = clamp01((elapsed - T.dropStart)/T.dropDur);
+    cubeYa.position.y = (elapsed < T.dropStart) ? 6 : lerp(6, REST_Y, easeOutBounce(ty));
   }
-  if (!flags.baseCaption && elapsed >= T.dropStart + T.dropStagger + T.dropDur){
-    flags.baseCaption = true; setCaption('t <span style="opacity:.5">+</span> dh'); setVarga('vc-t');
+  if (!flags.baseCaption && elapsed >= T.dropStart + T.dropDur){
+    flags.baseCaption = true; setCaption('ya-');
   }
 
-  // проявляются роли: бейджи + стрелка влияния dh → t + кольцо-пульс под буквой dh
+  // падение t, v, ā — группой, сразу на «1 кубик» от ya
+  suffixCubes.forEach((c, idx)=>{
+    const start = T.endStart + idx*T.endStagger;
+    const ty = clamp01((elapsed - start)/T.endDur);
+    c.mesh.position.y = (elapsed < start) ? 6 : lerp(6, REST_Y, easeOutBounce(ty));
+    if (elapsed < T.approach2Start){
+      c.mesh.position.x = slotX(c.slot) + NEAR_OFFSET + TOUCH_SHIFT;
+    }
+  });
+  if (!flags.endLanded && elapsed >= T.endStart + 2*T.endStagger + T.endDur){
+    flags.endLanded = true; setCaption('ya- <span style="opacity:.55">+</span> -tvā');
+  }
+
+  // роли + кольцо-пульс на всём суффиксе (t, v, ā) — одной фазой: влияет
+  // не отдельный звук, а суффикс -tvā целиком (его признак «kit» в
+  // терминах Панини), поэтому все три горят синхронно
   if (elapsed >= T.rolesStart){
     if (!flags.roles){
       flags.roles = true;
       badgeTrigger.classList.add('show');
       badgeTarget.classList.add('show');
       influenceArrow.classList.add('show');
+      setCaption('суффикс -tvā влияет <span class="gloss">(признак «kit», не отдельный звук)</span>');
     }
     if (pulseActive){
-      const cyclePos = ((elapsed - T.rolesStart) % PULSE_PERIOD) / PULSE_PERIOD; // 0..1, зациклено
-      const radiusFrac = lerp(0.25, 1.0, cyclePos);   // от четверти грани до края
-      const envelope = Math.sin(cyclePos * Math.PI);   // мягкий вход/выход на каждом цикле
-      redrawPulseFace(dhFrontPF, radiusFrac, 0.85 * envelope);
+      const cyclePos = ((elapsed - T.rolesStart) % PULSE_PERIOD) / PULSE_PERIOD;
+      const radiusFrac = lerp(0.25, 1.0, cyclePos);
+      const envelope = Math.sin(cyclePos * Math.PI);
+      suffixCubes.forEach(c=>redrawPulseFace(c.pulse, radiusFrac, 0.85 * envelope));
     }
   }
 
-  // волна влияния dh → t; t «чувствует» приближение — та же дрожь, что у i в гунировании
+  // дальнодействие: волны t → ya; ya бледнеет по факту долёта
   if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur){
     [0, 260].forEach((off,i)=>{
       const kf='wave'+i;
       if (!flags[kf] && elapsed >= T.influenceStart+off){
         flags[kf]=true;
         spawnWave(
-          cubeDh.position.clone().add(new THREE.Vector3(0,0.1,0)),
           cubeT.position.clone().add(new THREE.Vector3(0,0.1,0)),
+          cubeYa.position.clone().add(new THREE.Vector3(0,0.1,0)),
           560
         );
       }
     });
-    if (!flags.opTag){ flags.opTag=true; tagOp.textContent='озвончение'; tagOp.classList.add('show'); }
-    const ti = clamp01((elapsed - T.influenceStart)/T.influenceDur);
-    cubeT.rotation.z = Math.sin(elapsed*0.025) * 0.05 * Math.sin(ti*Math.PI);
+    if (!flags.opTag){ flags.opTag=true; tagOp.textContent='ослабление'; tagOp.classList.add('show'); }
   }
-  if (elapsed > T.influenceStart + T.influenceDur && elapsed < T.turnStart){
-    cubeT.rotation.z = 0;
+  if (!flags.white && elapsed >= T.influenceStart + T.whiteDelay){
+    flags.white = true;
+    cubeYa.material = matYaWFull; // зелёная ya → бледная ya (весь кубик)
   }
 
-  // t поворачивается на 180° вокруг Y — противоположная грань d (звонкая)
-  // выходит к зрителю. Противолежащие грани = пара по звонкости.
-  // Вращение — по часовой стрелке (CW = -1; см. константу выше файла).
-  if (elapsed >= T.turnStart && elapsed <= T.turnStart + T.turnDur){
-    const t = clamp01((elapsed - T.turnStart)/T.turnDur);
-    cubeT.rotation.y = CW * easeOutCubic(t) * Math.PI;  // 180°: перёд(t) → зад, зад(d) → перёд
-    cubeT.position.y = REST_Y + Math.sin(t*Math.PI)*0.16;
-    if (!flags.toVoiced && t >= T.colorAt){
-      flags.toVoiced = true;
-      setVarga('vc-d');
-      setCaption('d <span style="opacity:.5">+</span> dh <span class="gloss">→ taddhi</span>');
-      // влияние состоялось — кольцо под буквой dh останавливается
-      pulseActive = false;
-      redrawPulseFace(dhFrontPF, null, 0);
-      influenceArrow.classList.remove('show');
+  // ослабление: обратный оборот на дистанции (t/v/ā ещё далеко — есть где крутиться)
+  if (elapsed >= T.spinStart && elapsed <= T.spinStart + T.spinDur){
+    const t = clamp01((elapsed - T.spinStart)/T.spinDur);
+    cubeYa.position.y = REST_Y + Math.sin(t*Math.PI)*0.34;
+    cubeYa.rotation.y = -CW * t * Math.PI * 2; // противоход усиливающим эффектам
+    if (!flags.toWeak && t >= T.iAt){
+      flags.toWeak = true;
+      cubeYa.material = matIFull; // бледная ya → белая i (весь кубик)
+      setCaption('i- <span style="opacity:.5">+</span> -tvā <span class="gloss">→ iṣṭvā «принеся жертву»</span>');
+      if (!flags.targetDone){ flags.targetDone = true; badgeTarget.classList.remove('show'); }
     }
   }
-  if (elapsed > T.turnStart + T.turnDur && elapsed < T.settleStart){
-    tagOp.classList.remove('show');
-    if (!flags.targetDone){ flags.targetDone = true; badgeTarget.classList.remove('show'); }
+  if (elapsed > T.spinStart + T.spinDur && elapsed < T.approach2Start){
+    cubeYa.rotation.y = 0; // снимаем накопленную погрешность конца оборота
+    if (!flags.influenceDone){
+      flags.influenceDone = true;
+      tagOp.classList.remove('show');
+      influenceArrow.classList.remove('show');
+      pulseActive = false;
+      suffixCubes.forEach(c=>redrawPulseFace(c.pulse, null, 0));
+    }
   }
 
-  // итог: t осталось повёрнутым гранью d к зрителю (звонкое), лёгкое оседание
-  if (elapsed >= T.settleStart && elapsed <= T.settleStart + T.settleDur){
-    const t = clamp01((elapsed - T.settleStart)/T.settleDur);
-    cubeT.position.y = REST_Y + Math.sin(t*Math.PI) * 0.05 * (1-t);
+  // только теперь, когда ya уже стало i, t-v-ā одной группой придвигаются вплотную
+  if (elapsed >= T.approach2Start && elapsed < T.settleStart){
+    const t = clamp01((elapsed - T.approach2Start)/T.approach2Dur);
+    const te = easeOutCubic(t);
+    suffixCubes.forEach(c=>{
+      const from = slotX(c.slot) + NEAR_OFFSET + TOUCH_SHIFT;
+      const to = slotX(c.slot) + NEAR_OFFSET;
+      c.mesh.position.x = lerp(from, to, te);
+    });
   }
-  if (!flags.finalCaption && elapsed >= T.settleStart + 200){
-    flags.finalCaption = true;
-    setCaption('t → d <span class="gloss">озвончение по соседу (nimitta → sthānin)</span>');
-  }
+
+  // итог: слово собрано. Импульс-волна пробегает по всей строке слева
+  // направо — каждый кубик коротко подпрыгивает, когда волна его проходит,
+  // и все четыре зеленеют (даже белое i — весь кубик целиком, не грань).
+  // Вращения здесь нет: оборот зарезервирован под сами преобразования. ──
+  const LOCK_WAVE = [
+    { mesh: cubeYa, greenMat: matIGreenFull },
+    { mesh: tCube.mesh, greenMat: tCube.matsGreen },
+    { mesh: vCube.mesh, greenMat: vCube.matsGreen },
+    { mesh: aCube.mesh, greenMat: aCube.matsGreen },
+  ];
+  const LOCK_STEP = 80;
+  const LOCK_HOP  = 260;
+  LOCK_WAVE.forEach(({mesh, greenMat}, idx)=>{
+    const start = T.settleStart + idx*LOCK_STEP;
+    if (elapsed >= start && elapsed <= start + LOCK_HOP){
+      const t = clamp01((elapsed - start)/LOCK_HOP);
+      mesh.position.y = REST_Y + Math.sin(t*Math.PI) * 0.14;
+      const kf = 'lock' + idx;
+      if (!flags[kf] && t >= 0.4){
+        flags[kf] = true;
+        mesh.material = greenMat;
+      }
+    }
+  });
 }
 
 function updateOverlays(){
-  const off = new THREE.Vector3(0, CUBE_SIZE*0.5+0.4, 0);
-  const pT = project(cubeT.position.clone().add(off));
-  const pD = project(cubeDh.position.clone().add(off));
-  badgeTarget.style.left = pT.x+'px'; badgeTarget.style.top = pT.y+'px';
-  badgeTrigger.style.left = pD.x+'px'; badgeTrigger.style.top = pD.y+'px';
-  tagOp.style.left = pT.x+'px'; tagOp.style.top = (pT.y-22)+'px';
+  const off = new THREE.Vector3(0, CUBE_SIZE*0.5+0.35, 0);
+  const pYa = project(cubeYa.position.clone().add(off));
+  const pGroupCenter = project(vCube.mesh.position.clone().add(off)); // v — середина группы t-v-ā
+  badgeTarget.style.left = pYa.x+'px'; badgeTarget.style.top = pYa.y+'px';
+  badgeTrigger.style.left = pGroupCenter.x+'px'; badgeTrigger.style.top = pGroupCenter.y+'px';
+  tagOp.style.left = pYa.x+'px'; tagOp.style.top = (pYa.y-22)+'px';
 
-  // стрелка влияния: dh → t, с отступом от обоих кубиков
-  const pDc = project(cubeDh.position);
+  const pYac = project(cubeYa.position);
   const pTc = project(cubeT.position);
-  const dx = pTc.x - pDc.x, dy = pTc.y - pDc.y;
-  const fullLen = Math.hypot(dx, dy) || 1;
-  const inset = 55;
+  const dx = pTc.x - pYac.x, dy = pTc.y - pYac.y;
+  const fullLen = Math.hypot(dx,dy) || 1;
+  const inset = 48;
   const len = Math.max(0, fullLen - inset*2);
   const ux = dx/fullLen, uy = dy/fullLen;
-  influenceArrow.style.left = (pDc.x + ux*inset) + 'px';
-  influenceArrow.style.top  = (pDc.y + uy*inset) + 'px';
+  influenceArrow.style.left = (pTc.x - ux*inset) + 'px';
+  influenceArrow.style.top  = (pTc.y - uy*inset) + 'px';
   influenceArrow.style.width = len + 'px';
-  influenceArrow.style.transform = `rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`;
+  influenceArrow.style.transform = `rotate(${Math.atan2(-dy,-dx)*180/Math.PI}deg)`;
 }
+
 function updateShadows(){
-  [[cubeT, shT],[cubeDh, shDh]].forEach(([cu, sh])=>{
-    sh.position.x = cu.position.x + 0.08;
-    const heightAbove = Math.max(0, cu.position.y - FLOOR_Y);
-    const k = Math.max(0.4, 1 - heightAbove*0.16);
-    sh.scale.setScalar(k);
-    sh.material.opacity = k;
+  const all = [{ mesh: cubeYa, shadow: shYa }, ...suffixCubes];
+  all.forEach(c=>{
+    c.shadow.position.x = c.mesh.position.x + 0.08;
+    c.shadow.position.z = c.mesh.position.z + 0.05;
+    const heightAbove = Math.max(0, c.mesh.position.y - FLOOR_Y);
+    const heightK = Math.max(0.35, 1 - heightAbove*0.14);
+    const matOpacity = Array.isArray(c.mesh.material) ? (c.mesh.material[0].opacity ?? 1) : 1;
+    c.shadow.scale.setScalar(heightK);
+    c.shadow.material.opacity = heightK * matOpacity;
   });
 }
 

@@ -88,6 +88,10 @@
 <script type="module">
 import * as THREE from 'three';
 
+// Направление вращения — по часовой стрелке (подтверждено на демо
+// ассимиляции). Меняется одной строкой при необходимости.
+const CW = -1;
+
 const P = {
   texDepth:    0.55,
   bevelRound:  0.55,
@@ -558,11 +562,12 @@ function update(elapsed){
     tagGrade.classList.add('show');
   }
 
-  // двойной оборот (720°) одним непрерывным жестом: по ходу оранжевеет, затем u → au
+  // двойной оборот (720°) по часовой стрелке, одним непрерывным жестом:
+  // по ходу оранжевеет, затем u → au
   if (elapsed >= T.spinStart && elapsed <= T.spinStart + T.spinDur){
     const t = clamp01((elapsed - T.spinStart)/T.spinDur);
     cube.position.y = REST_Y + Math.sin(t*Math.PI)*0.40; // единая дуга подъёма на весь жест
-    cube.rotation.y = t * Math.PI * 4;                    // два полных оборота
+    cube.rotation.y = CW * t * Math.PI * 4;               // два полных оборота
     if (!flags.orange && t >= T.orangeAt){
       flags.orange = true;
       cube.material = matUo;                  // жёлтая u → оранжевая u (всё ещё u)
@@ -576,6 +581,7 @@ function update(elapsed){
   }
   if (elapsed > T.spinStart + T.spinDur && elapsed < T.settleStart){
     tagGrade.classList.remove('show');
+    cube.rotation.y = 0; // снимаем накопленную погрешность конца оборота
   }
 
   // итог: лёгкий двойной подскок — «максимальная ступень»
