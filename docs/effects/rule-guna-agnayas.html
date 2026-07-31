@@ -686,12 +686,13 @@ function makeTriCube(colorA, glyphA, colorB, glyphB, colorC, glyphC, seed){
   const matsA = buildChalkMaterials(colorA, seed*97+13, glyphA);
   const matsB = buildChalkMaterials(colorB, seed*97+14, glyphB);
   const matsC = buildChalkMaterials(colorC, seed*97+15, glyphC);
+  const matsBlank = buildChalkMaterials(colorC, seed*97+16, null); // на время оборота — без буквы, уже в целевом цвете
   // e (matsC) блёкнет во время "отстойника" — включаем прозрачность заранее
-  // на всех трёх наборах, чтобы переключение материала не сбрасывало её.
-  [matsA, matsB, matsC].forEach(mats => mats.forEach(m => { m.transparent = true; }));
+  // на всех наборах, чтобы переключение материала не сбрасывало её.
+  [matsA, matsB, matsC, matsBlank].forEach(mats => mats.forEach(m => { m.transparent = true; }));
   const mesh = new THREE.Mesh(geo, matsA);
   scene.add(mesh);
-  return { mesh, shadow: makeShadowFor(), matsA, matsB, matsC };
+  return { mesh, shadow: makeShadowFor(), matsA, matsB, matsC, matsBlank };
 }
 
 function setCubeOpacity(mats, val){
@@ -922,15 +923,18 @@ function update(elapsed){
       tagGuna.classList.add('show');
       document.getElementById('cell-w-i').classList.add('hl');
       document.getElementById('cell-g-e').classList.add('hl');
+      ie.mesh.material = ie.matsBlank; // с началом оборота буква пропадает — не мелькает жёлтая i
     }
     const t = clamp01((elapsed - T.gunaStart)/T.gunaDur);
     const clearance = Math.sin(t*Math.PI) * 0.35;
     ie.mesh.position.x = slotX(ie.slot) + clearance;
     ie.mesh.position.y = REST_Y + Math.sin(t*Math.PI) * 0.34;
-    ie.mesh.rotation.y = CW * t * Math.PI * 2;
-    if (!flags.gunaLabelSwap && t >= 0.5){
+    ie.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI * 2;
+    // e наносится рано — почти сразу после начала оборота, и едет
+    // вместе с гранью через всё оставшееся вращение
+    if (!flags.gunaLabelSwap && t >= 0.15){
       flags.gunaLabelSwap = true;
-      ie.mesh.material = ie.matsC; // жёлтое i → бирюзовое e (тот же цвет, что y)
+      ie.mesh.material = ie.matsC; // пусто → бирюзовое e (тот же цвет, что y)
     }
   }
   if (elapsed > T.gunaStart + T.gunaDur && elapsed < T.approach2Start){
@@ -1008,7 +1012,6 @@ function update(elapsed){
         lerp(SRC_A.y, REST_Y, tae) + arcA,
         lerp(SRC_A.z, 0, tae)
       );
-      cubes.aNew.mesh.rotation.y = (1-ta) * Math.PI * 2.2;
       if (!flags.aTagShown){ flags.aTagShown = true; tagAlphaA.classList.add('show'); }
       if (!flags.aTagHide && ta >= 0.85){ flags.aTagHide = true; tagAlphaA.classList.remove('show'); }
     }
@@ -1024,7 +1027,6 @@ function update(elapsed){
         lerp(SRC_Y.y, REST_Y, tye) + arcY,
         lerp(SRC_Y.z, 0, tye)
       );
-      cubes.y.mesh.rotation.y = (1-ty) * Math.PI * 3;
       if (!flags.flyTagShown){ flags.flyTagShown = true; tagAlpha.classList.add('show'); }
       if (!flags.flyTagHide && ty >= 0.85){ flags.flyTagHide = true; tagAlpha.classList.remove('show'); }
     }
