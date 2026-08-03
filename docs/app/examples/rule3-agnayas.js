@@ -4,7 +4,7 @@
 // (создание DOM внутри container вместо document.getElementById, отмена rAF и
 // resize-подписки в unmount(), общая утилизация геометрий/материалов через traverse).
 import * as THREE from 'three';
-import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from '../lib/chalk-module.js';
+import { CW, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from '../lib/chalk-module.js';
 
 export function mount(container) {
 /* ═══════════════════════════ НОВОЕ: СЦЕНА / РАСКАДРОВКА ═══════════════════════════ */
@@ -13,25 +13,11 @@ container.innerHTML = `
   <div class="eff-stage">
     <div class="eff-viewport"></div>
     <div class="eff-labels"></div>
-    <div class="eff-guna-mini">
-      <div class="gm-title">Гуна</div>
-      <table class="guna-table">
-        <tr><td class="gt-h"></td><td class="gt-h">i·ī</td></tr>
-        <tr><td class="gt-r">слаб</td><td data-cell="w-i">i</td></tr>
-        <tr><td class="gt-r">гуна</td><td data-cell="g-e">e</td></tr>
-      </table>
-      <div class="gm-title">Обратные</div>
-      <table class="guna-table">
-        <tr><td class="gt-h"></td><td class="gt-h">i</td></tr>
-        <tr><td class="gt-r">слаб</td><td data-cell="rw-i">i</td></tr>
-        <tr><td class="gt-r">гуна</td><td data-cell="rg-ya">ya</td></tr>
-      </table>
-    </div>
   </div>
   <div class="eff-caption"><span class="eff-caption-text">&nbsp;</span></div>
   <div class="eff-legend">
-    <span><i style="background:#C0E898"></i> agni- (основа)</span>
-    <span><i style="background:#F5D547"></i> i (под гуной)</span>
+    <span><i style="background:#A8D878"></i> agni- (основа)</span>
+    <span><i style="background:#E8C860"></i> i (под гуной)</span>
     <span><i style="background:#F0BF88"></i> -as (окончание)</span>
     <span><i style="background:#7DCFCA"></i> e = a + y (одна группа)</span>
   </div>
@@ -40,10 +26,13 @@ const stageEl = container.querySelector('.eff-stage');
 const viewportEl = container.querySelector('.eff-viewport');
 const labelsEl = container.querySelector('.eff-labels');
 const captionTextEl = container.querySelector('.eff-caption-text');
-const cellWI  = container.querySelector('[data-cell="w-i"]');
-const cellGE  = container.querySelector('[data-cell="g-e"]');
-const cellRWI = container.querySelector('[data-cell="rw-i"]');
-const cellRGYA = container.querySelector('[data-cell="rg-ya"]');
+// Подсвечиваем ячейки ЕДИНСТВЕННОЙ таблицы гуна/вриддхи (панель алфавита справа) —
+// свою копию таблицы внутри анимации не строим, чтобы не дублировать и не расходиться в стилях.
+const cellWI  = document.getElementById('main-cell-w-i');
+const cellGE  = document.getElementById('main-cell-g-e');
+const cellRWI = document.getElementById('main-cell-rw-i');
+const cellRGYA = document.getElementById('main-cell-rg-ya');
+
 
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -106,10 +95,13 @@ const REST_Y = FLOOR_Y + CUBE_SIZE/2;
 const SLOT = 1.05; // расстояние между слотами
 function slotX(i){ return (i - 3) * SLOT; }
 
-const COL_STEM   = 0xC0E898; // agni- — нежный травянистый зелёный (= фон плашки правила)
-const COL_GUNA   = 0xF5D547; // краткое i — условный жёлтый маркер «под гуной»
-const COL_ENDING = 0xF0BF88; // -as (совпадает с c5 — эта же морфема позже попадёт под висаргу)
-const COL_NEW    = 0x7DCFCA; // e / a(новое) / y — единая бирюзовая группа
+// Единая палитра приложения (та же, что у панели алфавита справа и таблицы Гуна/Вриддхи):
+// .vel #A8D878 · .pal #7DCFCA · .ret #C5B0D8 · .den #E8A8C0 · .lab #F0BF88
+const COL_STEM   = 0xA8D878; // agni- — velar-зелёный (официальный .vel; g — и правда велярный)
+const COL_GUNA   = 0xE8C860; // краткое i «под гуной» — тот же золотой, что .gv-active в таблице
+                              // (это состояние-подсветка, а не постоянная категория звука — поэтому не из пятицветной палитры мест образования)
+const COL_ENDING = 0xF0BF88; // -as — .lab (уже совпадал)
+const COL_NEW    = 0x7DCFCA; // e / a(новое) / y — .pal (уже совпадал; e и y — палатальные)
 
 function makeShadowFor(){
   const shadow = new THREE.Mesh(
@@ -255,10 +247,13 @@ function easeOutBounce(t){
   return n1*(t-=2.625/d1)*t+0.984375;
 }
 
+let captionTimeoutId = null;
 function setCaption(html){
   const el = captionTextEl;
+  clearTimeout(captionTimeoutId); // отменяем предыдущий отложенный показ — иначе он может
+                                   // «выстрелить» уже после сброса и перезаписать пустую подпись
   el.style.opacity = 0;
-  setTimeout(()=>{ el.innerHTML = html; el.style.opacity = 1; }, 180);
+  captionTimeoutId = setTimeout(()=>{ el.innerHTML = html; el.style.opacity = 1; }, 180);
 }
 
 let playT0 = null;
@@ -266,11 +261,12 @@ let flags = {};
 
 function resetScene(){
   flags = {};
+  clearTimeout(captionTimeoutId); // та же защита: сброс сцены отменяет любую подпись «в пути»
   captionTextEl.style.opacity = 1;
   captionTextEl.innerHTML = '&nbsp;';
   [tagGuna, tagAlpha, tagAlphaA, tagAlphaE].forEach(t=>t.classList.remove('show'));
   labelsEl.querySelectorAll('.impact-ring, .wave-ring').forEach(n=>n.remove());
-  [cellWI, cellGE, cellRWI, cellRGYA].forEach(el=>el.classList.remove('hl'));
+  [cellWI, cellGE, cellRWI, cellRGYA].forEach(el=>el?.classList.remove('gv-active'));
 
   for (const key of ['a1','g','n','ie']){
     const c = cubes[key];
@@ -373,8 +369,8 @@ function update(elapsed){
       flags.gunaTagShown = true;
       ie.mesh.rotation.z = 0;
       tagGuna.classList.add('show');
-      cellWI.classList.add('hl');
-      cellGE.classList.add('hl');
+      cellWI?.classList.add('gv-active');
+      cellGE?.classList.add('gv-active');
       ie.mesh.material = ie.matsBlank; // с началом оборота буква пропадает — не мелькает жёлтая i
     }
     const t = clamp01((elapsed - T.gunaStart)/T.gunaDur);
@@ -398,8 +394,8 @@ function update(elapsed){
   if (elapsed > T.gunaStart + T.gunaDur){
     if (!flags.gunaTagHide){ flags.gunaTagHide = true; tagGuna.classList.remove('show'); }
     if (elapsed < T.substStart){
-      cellWI.classList.remove('hl');
-      cellGE.classList.remove('hl');
+      cellWI?.classList.remove('gv-active');
+      cellGE?.classList.remove('gv-active');
     }
   }
 
@@ -424,8 +420,8 @@ function update(elapsed){
   if (elapsed >= T.substStart){
     if (!flags.substHl){
       flags.substHl = true;
-      cellRWI.classList.add('hl');
-      cellRGYA.classList.add('hl');
+      cellRWI?.classList.add('gv-active');
+      cellRGYA?.classList.add('gv-active');
     }
 
     // e поднимается вверх-влево, блёкнет до полупрозрачности
@@ -531,8 +527,8 @@ function update(elapsed){
     }
   });
   if (elapsed > T.settleStart + T.settleDur){
-    cellRWI.classList.remove('hl');
-    cellRGYA.classList.remove('hl');
+    cellRWI?.classList.remove('gv-active');
+    cellRGYA?.classList.remove('gv-active');
   }
 }
 
@@ -611,6 +607,7 @@ function unmount(){
   resizeObserver.disconnect();
   if (rafId !== null) cancelAnimationFrame(rafId);
   clearTimeout(startTimeoutId);
+  clearTimeout(captionTimeoutId);
 
   // общая утилизация: обходим сцену и освобождаем всё, что держит GPU-память
   // (геометрии, текстуры каждого материала, сами материалы)
