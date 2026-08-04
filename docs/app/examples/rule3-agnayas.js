@@ -97,11 +97,11 @@ function slotX(i){ return (i - 3) * SLOT; }
 
 // Единая палитра приложения (та же, что у панели алфавита справа и таблицы Гуна/Вриддхи):
 // .vel #A8D878 · .pal #7DCFCA · .ret #C5B0D8 · .den #E8A8C0 · .lab #F0BF88
-const COL_STEM   = 0xA8D878; // agni- — velar-зелёный (официальный .vel; g — и правда велярный)
-const COL_GUNA   = 0xE8C860; // краткое i «под гуной» — тот же золотой, что .gv-active в таблице
-                              // (это состояние-подсветка, а не постоянная категория звука — поэтому не из пятицветной палитры мест образования)
-const COL_ENDING = 0xF0BF88; // -as — .lab (уже совпадал)
-const COL_NEW    = 0x7DCFCA; // e / a(новое) / y — .pal (уже совпадал; e и y — палатальные)
+// Гладкая заливка без мела — цвет идёт напрямую, без компенсирующей математики.
+const COL_STEM   = 0xA8D878; // agni- — official .vel
+const COL_GUNA   = 0xE8C860; // «под гуной» — тот же золотой, что .gv-active
+const COL_ENDING = 0xF0BF88; // -as — official .lab
+const COL_NEW    = 0x7DCFCA; // e / a(новое) / y — official .pal
 
 function makeShadowFor(){
   const shadow = new THREE.Mesh(
@@ -568,11 +568,25 @@ function updateShadows(){
   }
 }
 
+const BASE_FOV = 32;       // исходный fov — используется, когда ширины хватает с запасом
+const HALF_WORLD_W = 6.5;  // половина ширины сцены, которая обязана быть видна — с щедрым запасом
+                            // (было 4.3 — не хватило на реальных узких окнах; сцена будет казаться
+                            // чуть мельче на широких экранах, но кубики никогда не обрежутся)
+
 function resize(){
   const w = stageEl.clientWidth, h = stageEl.clientHeight;
   if (w === 0 || h === 0) return; // контейнер временно скрыт (display:none) — размера ещё нет
   renderer.setSize(w, h, false);
-  camera.aspect = w/h;
+  const aspect = w/h;
+  camera.aspect = aspect;
+  // если контейнер слишком узкий/квадратный относительно высоты (как в центральной колонке
+  // v19 при увеличенной высоте .eff-stage) — базового fov не хватает, и крайние кубики
+  // (первая a и конечная s) обрезаются рамкой контейнера. Раздвигаем fov ровно настолько,
+  // чтобы вся строка гарантированно помещалась, независимо от пропорций контейнера.
+  const neededFov = THREE.MathUtils.radToDeg(
+    2 * Math.atan(HALF_WORLD_W / (camBase.z * aspect))
+  );
+  camera.fov = Math.max(BASE_FOV, neededFov);
   camera.updateProjectionMatrix();
 }
 // ResizeObserver вместо window.resize — реагирует и на изменение окна,
