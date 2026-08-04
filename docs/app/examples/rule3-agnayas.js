@@ -568,10 +568,11 @@ function updateShadows(){
   }
 }
 
-const BASE_FOV = 32;       // исходный fov — используется, когда ширины хватает с запасом
-const HALF_WORLD_W = 6.5;  // половина ширины сцены, которая обязана быть видна — с щедрым запасом
-                            // (было 4.3 — не хватило на реальных узких окнах; сцена будет казаться
-                            // чуть мельче на широких экранах, но кубики никогда не обрежутся)
+const BASE_FOV = 32;       // минимальный fov — используется как пол на случай очень широких контейнеров
+const HALF_WORLD_W = 4.2;  // половина ширины сцены, которая обязана быть видна:
+                            // 7 кубиков по SLOT=1.05 (=6.3) + по полкубика по краям (+1.0) + запас
+const HALF_WORLD_H = 2.3;  // половина высоты сцены относительно точки взгляда камеры (-0.35):
+                            // кубик e подскакивает до HOLD_E.y≈1.05, снизу пол на REST_Y≈-0.55 — плюс запас
 
 function resize(){
   const w = stageEl.clientWidth, h = stageEl.clientHeight;
@@ -579,14 +580,14 @@ function resize(){
   renderer.setSize(w, h, false);
   const aspect = w/h;
   camera.aspect = aspect;
-  // если контейнер слишком узкий/квадратный относительно высоты (как в центральной колонке
-  // v19 при увеличенной высоте .eff-stage) — базового fov не хватает, и крайние кубики
-  // (первая a и конечная s) обрезаются рамкой контейнера. Раздвигаем fov ровно настолько,
-  // чтобы вся строка гарантированно помещалась, независимо от пропорций контейнера.
-  const neededFov = THREE.MathUtils.radToDeg(
-    2 * Math.atan(HALF_WORLD_W / (camBase.z * aspect))
-  );
-  camera.fov = Math.max(BASE_FOV, neededFov);
+  // Раньше здесь боролись только за ширину — из-за этого на широких контейнерах (как в v19)
+  // камера отъезжала намного дальше, чем нужно по высоте, и кубики выглядели мелкими посреди
+  // пустого пространства. Теперь считаем оба ограничения и берём то, что жёстче для текущих
+  // пропорций: на широкой сцене это высота (кубики заполняют её, по бокам естественные поля),
+  // на узкой — по-прежнему ширина (ничего не обрезается).
+  const fovForHeight = THREE.MathUtils.radToDeg(2 * Math.atan(HALF_WORLD_H / camBase.z));
+  const fovForWidth  = THREE.MathUtils.radToDeg(2 * Math.atan(HALF_WORLD_W / (camBase.z * aspect)));
+  camera.fov = Math.max(BASE_FOV, fovForHeight, fovForWidth);
   camera.updateProjectionMatrix();
 }
 // ResizeObserver вместо window.resize — реагирует и на изменение окна,
