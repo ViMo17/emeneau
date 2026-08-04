@@ -30,7 +30,7 @@ const captionTextEl = container.querySelector('.eff-caption-text');
 // свою копию таблицы внутри анимации не строим, чтобы не дублировать и не расходиться в стилях.
 const cellWI  = document.getElementById('main-cell-w-i');
 const cellGE  = document.getElementById('main-cell-g-e');
-const cellRWI = document.getElementById('main-cell-rw-i');
+const cellRWI = cellWI; // строка "слаб" в таблице теперь одна на обе ветки (гуна и полугласный)
 const cellRGYA = document.getElementById('main-cell-rg-ya');
 
 

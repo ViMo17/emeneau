@@ -738,6 +738,40 @@
     flex-shrink: 0;
     letter-spacing: 0.02em;
   }
+  #role-legend {
+    flex: 0 0 auto;
+    background: rgba(200,188,158, 0.10);
+    border: 1px solid rgba(200,188,158, 0.26);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .role-legend-title {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(225,215,190, 0.92);
+  }
+  .role-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: rgba(225,215,190, 0.75);
+  }
+  .role-legend-sw {
+    width: 15px; height: 15px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    background: #7DCFCA;
+  }
+  .role-legend-sw.trg { background: transparent; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 2px; }
+  .role-legend-sw.res { background: rgba(230,225,210,0.06); outline: 2px solid #fff; outline-offset: 2px; }
   .guna-table {
     border-collapse: separate;
     border-spacing: 3px;
@@ -772,16 +806,18 @@
     background: none !important;
     font-weight: 400 !important;
   }
-  /* цвета — те же классы места образования, что у больших плиток алфавита справа */
-  .guna-table td.gv-vel { background: #A8D878; color: rgba(50,90,15,.92); }
-  .guna-table td.gv-pal { background: #7DCFCA; color: rgba(10,65,60,.92); }
-  .guna-table td.gv-ret { background: #C5B0D8; color: rgba(70,40,100,.92); }
-  .guna-table td.gv-den { background: #E8A8C0; color: rgba(130,40,70,.92); }
-  .guna-table td.gv-lab { background: #F0BF88; color: rgba(120,65,10,.92); }
+  /* цвет по СТУПЕНИ (слаб/гуна/вридд), а не по месту образования — в этой
+     таблице столбцы идут в другом порядке (a,i,u,ṛ,ḷ), чем в алфавите справа
+     (vel,pal,ret,den,lab), и цвет по варге путал, а не помогал считывать */
+  .guna-table td.grade-weak    { background: #DCD6C4; color: #3a3428; }
+  .guna-table td.grade-guna    { background: #C7A05A; color: #2e2308; }
+  .guna-table td.grade-vriddhi { background: #9C7038; color: #f5ecd8; }
+  .guna-table td.gt-blank { background: transparent; }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
-     не создавая свою копию. Список задействованных id пополняется по мере добавления примеров:
-     main-cell-w-i / main-cell-g-e / main-cell-rw-i / main-cell-rg-ya — уже используются (agnayas). */
+     не создавая свою копию. main-cell-w-i / main-cell-g-e / main-cell-rg-ya — уже
+     используются (agnayas); rw-i как отдельная ячейка больше не существует —
+     строка "слаб" теперь одна на всю башню, main-cell-w-i служит и тем, и другим. */
   .guna-table td.gv-active {
     background: #E8C860 !important;
     color: #2a2205 !important;
@@ -1055,6 +1091,13 @@
     <div id="alpha-wrap"></div>
     <div id="alpha-desc"></div>
 
+    <div id="role-legend">
+      <div class="role-legend-title">Роли в примере</div>
+      <div class="role-legend-item"><span class="role-legend-sw src"></span>источник · было</div>
+      <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
+      <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
+    </div>
+
     <div id="guna-box">
       <div class="guna-title">Гуна · Вриддхи</div>
       <table class="guna-table">
@@ -1065,39 +1108,27 @@
           <td class="gt-h">ḷ</td>
         </tr>
         <tr>
-          <td class="gt-r">слаб</td>
-          <td class="gv-vel">a</td><td class="gv-pal" id="main-cell-w-i">i</td><td class="gv-lab">u</td><td class="gv-ret">ṛ</td><td class="gv-den">ḷ</td>
+          <td class="gt-r">вридд ↑</td>
+          <td class="gt-blank"></td><td class="grade-vriddhi">yā</td><td class="grade-vriddhi">vā</td><td class="grade-vriddhi">rā</td><td class="gt-blank"></td>
         </tr>
         <tr>
-          <td class="gt-r">гуна</td>
-          <td class="gv-vel">a</td><td class="gv-pal" id="main-cell-g-e">e</td><td class="gv-lab">o</td><td class="gv-ret">ar</td><td class="gv-den">al</td>
-        </tr>
-        <tr>
-          <td class="gt-r">вридд</td>
-          <td class="gv-vel">ā</td><td class="gv-pal">āi</td><td class="gv-lab">āu</td><td class="gv-ret">ār</td><td class="gv-den">āl</td>
-        </tr>
-      </table>
-      <div class="guna-note">Вриддхи → гуна: никогда</div>
-      <div class="guna-subtitle">Обратные</div>
-      <table class="guna-table">
-        <tr>
-          <td class="gt-h"></td>
-          <td class="gt-h">i</td><td class="gt-h">u</td>
-          <td class="gt-h">ṛ</td>
+          <td class="gt-r">гуна ↑</td>
+          <td class="gt-blank"></td><td class="grade-guna" id="main-cell-rg-ya">ya</td><td class="grade-guna">va</td><td class="grade-guna">ra</td><td class="gt-blank"></td>
         </tr>
         <tr>
           <td class="gt-r">слаб</td>
-          <td class="gv-pal" id="main-cell-rw-i">i</td><td class="gv-lab">u</td><td class="gv-ret">ṛ</td>
+          <td class="grade-weak">a</td><td class="grade-weak" id="main-cell-w-i">i</td><td class="grade-weak">u</td><td class="grade-weak">ṛ</td><td class="grade-weak">ḷ</td>
         </tr>
         <tr>
           <td class="gt-r">гуна</td>
-          <td class="gv-pal" id="main-cell-rg-ya">ya</td><td class="gv-lab">va</td><td class="gv-ret">ra</td>
+          <td class="grade-guna">a</td><td class="grade-guna" id="main-cell-g-e">e</td><td class="grade-guna">o</td><td class="grade-guna">ar</td><td class="grade-guna">al</td>
         </tr>
         <tr>
           <td class="gt-r">вридд</td>
-          <td class="gv-pal">yā</td><td class="gv-lab">vā</td><td class="gv-ret">rā</td>
+          <td class="grade-vriddhi">ā</td><td class="grade-vriddhi">āi</td><td class="grade-vriddhi">āu</td><td class="grade-vriddhi">ār</td><td class="grade-vriddhi">āl</td>
         </tr>
       </table>
+      <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
     </div>
   </div>
 
