@@ -6,7 +6,7 @@
 // раннего прототипа docs/effects/rule-assimilation-varga-t-d.html (t→d) —
 // тот же класс эффекта, что и здесь (k→g), проверено по коду, не по памяти.
 import * as THREE from 'three';
-import { CW, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from '../lib/chalk-module.js';
+import { CW, paintGlyph, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from '../lib/chalk-module.js';
 
 export function mount(container) {
 
@@ -94,6 +94,16 @@ const WORD_GAP = 1.0;       // === граница слова === доп. пол�
 
 const COL_VEL = 0xA8D878, COL_LAB = 0xF0BF88, COL_DEN = 0xE8A8C0, COL_PAL = 0x7DCFCA;
 
+// Затемнение неактивных букв: MeshStandardMaterial.color умножается на карту
+// текстуры — можно приглушить кубик, просто перекрасив .color в серый тон,
+// не перерисовывая канвас. mix=1 — обычный вид, mix=0 — максимально приглушено.
+const DIM_TINT = new THREE.Color(0x6b6f78);
+const FULL_TINT = new THREE.Color(0xffffff);
+function tintCube(cube, mix){
+  const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
+  mats.forEach(m => m.color.copy(FULL_TINT).lerp(DIM_TINT, 1 - mix));
+}
+
 function slotX(i, wordBreakAfter){
   // wordBreakAfter — индекс последней буквы первого слова (после неё встаёт WORD_GAP)
   const raw = i <= wordBreakAfter ? i*SLOT : i*SLOT + WORD_GAP;
@@ -146,22 +156,87 @@ const cubes = {
 };
 const ORDER = ['v','aa','k','a','s','t','i'];
 
+// nimitta (a) получает перерисовываемую переднюю грань вместо статичной —
+// на ней и рисуется кольцо-пульс. Остальные 5 граней куба — обычные.
+const aPulseFace = buildPulseFace(COL_VEL, 'a');
+cubes.a.mesh.material[4].map?.dispose();
+cubes.a.mesh.material[4].dispose();
+cubes.a.mesh.material[4] = aPulseFace.material;
+cubes.a.pulseFace = aPulseFace;
+
 const tagSthanin = document.createElement('div'); tagSthanin.className='tag-float'; tagSthanin.textContent='sthānin · k → g'; labelsEl.appendChild(tagSthanin);
 const tagNimitta = document.createElement('div'); tagNimitta.className='tag-float'; tagNimitta.textContent='nimitta · звонкая a'; labelsEl.appendChild(tagNimitta);
 
-function spawnWave(fromVec3, toVec3, dur){
-  const pA = project(fromVec3);
-  const pB = project(toVec3);
-  const ring = document.createElement('div');
-  ring.className = 'wave-ring';
-  ring.style.left = pA.x + 'px';
-  ring.style.top = pA.y + 'px';
-  ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
-  ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
-  ring.style.setProperty('--wave-dur', dur + 'ms');
-  labelsEl.appendChild(ring);
-  setTimeout(()=>ring.remove(), dur + 80);
+// Цвет кольца — не хардкод (.impact-ring в общем CSS даёт бежевый ringOut),
+// а от собственного тона nimitta: тот же hue, светлота и насыщенность подняты.
+// Один и тот же приём годится для любой категории (vel/pal/ret/den/lab),
+// не только под конкретный пример.
+function hexToHsl(hex){
+  const r=((hex>>16)&255)/255, g=((hex>>8)&255)/255, b=(hex&255)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){h=s=0;} else {
+    const d=max-min; s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}
+    h/=6;
+  }
+  return [h,s,l];
 }
+function hslToRgbStr(h,s,l){
+  let r,g,b;
+  if(s===0){r=g=b=l;} else {
+    const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+    const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
+    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
+  }
+  return `${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)}`;
+}
+function ringColorFrom(hex){
+  const [h,s,l] = hexToHsl(hex);
+  return hslToRgbStr(h, Math.min(1,s+0.25), Math.min(0.86,l+0.22)); // тот же тон, заметно светлее
+}
+
+// ЭТО и есть нужный алгоритм — перенесено дословно из
+// rule-assimilation-varga-t-d.html (buildPulseFace/redrawPulseFace): кольцо
+// рисуется НА текстуре грани самой nimitta, центр = центр буквы, не летает
+// по экрану как DOM-элемент (то, что было раньше — .impact-ring — не то же
+// самое, спутала два разных механизма). Упрощено под текущий плоский рендер
+// (без старой меловой bump/roughness карты — она уже выведена из проекта).
+function buildPulseFace(hex, glyph){
+  const SZ = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = SZ;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#' + hex.toString(16).padStart(6,'0');
+  ctx.fillRect(0,0,SZ,SZ);
+  const baseCv = document.createElement('canvas');
+  baseCv.width = baseCv.height = SZ;
+  baseCv.getContext('2d').drawImage(cv,0,0); // чистая заливка, эталон для перерисовки каждый кадр
+  if (glyph) paintGlyph(cv, glyph);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.encoding = THREE.sRGBEncoding;
+  const material = new THREE.MeshStandardMaterial({ map:tex, roughness:0.55, metalness:0, envMapIntensity:0, fog:false });
+  return { material, canvas:cv, baseCanvas:baseCv, glyph };
+}
+// radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца
+function redrawPulseFace(pf, radiusFrac, alpha, ringRgb){
+  const sz = pf.canvas.width;
+  const ctx = pf.canvas.getContext('2d');
+  ctx.clearRect(0,0,sz,sz);
+  ctx.drawImage(pf.baseCanvas,0,0);
+  if (radiusFrac !== null){
+    const cx=sz/2, cy=sz/2, r=Math.max(1, radiusFrac*(sz/2));
+    ctx.save();
+    ctx.filter = `blur(${sz*0.024}px)`;
+    ctx.strokeStyle = `rgba(${ringRgb},${alpha})`;
+    ctx.lineWidth = sz*0.05;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  if (pf.glyph) paintGlyph(pf.canvas, pf.glyph);
+  pf.material.map.needsUpdate = true;
+}
+const PULSE_PERIOD = 1700; // = период в оригинале, не подбирала заново
 
 /* ── таймлайн ──
    Оба слова падают сразу в конечные позиции, разрыв WORD_GAP виден с самого
@@ -174,12 +249,12 @@ function spawnWave(fromVec3, toVec3, dur){
 const T = {
   fallStart: 0, fallStagger: 90, fallDur: 650,
   rolesStart: 1500,
-  influenceStart: 2100, influenceDur: 850,   // 2 волны, офсет 0 и 260мс
-  turnStart: 3300, turnDur: 1500,
-  settleStart: 5100, settleDur: 800,
-  total: 6100,
+  influenceStart: 2100, influenceDur: 1150,   // 2 волны, офсет 0 и 400мс — раздвинула, было мало заметно на коротком WORD_GAP
+  turnStart: 3600, turnDur: 1500,             // сдвинут вслед за влиянием (было 3300, влияние стало длиннее)
+  settleStart: 5400, settleDur: 800,
+  total: 6400,
 };
-const SWAP_AT = 0.15; // t в пределах оборота — см. комментарий к таймлайну
+const SWAP_AT = 0.5; // ровно середина ПОЛНОГО оборота — грань в этот момент смотрит от камеры
 
 function clamp01(t){ return Math.max(0, Math.min(1, t)); }
 function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
@@ -208,7 +283,8 @@ function resetScene(){
   captionTextEl.style.opacity = 1;
   captionTextEl.innerHTML = '&nbsp;';
   [tagSthanin, tagNimitta].forEach(t=>t.classList.remove('show'));
-  labelsEl.querySelectorAll('.wave-ring').forEach(n=>n.remove());
+  redrawPulseFace(cubes.a.pulseFace, null, 0, ringColorFrom(COL_VEL)); // чистая грань перед новым проигрыванием
+  ORDER.forEach(key => tintCube(cubes[key], 1)); // сброс приглушения перед новым проигрыванием
 
   ORDER.forEach((key,i) => {
     const c = cubes[key];
@@ -235,28 +311,37 @@ function update(elapsed){
     tagNimitta.classList.add('show');
   }
 
-  // волны влияния a → k, через WORD_GAP
-  if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur){
-    [0, 260].forEach((off, wi) => {
-      const fkey = 'wave'+wi;
-      if (!flags[fkey] && elapsed >= T.influenceStart + off){
-        flags[fkey] = true;
-        spawnWave(cubes.a.mesh.position, cubes.k.mesh.position, 560);
-      }
-    });
+  // влияние: непрерывный пульс-кольцо НА грани самой nimitta (не бегущие
+  // круги по экрану) — портировано из rule-assimilation-varga-t-d.html:
+  // радиус растёт от четверти грани до края, зациклено, с мягким
+  // sin-конвертом на вход/выход каждого цикла; гаснет в момент, когда
+  // sthānin реально сменил букву (см. блок поворота ниже, flags.swapped).
+  const pulseActive = elapsed >= T.rolesStart && !flags.pulseStopped;
+  if (pulseActive){
+    const cyclePos = ((elapsed - T.rolesStart) % PULSE_PERIOD) / PULSE_PERIOD;
+    const radiusFrac = THREE.MathUtils.lerp(0.25, 1.0, cyclePos);
+    const envelope = Math.sin(cyclePos * Math.PI);
+    redrawPulseFace(cubes.a.pulseFace, radiusFrac, 0.85 * envelope, ringColorFrom(COL_VEL));
   }
 
-  // поворот k: пусто → g на t=0.15, подскок во время оборота
+  // поворот k: buildChalkMaterials красит только перёднюю грань (idx4), не обе
+  // торцевые — значит нужен ПОЛНЫЙ оборот (360°), а не половина: свап должен
+  // случиться, когда грань смотрит строго ОТ камеры (t=0.5 внутри полного
+  // круга), тогда та же самая физическая грань докручивается обратно к
+  // зрителю уже с g. При 180° и свапе на t=0.15 к зрителю в итоге
+  // разворачивается противоположная (всегда пустая) грань — это и была причина бага.
   if (elapsed >= T.turnStart && elapsed <= T.turnStart + T.turnDur){
     if (!flags.blanked){ flags.blanked = true; cubes.k.mesh.material = cubes.k.matsBlank; }
     const t = clamp01((elapsed - T.turnStart) / T.turnDur);
-    cubes.k.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI;
+    cubes.k.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI * 2; // полный оборот
     cubes.k.mesh.position.y = REST_Y + Math.sin(t*Math.PI)*0.16;
     if (!flags.swapped && t >= SWAP_AT){
       flags.swapped = true;
+      flags.pulseStopped = true;
       cubes.k.mesh.material = cubes.k.matsTo;
       tagSthanin.classList.remove('show');
       tagNimitta.classList.remove('show');
+      redrawPulseFace(cubes.a.pulseFace, null, 0, ringColorFrom(COL_VEL)); // погасить кольцо чисто, без обрыва на середине цикла
     }
   } else if (elapsed > T.turnStart + T.turnDur){
     cubes.k.mesh.rotation.y = 0;
@@ -278,6 +363,26 @@ function update(elapsed){
       setCaption('<b>k</b> перед звонкой (гласной <b>a</b>) → <b>g</b> — правило 71');
     }
   }
+
+  // приглушение неактивных букв: внимание должно идти на пару nimitta/sthānin,
+  // пока решается переход. Активные (a, k/g) — всегда полный цвет. Остальные
+  // гаснут вскоре после появления бейджей ролей и разгораются обратно вместе
+  // с волной оседания — тем же движением, что и подскок, не отдельным шагом.
+  const DIM_RAMP = 350;
+  ORDER.forEach((key, idx) => {
+    const c = cubes[key];
+    if (c.isNimitta || c.isSthanin) { tintCube(c, 1); return; }
+    let mix = 1;
+    if (elapsed >= T.rolesStart) mix = 1 - clamp01((elapsed - T.rolesStart) / DIM_RAMP);
+    if (elapsed >= T.settleStart) {
+      const t = clamp01((elapsed - T.settleStart) / T.settleDur);
+      const wavePos = t * (ORDER.length + 3) - 2;
+      const d = wavePos - idx;
+      if (d >= 1.4) mix = 1;
+      else if (d > 0) mix = Math.max(mix, d/1.4);
+    }
+    tintCube(c, mix);
+  });
 
   updateShadows();
 }
