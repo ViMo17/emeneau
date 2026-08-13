@@ -144,6 +144,17 @@ function setCubeOpacity(mats, val){
   mats.forEach(m => { m.opacity = val; });
 }
 
+// Притенение неактивных букв — экстраполировано с правила 71 (тот же приём,
+// та же величина: настоящая opacity 0.22, как в alphabet-highlight-concept.html,
+// не цвет). cubes.ie сюда НЕ включаю — у него уже своя opacity-хореография
+// для угасания в «отстойнике» (setCubeOpacity выше), два источника прозрачности
+// на одном кубике будут конфликтовать.
+const DIMMED_OPACITY = 0.22;
+function dimCube(cube, mix){
+  const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
+  mats.forEach(m => { m.transparent = true; m.opacity = THREE.MathUtils.lerp(DIMMED_OPACITY, 1, mix); });
+}
+
 // два состояния цвета на одной геометрии и одной букве — для тех кубиков,
 // что в конце ролика становятся зелёными (слово снова единое, взаимодействия завершены)
 function makeDualCube(colorA, colorB, glyph, seed){
@@ -267,6 +278,7 @@ function resetScene(){
   [tagGuna, tagAlpha, tagAlphaA, tagAlphaE].forEach(t=>t.classList.remove('show'));
   labelsEl.querySelectorAll('.impact-ring, .wave-ring').forEach(n=>n.remove());
   [cellWI, cellGE, cellRWI, cellRGYA].forEach(el=>el?.classList.remove('gv-active'));
+  [cubes.a1, cubes.g, cubes.n, cubes.s].forEach(c => dimCube(c, 1)); // сброс притенения перед новым проигрыванием
 
   for (const key of ['a1','g','n','ie']){
     const c = cubes[key];
@@ -530,6 +542,23 @@ function update(elapsed){
     cellRWI?.classList.remove('gv-active');
     cellRGYA?.classList.remove('gv-active');
   }
+
+  // притенение фона: a1/g/n/s гаснут вскоре после начала влияния (as → i),
+  // держат внимание на активной паре (a2=nimitta, ie=sthānin), возвращаются
+  // к полной яркости синхронно с LOCK_WAVE выше — тем же движением, что подскок
+  const DIM_RAMP = 700;
+  const DIM_BG = [cubes.a1, cubes.g, cubes.n, cubes.s];
+  DIM_BG.forEach((cube) => {
+    let mix = 1;
+    if (elapsed >= T.influenceStart) mix = 1 - clamp01((elapsed - T.influenceStart) / DIM_RAMP);
+    const idx = LOCK_WAVE.findIndex(w => w.cube === cube);
+    if (elapsed >= T.settleStart && idx !== -1){
+      const start = T.settleStart + idx*LOCK_STEP;
+      const localT = clamp01((elapsed - start) / LOCK_HOP);
+      if (elapsed >= start) mix = Math.max(mix, localT);
+    }
+    dimCube(cube, mix);
+  });
 }
 
 function project(vec3){

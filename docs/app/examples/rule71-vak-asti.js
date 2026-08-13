@@ -257,7 +257,7 @@ function redrawPulseFace(pf, radiusFrac, alpha, ringRgb){
   if (pf.glyph) paintGlyph(pf.canvas, pf.glyph);
   pf.material.map.needsUpdate = true;
 }
-const PULSE_PERIOD = 1700; // = период в оригинале, не подбирала заново
+const PULSE_PERIOD = 3400; // = ×2 от периода в оригинале (было 1700)
 
 // Второй, отдельный слой влияния — бегущие кольца dh→t (в оригинале — DOM
 // .wave-ring с --dx/--dy, отдельно от кольца-пульса на грани). Работают
@@ -290,12 +290,13 @@ function spawnWave(fromVec3, toVec3, dur, rgbStr){
    (ПРОВЕРЕНО по коду прототипа: не «3/4 осталось», а именно 0.15). Затем
    единая волна-оседание по всему ряду — WORD_GAP не схлопывается никогда. */
 const T = {
-  fallStart: 0, fallStagger: 90, fallDur: 650,
-  rolesStart: 1500,
-  influenceStart: 2100, influenceDur: 560,   // = проверенные значения оригинала (офсет 0/260мс, длительность 560мс)
-  turnStart: 3600, turnDur: 1500,             // сдвинут вслед за влиянием (было 3300, влияние стало длиннее)
-  settleStart: 5400, settleDur: 800,
-  total: 6400,
+  // все тайминги ×2 — по просьбе, быстрая анимация не давала сосредоточиться
+  fallStart: 0, fallStagger: 180, fallDur: 1300,
+  rolesStart: 3000,
+  influenceStart: 4200, influenceDur: 1120,   // = ×2 от проверенных значений оригинала (было 560)
+  turnStart: 7200, turnDur: 3000,
+  settleStart: 10800, settleDur: 1600,
+  total: 12800,
 };
 const SWAP_AT = 0.15; // = проверенное значение из rule-assimilation-varga-t-d.html; работает
                        // теперь, когда обе торцевые грани куба несут одну и ту же букву
@@ -370,8 +371,8 @@ function update(elapsed){
   }
 
   // второй слой влияния — бегущие кольца a → k (см. комментарий у spawnWave)
-  if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur + 260){
-    [0, 260].forEach((off, wi) => {
+  if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur + 520){
+    [0, 520].forEach((off, wi) => { // ×2 от офсета оригинала (было 260)
       const fkey = 'wave'+wi;
       if (!flags[fkey] && elapsed >= T.influenceStart + off){
         flags[fkey] = true;
@@ -422,7 +423,7 @@ function update(elapsed){
   // пока решается переход. Активные (a, k/g) — всегда полный цвет. Остальные
   // гаснут вскоре после появления бейджей ролей и разгораются обратно вместе
   // с волной оседания — тем же движением, что и подскок, не отдельным шагом.
-  const DIM_RAMP = 350;
+  const DIM_RAMP = 700; // ×2
   ORDER.forEach((key, idx) => {
     const c = cubes[key];
     if (c.isNimitta || c.isSthanin) { tintCube(c, 1); return; }
@@ -437,8 +438,6 @@ function update(elapsed){
     }
     tintCube(c, mix);
   });
-
-  updateShadows();
 }
 
 function updateShadows(){
@@ -498,6 +497,7 @@ function frame(now){
   }
   camera.position.copy(camBase);
   updateTags();
+  updateShadows(); // безусловно, каждый кадр — не только пока playT0 задан (см. ниже, почему)
   renderer.render(scene, camera);
 }
 
