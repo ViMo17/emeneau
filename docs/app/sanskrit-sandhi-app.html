@@ -33,13 +33,14 @@
     gap: 6px;
   }
   #panel-alpha {
-    flex: 0 0 auto;
+    flex: 0 0 460px;
+    width: 460px;
     height: 100vh;
     overflow: visible;
     display: flex;
     flex-direction: column;
     padding: 16px 10px 16px 10px;
-    gap: 8px;
+    gap: 6px;
   }
 
   /* ══ ЦЕНТР ══ */
@@ -432,15 +433,16 @@
     margin-top: 3px;
   }
   .eff-legend {
-    display: flex; justify-content: center; gap: 16px;
+    display: flex; flex-wrap: nowrap; justify-content: center; gap: 16px;
     margin-top: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     font-size: 9px;
     letter-spacing: 0.05em;
     color: rgba(220,224,232,0.55);
+    overflow-x: auto; /* явный запасной вариант вместо переноса на новую строку */
   }
-  .eff-legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .eff-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .eff-legend span { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; white-space: nowrap; }
+  .eff-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex: 0 0 auto; }
 
   /* Зона 1/5 — упражнения */
   #exercises-zone {
@@ -535,8 +537,8 @@
   }
 
   :root {
-    --card: 40px;
-    --gap:  2px;
+    --card: 56px;
+    --gap:  3px;
   }
 
   /* ══ САНДХИ ══ */
@@ -703,6 +705,8 @@
   /* ══ Гуна / Вриддхи (переехала к алфавиту, справа) ══ */
   #guna-box {
     flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     overflow: visible;
     background: rgba(200,188,158, 0.10);
     border: 1px solid rgba(200,188,158, 0.26);
@@ -711,7 +715,7 @@
     display: flex;
     flex-direction: column;
     gap: 7px;
-    margin-top: 4px;
+    margin-top: 0;
   }
   .guna-title {
     font-size: 9px;
@@ -740,6 +744,8 @@
   }
   #role-legend {
     flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     background: rgba(200,188,158, 0.10);
     border: 1px solid rgba(200,188,158, 0.26);
     border-radius: 10px;
@@ -750,7 +756,7 @@
     margin-top: 4px;
   }
   .role-legend-title {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -760,12 +766,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 10px;
+    font-size: 11px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(225,215,190, 0.75);
   }
   .role-legend-sw {
-    width: 15px; height: 15px;
+    width: 18px; height: 18px;
     border-radius: 5px;
     flex-shrink: 0;
     background: #7DCFCA;
@@ -838,7 +844,8 @@
     flex: none;
     display: grid;
     flex-shrink: 0;
-    grid-template-columns: 58px repeat(5, var(--card));
+    align-self: flex-start;
+    grid-template-columns: 76px repeat(5, var(--card));
     gap: var(--gap);
     align-items: center;
     flex-shrink: 0;
@@ -860,14 +867,14 @@
     user-select: none;
   }
   .row-label .rl-main {
-    font-size: 11px;
+    font-size: 13px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.04em;
     color: rgba(225,228,235,0.88);
     text-align: right;
   }
   .row-label .rl-sub {
-    font-size: 9px;
+    font-size: 11px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(190,195,205,0.65);
     text-align: right;
@@ -894,13 +901,13 @@
     height: 8px;
   }
   .lc .dv {
-    font-size: 16px;
+    font-size: 22px;
     line-height: 1.1;
     pointer-events: none;
     transition: font-size 0.22s cubic-bezier(.34,1.56,.64,1), color 0.18s ease;
   }
   .lc .tr {
-    font-size: 7px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.03em;
     pointer-events: none;
@@ -916,13 +923,13 @@
     z-index: 300 !important;
     transform: translateY(-15px) scale(1.09) !important;
   }
-  .lc.hovered .dv, .lc.pinned .dv { font-size: 22px; }
+  .lc.hovered .dv, .lc.pinned .dv { font-size: 30px; }
 
   /* ── Подсветка при активном правиле ── */
 
   /* G0 и G1 — без выдвижения, насыщенный фон, белый увеличенный текст */
   .lc.rule-hl-0 .dv,
-  .lc.rule-hl-1 .dv { font-size: 24px !important; color: rgba(255,255,255,0.97) !important; }
+  .lc.rule-hl-1 .dv { font-size: 34px !important; color: rgba(255,255,255,0.97) !important; }
   .vel.rule-hl-0, .vel.rule-hl-1 { background: #6A9E4A !important; }
   .pal.rule-hl-0, .pal.rule-hl-1 { background: #4E9E99 !important; }
   .ret.rule-hl-0, .ret.rule-hl-1 { background: #8A72A8 !important; }
@@ -933,7 +940,7 @@
   .lab-s.rule-hl-0, .lab-s.rule-hl-1 { background: #C08040 !important; }
 
   /* G2 — насыщенный фон, чёрный увеличенный текст */
-  .lc.rule-hl-2 .dv { font-size: 24px !important; color: rgba(0,0,0,0.85) !important; }
+  .lc.rule-hl-2 .dv { font-size: 34px !important; color: rgba(0,0,0,0.85) !important; }
   .vel.rule-hl-2 { background: #6A9E4A !important; }
   .pal.rule-hl-2 { background: #4E9E99 !important; }
   .ret.rule-hl-2 { background: #8A72A8 !important; }
