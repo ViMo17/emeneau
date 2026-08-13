@@ -96,12 +96,14 @@ const COL_VEL = 0xA8D878, COL_LAB = 0xF0BF88, COL_DEN = 0xE8A8C0, COL_PAL = 0x7D
 
 // Затемнение неактивных букв: MeshStandardMaterial.color умножается на карту
 // текстуры — можно приглушить кубик, просто перекрасив .color в серый тон,
-// не перерисовывая канвас. mix=1 — обычный вид, mix=0 — максимально приглушено.
-const DIM_TINT = new THREE.Color(0x6b6f78);
-const FULL_TINT = new THREE.Color(0xffffff);
+// Приглушение — НЕ цвет (как было раньше), а настоящая прозрачность: точно
+// то же значение, что и в alphabet-highlight-concept.html (.dimmed{opacity:.22}),
+// который вы прислали как эталон. mix=1 — обычный вид, mix=0 → opacity=0.22.
+const DIMMED_OPACITY = 0.22;
 function tintCube(cube, mix){
   const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
-  mats.forEach(m => m.color.copy(FULL_TINT).lerp(DIM_TINT, 1 - mix));
+  const op = THREE.MathUtils.lerp(DIMMED_OPACITY, 1, mix);
+  mats.forEach(m => { m.transparent = true; m.opacity = op; });
 }
 
 function slotX(i, wordBreakAfter){
@@ -135,11 +137,30 @@ function makeCube(color, seed, glyph){
 // на время оборота. Портировано из rule-assimilation-varga-t-d.html: буква
 // красится на ОБЕИХ торцевых гранях (это делает сам buildChalkMaterials),
 // поэтому неважно, какая грань окажется к зрителю после разворота на 180°.
+// sthānin для НАСТОЯЩЕГО поворота на 180° (как в эталоне-ассимиляции: t↔d,
+// буква и цвет нанесены сразу на ОБЕ торцевые грани, целиком, заранее) —
+// buildChalkMaterials красит только одну грань (idx4), для 180° этого
+// недостаточно (см. историю правок), поэтому здесь свой билдер граней,
+// тот же paintGlyph, что и в chalk-module.js, просто на обе грани разом.
+function buildDualFaceMaterials(hex, glyph){
+  const SZ = 256;
+  return [0,1,2,3,4,5].map(idx => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = SZ;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#' + hex.toString(16).padStart(6,'0');
+    ctx.fillRect(0,0,SZ,SZ);
+    if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    return new THREE.MeshStandardMaterial({ map:tex, roughness:0.55, metalness:0, envMapIntensity:0, fog:false, transparent:true });
+  });
+}
 function makeSwapCube(color, glyphFrom, glyphTo, seed){
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
-  const matsFrom  = buildChalkMaterials(color, seed*97+13, glyphFrom);
-  const matsBlank = buildChalkMaterials(color, seed*97+14, null);
-  const matsTo    = buildChalkMaterials(color, seed*97+15, glyphTo);
+  const matsFrom  = buildDualFaceMaterials(color, glyphFrom);
+  const matsBlank = buildDualFaceMaterials(color, null);
+  const matsTo    = buildDualFaceMaterials(color, glyphTo);
   const mesh = new THREE.Mesh(geo, matsFrom);
   scene.add(mesh);
   return { mesh, shadow: makeShadowFor(), matsFrom, matsBlank, matsTo };
@@ -238,6 +259,28 @@ function redrawPulseFace(pf, radiusFrac, alpha, ringRgb){
 }
 const PULSE_PERIOD = 1700; // = период в оригинале, не подбирала заново
 
+// Второй, отдельный слой влияния — бегущие кольца dh→t (в оригинале — DOM
+// .wave-ring с --dx/--dy, отдельно от кольца-пульса на грани). Работают
+// ОБА слоя одновременно, не один вместо другого — это я упустила раньше.
+// .wave-ring уже есть в общем CSS хоста (используется под правило 3), но
+// там цвет захардкожен золотым под agnayas — здесь переопределяю инлайном
+// под тон nimitta, тем же ringColorFrom().
+function spawnWave(fromVec3, toVec3, dur, rgbStr){
+  const pA = project(fromVec3.clone().add(new THREE.Vector3(0,0.1,0)));
+  const pB = project(toVec3.clone().add(new THREE.Vector3(0,0.1,0)));
+  const ring = document.createElement('div');
+  ring.className = 'wave-ring';
+  ring.style.left = pA.x + 'px';
+  ring.style.top = pA.y + 'px';
+  ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
+  ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
+  ring.style.setProperty('--wave-dur', dur + 'ms');
+  ring.style.borderColor = `rgba(${rgbStr},0.9)`;
+  ring.style.boxShadow = `0 0 10px 1px rgba(${rgbStr},0.35)`;
+  labelsEl.appendChild(ring);
+  setTimeout(()=>ring.remove(), dur + 80);
+}
+
 /* ── таймлайн ──
    Оба слова падают сразу в конечные позиции, разрыв WORD_GAP виден с самого
    начала и остаётся видимым всегда (это внешние сандхи — слова не сливаются
@@ -249,12 +292,13 @@ const PULSE_PERIOD = 1700; // = период в оригинале, не под�
 const T = {
   fallStart: 0, fallStagger: 90, fallDur: 650,
   rolesStart: 1500,
-  influenceStart: 2100, influenceDur: 1150,   // 2 волны, офсет 0 и 400мс — раздвинула, было мало заметно на коротком WORD_GAP
+  influenceStart: 2100, influenceDur: 560,   // = проверенные значения оригинала (офсет 0/260мс, длительность 560мс)
   turnStart: 3600, turnDur: 1500,             // сдвинут вслед за влиянием (было 3300, влияние стало длиннее)
   settleStart: 5400, settleDur: 800,
   total: 6400,
 };
-const SWAP_AT = 0.5; // ровно середина ПОЛНОГО оборота — грань в этот момент смотрит от камеры
+const SWAP_AT = 0.15; // = проверенное значение из rule-assimilation-varga-t-d.html; работает
+                       // теперь, когда обе торцевые грани куба несут одну и ту же букву
 
 function clamp01(t){ return Math.max(0, Math.min(1, t)); }
 function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
@@ -284,6 +328,7 @@ function resetScene(){
   captionTextEl.innerHTML = '&nbsp;';
   [tagSthanin, tagNimitta].forEach(t=>t.classList.remove('show'));
   redrawPulseFace(cubes.a.pulseFace, null, 0, ringColorFrom(COL_VEL)); // чистая грань перед новым проигрыванием
+  labelsEl.querySelectorAll('.wave-ring').forEach(n=>n.remove());
   ORDER.forEach(key => tintCube(cubes[key], 1)); // сброс приглушения перед новым проигрыванием
 
   ORDER.forEach((key,i) => {
@@ -324,16 +369,25 @@ function update(elapsed){
     redrawPulseFace(cubes.a.pulseFace, radiusFrac, 0.85 * envelope, ringColorFrom(COL_VEL));
   }
 
-  // поворот k: buildChalkMaterials красит только перёднюю грань (idx4), не обе
-  // торцевые — значит нужен ПОЛНЫЙ оборот (360°), а не половина: свап должен
-  // случиться, когда грань смотрит строго ОТ камеры (t=0.5 внутри полного
-  // круга), тогда та же самая физическая грань докручивается обратно к
-  // зрителю уже с g. При 180° и свапе на t=0.15 к зрителю в итоге
-  // разворачивается противоположная (всегда пустая) грань — это и была причина бага.
+  // второй слой влияния — бегущие кольца a → k (см. комментарий у spawnWave)
+  if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur + 260){
+    [0, 260].forEach((off, wi) => {
+      const fkey = 'wave'+wi;
+      if (!flags[fkey] && elapsed >= T.influenceStart + off){
+        flags[fkey] = true;
+        spawnWave(cubes.a.mesh.position, cubes.k.mesh.position, T.influenceDur, ringColorFrom(COL_VEL));
+      }
+    });
+  }
+
+  // поворот k: настоящий 180° по часовой, буква/цвет наносятся рано и целиком
+  // (t=0.15), едут с гранью до конца поворота — как в эталоне-ассимиляции
+  // (t→d). Обе торцевые грани несут одну и ту же букву (buildDualFaceMaterials
+  // выше), поэтому неважно, какая из них окажется к зрителю после разворота.
   if (elapsed >= T.turnStart && elapsed <= T.turnStart + T.turnDur){
     if (!flags.blanked){ flags.blanked = true; cubes.k.mesh.material = cubes.k.matsBlank; }
     const t = clamp01((elapsed - T.turnStart) / T.turnDur);
-    cubes.k.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI * 2; // полный оборот
+    cubes.k.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI; // 180°, как в эталоне (не 360°)
     cubes.k.mesh.position.y = REST_Y + Math.sin(t*Math.PI)*0.16;
     if (!flags.swapped && t >= SWAP_AT){
       flags.swapped = true;
