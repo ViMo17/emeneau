@@ -33,8 +33,7 @@
     gap: 6px;
   }
   #panel-alpha {
-    flex: 0 0 460px;
-    width: 460px;
+    flex: 0 0 auto;
     height: 100vh;
     overflow: visible;
     display: flex;
@@ -248,7 +247,7 @@
     text-align: center;
   }
   #rd-num {
-    font-size: 8px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -459,7 +458,7 @@
     overflow: hidden;
   }
   #ez-label {
-    font-size: 8px;
+    font-size: 20px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -527,7 +526,7 @@
   .eg-chip.c5 { background: #F0BF88; border: 1.5px solid #D09050; color: rgba(80,38,5,0.92); }
 
   .panel-title {
-    font-size: 10px;
+    font-size: 20px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: rgba(220,224,232,0.85);
@@ -537,8 +536,8 @@
   }
 
   :root {
-    --card: 56px;
-    --gap:  3px;
+    --card: 40px;
+    --gap:  2px;
   }
 
   /* ══ САНДХИ ══ */
@@ -705,8 +704,6 @@
   /* ══ Гуна / Вриддхи (переехала к алфавиту, справа) ══ */
   #guna-box {
     flex: 0 0 auto;
-    width: 100%;
-    box-sizing: border-box;
     overflow: visible;
     background: rgba(200,188,158, 0.10);
     border: 1px solid rgba(200,188,158, 0.26);
@@ -718,7 +715,7 @@
     margin-top: 0;
   }
   .guna-title {
-    font-size: 9px;
+    font-size: 20px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -744,8 +741,6 @@
   }
   #role-legend {
     flex: 0 0 auto;
-    width: 100%;
-    box-sizing: border-box;
     background: rgba(200,188,158, 0.10);
     border: 1px solid rgba(200,188,158, 0.26);
     border-radius: 10px;
@@ -756,7 +751,7 @@
     margin-top: 4px;
   }
   .role-legend-title {
-    font-size: 10px;
+    font-size: 20px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -766,12 +761,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(225,215,190, 0.75);
   }
   .role-legend-sw {
-    width: 18px; height: 18px;
+    width: 15px; height: 15px;
     border-radius: 5px;
     flex-shrink: 0;
     background: #7DCFCA;
@@ -844,8 +839,7 @@
     flex: none;
     display: grid;
     flex-shrink: 0;
-    align-self: flex-start;
-    grid-template-columns: 76px repeat(5, var(--card));
+    grid-template-columns: 58px repeat(5, var(--card));
     gap: var(--gap);
     align-items: center;
     flex-shrink: 0;
@@ -867,14 +861,14 @@
     user-select: none;
   }
   .row-label .rl-main {
-    font-size: 13px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.04em;
     color: rgba(225,228,235,0.88);
     text-align: right;
   }
   .row-label .rl-sub {
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(190,195,205,0.65);
     text-align: right;
@@ -901,13 +895,13 @@
     height: 8px;
   }
   .lc .dv {
-    font-size: 22px;
+    font-size: 16px;
     line-height: 1.1;
     pointer-events: none;
     transition: font-size 0.22s cubic-bezier(.34,1.56,.64,1), color 0.18s ease;
   }
   .lc .tr {
-    font-size: 10px;
+    font-size: 7px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.03em;
     pointer-events: none;
@@ -923,32 +917,8 @@
     z-index: 300 !important;
     transform: translateY(-15px) scale(1.09) !important;
   }
-  .lc.hovered .dv, .lc.pinned .dv { font-size: 30px; }
+  .lc.hovered .dv, .lc.pinned .dv { font-size: 22px; }
 
-  /* ── Подсветка при активном правиле ── */
-
-  /* G0 и G1 — без выдвижения, насыщенный фон, белый увеличенный текст */
-  .lc.rule-hl-0 .dv,
-  .lc.rule-hl-1 .dv { font-size: 34px !important; color: rgba(255,255,255,0.97) !important; }
-  .vel.rule-hl-0, .vel.rule-hl-1 { background: #6A9E4A !important; }
-  .pal.rule-hl-0, .pal.rule-hl-1 { background: #4E9E99 !important; }
-  .ret.rule-hl-0, .ret.rule-hl-1 { background: #8A72A8 !important; }
-  .den.rule-hl-0, .den.rule-hl-1 { background: #B06688 !important; }
-  .lab.rule-hl-0, .lab.rule-hl-1 { background: #C08040 !important; }
-  .dim.rule-hl-0, .dim.rule-hl-1 { background: #A8A490 !important; }
-  .pal-s.rule-hl-0, .pal-s.rule-hl-1 { background: #4E9E99 !important; }
-  .lab-s.rule-hl-0, .lab-s.rule-hl-1 { background: #C08040 !important; }
-
-  /* G2 — насыщенный фон, чёрный увеличенный текст */
-  .lc.rule-hl-2 .dv { font-size: 34px !important; color: rgba(0,0,0,0.85) !important; }
-  .vel.rule-hl-2 { background: #6A9E4A !important; }
-  .pal.rule-hl-2 { background: #4E9E99 !important; }
-  .ret.rule-hl-2 { background: #8A72A8 !important; }
-  .den.rule-hl-2 { background: #B06688 !important; }
-  .lab.rule-hl-2 { background: #C08040 !important; }
-  .dim.rule-hl-2 { background: #A8A490 !important; }
-  .pal-s.rule-hl-2 { background: #4E9E99 !important; }
-  .lab-s.rule-hl-2 { background: #C08040 !important; }
   .lc-empty { width: var(--card); height: var(--card); }
 
   /* Цвета алфавита */
@@ -1511,34 +1481,6 @@ async function mountAnimExample(modulePath) {
   }
 }
 
-/* ═══════════════════ ПОДСВЕТКА АЛФАВИТА ПО ПРАВИЛУ ═══════════════════ */
-let _currentAlphaHL = [];
-
-function highlightRuleAlpha(ruleN) {
-  clearRuleAlpha();
-  const sets = RULE_ALPHA[ruleN];
-  if (!sets) return;
-  (sets[0] || []).forEach(id => {
-    const el = document.getElementById('ac-' + id);
-    if (el) { el.classList.add('rule-hl-0'); console.log('G0 added to', 'ac-'+id, el); }
-    else console.warn('G0 NOT FOUND: ac-'+id);
-  });
-  (sets[1] || []).forEach(id => {
-    const el = document.getElementById('ac-' + id);
-    if (el && !el.classList.contains('rule-hl-0')) el.classList.add('rule-hl-1');
-  });
-  (sets[2] || []).forEach(id => {
-    const el = document.getElementById('ac-' + id);
-    if (el && !el.classList.contains('rule-hl-0') && !el.classList.contains('rule-hl-1'))
-      el.classList.add('rule-hl-2');
-  });
-}
-
-function clearRuleAlpha() {
-  document.querySelectorAll('.rule-hl-0,.rule-hl-1,.rule-hl-2').forEach(el =>
-    el.classList.remove('rule-hl-0','rule-hl-1','rule-hl-2'));
-}
-
 /* ═══════════════════ ПАРСИНГ ПРАВИЛ ═══════════════════ */
 function parseEmeno(emeno) {
   const sep = emeno.indexOf('Например:');
@@ -1557,8 +1499,6 @@ function showCenter(cd) {
   const parsed = parseEmeno(cd.emeno);
 
   unmountCurrentAnim(); // при смене правила предыдущая анимация больше не актуальна
-
-  highlightRuleAlpha(cd.n);
 
   rdEmpty.style.display    = 'none';
   rdNum.style.display      = 'block';
@@ -1622,7 +1562,6 @@ function showCenter(cd) {
 }
 
 function hideCenter() {
-  clearRuleAlpha();
   unmountCurrentAnim();
   rdEmpty.style.display    = 'block';
   rdNum.style.display      = 'none';
@@ -1641,84 +1580,6 @@ function getRuleType(n) {
   if (n <= 59) return 'Висарга сандхи';
   if (n <= 65) return 'Внешние сандхи · Носовые';
   return 'Внешние сандхи · Взрывные';
-}
-/* ═══════════════════ ПОДСВЕТКА АЛФАВИТА ПО ПРАВИЛУ ═══════════════════ */
-
-/* Карта: номер правила → [звуки эффект-1, звуки эффект-2 (опц.)]
-   эффект-1 = rule-hl  (подъём + масштаб)
-   эффект-2 = rule-hl-2 (подъём + brightness, для «подвергающихся» в пр.39) */
-const RULE_ALPHA = {
-   1: [[], ['e','ai','o','au','a','ā'], []],
-   2: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['e','o','ra','la']],
-   3: [[], ['e','ai','o','au','a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['ya','ra','la','va']],
-   4: [[], ['i','ī','u','ū'], ['ya','va']],
-   5: [[], ['ṛ'], ['ra','u','ū']],
-   6: [[], ['ṛ','i','ī','u','ū'], ['ya','ra','la','va']],
-   7: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], []],
-   8: [[], ['ra'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
-   9: [[], [], []],
-  10: [[], ['cha'], []],
-  11: [[], ['ma'], ['va']],
-  12: [[], ['sa'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
-  13: [[], ['sa'], ['ḥ']],
-  14: [[], ['sa'], ['ta']],
-  15: [[], ['sa'], ['dha']],
-  16: [[], ['ha'], ['gha']],
-  17: [[], ['ha'], ['dha']],
-  18: [[], ['ha'], ['gha']],
-  19: [[], [], []],
-  20: [[], ['ka','ṣa'], ['gha']],
-  21: [[], [], ['ka','ṣa','ṭa','ta','sa']],
-  22: [[], [], []],
-  23: [[], [], ['śa','ca','ka','ṭa','ṣa']],
-  24: [[], [], ['ṣa','ka','ṭa','ta']],
-  25: [[], [], []],
-  26: [[], [], []],
-  27: [[], ['jha'], ['ka']],
-  28: [[], ['ca'], ['ka']],
-  29: [[], [], []],
-  30: [['gha','jha','ḍha','dha','bha'], ['kha','cha','ṭha','tha','pha'], []],
-  31: [['ga','gha','ja','jha','ḍa','ḍha','da','dha','ba','bha'], [], ['ka','ca','ṭa','ta','pa']],
-  32: [['ka','kha','ca','cha','ṭa','ṭha','ta','tha','pa','pha'], [], ['ga','ja','ḍa','da','ba']],
-  33: [['gha','jha','ṭha','tha','bha'], ['kha','cha','ṭha','tha','pha'], ['ka','ca','ṭa','ta','pa','śa','ṣa','sa']],
-  34: [[], ['gha','jha','ḍha','dha','bha'], ['ka','ca','ṭa','ta','pa']],
-  35: [[], ['ṅa','ña','ṇa','na','ma'], ['śa','ṣa','sa','ṃ']],
-  36: [['sa'], ['i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au','ka','ra','la'], ['ṣa']],
-  37: [['na'], ['ra','ṣa','ṛ','ṝ'], ['ṇa']],
-  38: [['ta','tha','da','dha','na'], ['ṭa','ṭha','ḍa','ḍha','ṇa'], ['ṭa','ṭha','ḍa','ḍha','ṇa']],
-  39: [[], [], []],
-  40: [['na'], ['ca','ja'], ['ña']],
-  41: [[], ['i','ī','u','ū','e'], []],
-  42: [[], ['e','ai','o','au','a','ā'], []],
-  43: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['e','o','ra','la']],
-  44: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], []],
-  45: [[], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū'], ['ya','ra','la','va']],
-  46: [[], ['e','ai','o','au','a'], []],
-  47: [[], ['e','ai'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','o','au']],
-  48: [[], ['o','au'], ['va','a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai']],
-  49: [[], [], []],
-  50: [[], ['sa','a'], ['o']],
-  51: [[], ['sa','a'], ['ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au']],
-  52: [[], ['sa'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
-  53: [[], ['sa','a'], ['ḥ','o','ga','ja','ḍa','da','ba']],
-  54: [[], ['sa'], ['ba','ha']],
-  55: [[], ['sa','ā'], ['ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
-  56: [[], ['sa','ra'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū']],
-  57: [[], ['sa','ra'], ['ḥ']],
-  58: [[], ['ḥ'], ['ra','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha']],
-  59: [[], [], []],
-  60: [[], ['ma'], ['ṃ']],
-  61: [[], ['ṅa','ña','ṇa','na','ma'], ['a','ā','i','ī','ṛ','ṝ','ḷ','u','ū','e','ai','o','au']],
-  62: [[], ['na'], ['ṃ','śa','ṣa','sa','ca','ṭa','ta']],
-  63: [[], ['na'], ['ña','ṇa','ja','ḍa','da']],
-  64: [[], ['na'], ['ña','śa','cha']],
-  65: [[], ['na'], ['ma','la','ṃ']],
-  66: [[], ['ta','śa'], ['cha']],
-  67: [[], ['ta'], ['ca','ṭa','cha','ṭha']],
-  68: [[], ['ta'], ['la']],
-  69: [[], [], []],
-  70: [['ha'], ['ka','ca','ṭa','ta','pa','kha','cha','ṭha','tha','pha','ga','ja','ḍa','da','ba','gha','jha','ḍha','dha','bha'], ['gha','jha','ḍha','dha','bha']],
-  71: [['ka','kha','ca','cha','ṭa','ṭha','ta','tha','pa','pha'], [], ['ga','ja','ḍa','da','ba']],
 }
 const RULE_GROUP = {};
 for (let i = 17; i <= 29; i++) RULE_GROUP[i] = 'g1';
