@@ -220,32 +220,33 @@ function spawnWave(fromVec3, toVec3, dur){
    потом e окончательно растворяется, а as, подтолкнутое прилётом y,
    возвращается на дистанцию в 1 кубик. */
 const T = {
-  stemStart: 0, stemStagger: 130, stemDur: 650,
-  endStart: 1300, endStagger: 150, endDur: 650, // as падает сразу на «1 кубик» от i
+  // все тайминги ×2 — по тому же решению, что и для правила 71
+  stemStart: 0, stemStagger: 260, stemDur: 1300,
+  endStart: 2600, endStagger: 300, endDur: 1300,
 
-  influenceStart: 2600, influenceDur: 650,   // as воздействует на i на расстоянии
+  influenceStart: 5200, influenceDur: 1300,
 
-  gunaStart: 3550, gunaDur: 700,             // i → e (подскок + оборот + смена цвета)
+  gunaStart: 7100, gunaDur: 1400,
 
-  approach2Start: 4550, approach2Dur: 550,   // as: 1 кубик от e → вплотную (контакт)
+  approach2Start: 9100, approach2Dur: 1100,
 
-  substStart: 5100,                          // = approach2Start + approach2Dur — контакт, триггер всего дальнейшего
-  riseDur: 500,                              // e поднимается вверх-влево, блёкнет до полупрозрачности
+  substStart: 10200,
+  riseDur: 1000,
 
-  arrivalStart: 5950,                        // = substStart + riseDur + 350 (пауза «e уже в стороне, одна»)
-  yInDur: 750,                               // y прилетает из алфавита
-  aInOffset: 120, aInDur: 650,               // новое a — чуть вслед за y
+  arrivalStart: 11900,
+  yInDur: 1500,
+  aInOffset: 240, aInDur: 1300,
 
-  pushStart: 6200, pushDur: 430,             // as отодвигается назад, освобождая слот y
+  pushStart: 12400, pushDur: 860,
 
-  fadeStart: 7600, fadeDur: 450,             // e окончательно растворяется (после ~2.5с сравнения)
+  fadeStart: 15200, fadeDur: 900,
 
-  settleStart: 8250, settleDur: 850,
-  total: 9300,
+  settleStart: 16500, settleDur: 1700,
+  total: 18600,
 };
 const NEAR_OFFSET = 0;      // "1 кубик от соседа" — расстояние по умолчанию между блоками
 const TOUCH_SHIFT = SLOT;   // вплотную к e = сдвиг на 1 слот влево от NEAR
-const WAVE_TRAVEL_MS = 550; // время в пути одной волны-пульса от as до i
+const WAVE_TRAVEL_MS = 1100; // ×2, время в пути одной волны-пульса от as до i
 
 function clamp01(t){ return Math.max(0, Math.min(1, t)); }
 function lerp(a,b,t){ return a+(b-a)*t; }
@@ -349,7 +350,7 @@ function update(elapsed){
   // Как только первая волна долетает — i желтеет: это сигнал «гуна начата».
   // Пока волна в пути, i остаётся зелёным — оно ещё просто часть agni-. ──
   if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur){
-    [0, 220, 440].forEach((offset, i) => {
+    [0, 440, 880].forEach((offset, i) => {
       const key = 'wave' + i;
       if (!flags[key] && elapsed >= T.influenceStart + offset){
         flags[key] = true;
@@ -361,7 +362,7 @@ function update(elapsed){
       }
     });
     const t = clamp01((elapsed - T.influenceStart)/T.influenceDur);
-    ie.mesh.rotation.z = Math.sin(elapsed*0.025) * 0.05 * Math.sin(t*Math.PI);
+    ie.mesh.rotation.z = Math.sin(elapsed*0.0125) * 0.05 * Math.sin(t*Math.PI);
   }
   if (!flags.turnYellow && elapsed >= T.influenceStart + WAVE_TRAVEL_MS){
     flags.turnYellow = true;
@@ -524,8 +525,8 @@ function update(elapsed){
     { cube: cubes.a1 }, { cube: cubes.g }, { cube: cubes.n },
     { cube: cubes.aNew }, { cube: cubes.y }, { cube: cubes.a2 }, { cube: cubes.s },
   ];
-  const LOCK_STEP = 75;   // сдвиг импульса от кубика к кубику
-  const LOCK_HOP  = 260;  // длительность подскока одного кубика
+  const LOCK_STEP = 150;   // ×2, сдвиг импульса от кубика к кубику
+  const LOCK_HOP  = 520;  // ×2, длительность подскока одного кубика
   LOCK_WAVE.forEach(({cube}, i) => {
     const start = T.settleStart + i*LOCK_STEP;
     if (elapsed >= start && elapsed <= start + LOCK_HOP){

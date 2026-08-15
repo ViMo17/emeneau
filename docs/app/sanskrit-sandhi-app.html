@@ -33,7 +33,8 @@
     gap: 6px;
   }
   #panel-alpha {
-    flex: 0 0 auto;
+    flex: 0 0 400px;
+    width: 400px;
     height: 100vh;
     overflow: visible;
     display: flex;
@@ -81,7 +82,7 @@
 
   /* ══ Маркеры подгрупп в панели сандхи ══ */
   .g-marker {
-    font-size: 7px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -104,7 +105,7 @@
     background: rgba(168,188,200, 0.18);
   }
   .g-marker.sub {
-    font-size: 6.5px;
+    font-size: 9px;
     color: rgba(205,218,228, 0.68);
     padding-left: 11px;
   }
@@ -187,14 +188,14 @@
   #group-stub.stub-c4 { background: rgba(150,50,85, 0.30); border-color: rgba(200,80,120, 0.40); }
   #group-stub.stub-c5 { background: rgba(140,80,10, 0.30); border-color: rgba(190,130,40, 0.40); }
   #stub-label {
-    font-size: 14px;
+    font-size: 16px;
     font-family: 'Georgia', serif;
     color: rgba(240,230,215, 0.90);
     line-height: 1.45;
     white-space: pre-line;
   }
   #stub-sub {
-    font-size: 12px;
+    font-size: 13px;
     font-family: 'Georgia', serif;
     color: rgba(210,220,235, 0.78);
     line-height: 1.55;
@@ -239,7 +240,7 @@
     overflow: hidden;
   }
   #rd-empty {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #454540;
     letter-spacing: 0.14em;
@@ -274,14 +275,14 @@
     max-height: 130px;
   }
   #lp-empty {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #3a3a36;
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
   .lp-group-label {
-    font-size: 7px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.10em;
     text-transform: uppercase;
@@ -301,7 +302,7 @@
     align-items: center;
   }
   #lp-sep {
-    font-size: 22px;
+    font-size: 16px;
     color: #424240;
     font-family: 'Helvetica Neue', sans-serif;
     font-weight: 300;
@@ -319,8 +320,8 @@
     transition: transform 0.18s cubic-bezier(.34,1.56,.64,1);
   }
   .lp-tile:hover { transform: translateY(-4px) scale(1.10); }
-  .lp-tile .t-dv { font-size: 14px; line-height: 1; pointer-events: none; }
-  .lp-tile .t-tr { font-size: 6px; font-family: 'Helvetica Neue', sans-serif; margin-top: 1px; pointer-events: none; }
+  .lp-tile .t-dv { font-size: 13px; line-height: 1; pointer-events: none; }
+  .lp-tile .t-tr { font-size: 9px; font-family: 'Helvetica Neue', sans-serif; margin-top: 1px; pointer-events: none; }
 
   /* Зона 2/5 — анимация слияния */
   #animation-area {
@@ -343,7 +344,7 @@
     flex-direction: column;
   }
   #anim-empty {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #3a3a36;
     letter-spacing: 0.10em;
@@ -369,7 +370,7 @@
     position: absolute;
     transform: translate(-50%, -100%);
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 10.5px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: rgba(240,230,210,0.92);
@@ -416,7 +417,7 @@
   .eff-caption {
     margin-top: 12px;
     text-align: center;
-    font-size: 17px;
+    font-size: 16px;
     font-family: 'Georgia', serif;
     color: #e8e4d8;
     min-height: 26px;
@@ -435,7 +436,7 @@
     display: flex; flex-wrap: nowrap; justify-content: center; gap: 16px;
     margin-top: 10px;
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.05em;
     color: rgba(220,224,232,0.55);
     overflow-x: auto; /* явный запасной вариант вместо переноса на новую строку */
@@ -458,7 +459,7 @@
     overflow: hidden;
   }
   #ez-label {
-    font-size: 20px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -477,7 +478,7 @@
   #ez-chips::-webkit-scrollbar { width: 3px; }
   #ez-chips::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
   #ez-empty {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #3a3a36;
     letter-spacing: 0.10em;
@@ -488,7 +489,7 @@
     align-items: center;
     padding: 5px 12px;
     border-radius: 20px;
-    font-size: 10px;
+    font-size: 13px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -557,7 +558,7 @@
 
   /* Метка секции */
   .s-label {
-    font-size: 8px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -613,7 +614,7 @@
   }
 
   .card-num {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 400;
     font-family: 'Helvetica Neue', sans-serif;
     line-height: 1;
@@ -677,7 +678,7 @@
   #quote-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 
   #quote-num {
-    font-size: 8px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -685,14 +686,14 @@
     margin-bottom: 3px;
   }
   #quote-text {
-    font-size: 9px;
+    font-size: 13px;
     font-family: 'Georgia', serif;
     color: #bbb;
     line-height: 1.5;
     white-space: pre-wrap;
   }
   #quote-empty {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #555;
     letter-spacing: 0.08em;
@@ -715,7 +716,7 @@
     margin-top: 0;
   }
   .guna-title {
-    font-size: 20px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -723,7 +724,7 @@
     flex-shrink: 0;
   }
   .guna-subtitle {
-    font-size: 8px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -732,7 +733,7 @@
     margin-top: 3px;
   }
   .guna-note {
-    font-size: 8px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     font-style: italic;
     color: rgba(225,215,190, 0.55);
@@ -751,7 +752,7 @@
     margin-top: 4px;
   }
   .role-legend-title {
-    font-size: 20px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -764,6 +765,14 @@
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(225,215,190, 0.75);
+  }
+  .role-legend-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 16px;
+    overflow-x: auto;
   }
   .role-legend-sw {
     width: 15px; height: 15px;
@@ -779,7 +788,7 @@
     flex-shrink: 0;
   }
   .guna-table td {
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 9px;
     text-align: center;
     border-radius: 5px;
@@ -791,7 +800,7 @@
   }
   .gt-h {
     font-family: 'Helvetica Neue', sans-serif !important;
-    font-size: 8px !important;
+    font-size: 9px !important;
     letter-spacing: 0.06em;
     color: rgba(225,215,190, 0.6) !important;
     text-transform: uppercase;
@@ -800,7 +809,7 @@
   }
   .gt-r {
     font-family: 'Helvetica Neue', sans-serif !important;
-    font-size: 8.5px !important;
+    font-size: 9px !important;
     color: rgba(225,215,190, 0.75) !important;
     text-align: right !important;
     padding-right: 8px !important;
@@ -810,9 +819,9 @@
   /* цвет по СТУПЕНИ (слаб/гуна/вридд), а не по месту образования — в этой
      таблице столбцы идут в другом порядке (a,i,u,ṛ,ḷ), чем в алфавите справа
      (vel,pal,ret,den,lab), и цвет по варге путал, а не помогал считывать */
-  .guna-table td.grade-weak    { background: #DCD6C4; color: #3a3428; }
-  .guna-table td.grade-guna    { background: #C7A05A; color: #2e2308; }
-  .guna-table td.grade-vriddhi { background: #9C7038; color: #f5ecd8; }
+  .guna-table td.grade-weak    { background: #E8E6E1; color: #3a3428; }
+  .guna-table td.grade-guna    { background: #BDAC8C; color: #2e2308; }
+  .guna-table td.grade-vriddhi { background: #9F825E; color: #f5ecd8; }
   .guna-table td.gt-blank { background: transparent; }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
@@ -839,6 +848,7 @@
     flex: none;
     display: grid;
     flex-shrink: 0;
+    margin: 0 auto; /* сдвинуто вправо от левого края, но с зазором и справа тоже — не вплотную */
     grid-template-columns: 58px repeat(5, var(--card));
     gap: var(--gap);
     align-items: center;
@@ -863,7 +873,8 @@
   .row-label .rl-main {
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
     color: rgba(225,228,235,0.88);
     text-align: right;
   }
@@ -901,7 +912,7 @@
     transition: font-size 0.22s cubic-bezier(.34,1.56,.64,1), color 0.18s ease;
   }
   .lc .tr {
-    font-size: 7px;
+    font-size: 9px;
     font-family: 'Helvetica Neue', sans-serif;
     letter-spacing: 0.03em;
     pointer-events: none;
@@ -965,7 +976,7 @@
     padding: 0 4px;
   }
   #audio-panel.visible { height: 36px; }
-  #audio-label { font-size:14px; font-family:'Georgia',serif; color:#ccc; min-width:20px; text-align:center; }
+  #audio-label { font-size:13px; font-family:'Helvetica Neue',sans-serif; color:#ccc; min-width:20px; text-align:center; }
   #audio-trans { font-size:10px; font-family:'Helvetica Neue',sans-serif; color:#888; letter-spacing:0.05em; min-width:18px; }
   #audio-placeholder {
     display:flex; align-items:center; gap:5px;
@@ -974,14 +985,14 @@
     border:1px dashed rgba(255,255,255,0.14);
   }
   #audio-placeholder svg { opacity:0.4; }
-  #audio-placeholder span { font-size:8px; font-family:'Helvetica Neue',sans-serif; letter-spacing:0.08em; color:#666; text-transform:uppercase; }
+  #audio-placeholder span { font-size:9px; font-family:'Helvetica Neue',sans-serif; letter-spacing:0.08em; color:#666; text-transform:uppercase; }
 
   /* ══ Tooltip ══ */
   .tooltip {
     position: fixed;
     background: #1a1a1a;
     color: #e8e8e8;
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     padding: 7px 12px;
     border-radius: 8px;
@@ -1041,7 +1052,7 @@
 
     <!-- Зона 2 — примеры-пилюли -->
     <div id="letter-picker">
-      <span style="font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>
+      <span style="font-size:10px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>
     </div>
 
     <!-- 2/5 — анимация слияния -->
@@ -1070,9 +1081,11 @@
 
     <div id="role-legend">
       <div class="role-legend-title">Роли в примере</div>
-      <div class="role-legend-item"><span class="role-legend-sw src"></span>источник · было</div>
-      <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
-      <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
+      <div class="role-legend-row">
+        <div class="role-legend-item"><span class="role-legend-sw src"></span>источник · было</div>
+        <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
+        <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
+      </div>
     </div>
 
     <div id="guna-box">
@@ -1477,7 +1490,7 @@ async function mountAnimExample(modulePath) {
     currentAnim = { controller, modulePath };
   } catch (err) {
     console.error('Не удалось загрузить анимацию:', modulePath, err);
-    animTiles.innerHTML = '<div style="font-size:11px;color:#c88;text-align:center;padding:20px;">Ошибка загрузки анимации — см. консоль</div>';
+    animTiles.innerHTML = '<div style="font-size:10px;color:#c88;text-align:center;padding:20px;">Ошибка загрузки анимации — см. консоль</div>';
   }
 }
 
@@ -1514,7 +1527,7 @@ function showCenter(cd) {
   const exData = EXAMPLES[cd.n] || [];
   if (exData.length === 0 && parsed.examples.length === 0) {
     const ph = document.createElement('span');
-    ph.style.cssText = 'font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;';
+    ph.style.cssText = 'font-size:10px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;';
     ph.textContent = '— примеры не добавлены —';
     lpPicker.appendChild(ph);
   } else {
@@ -1568,7 +1581,7 @@ function hideCenter() {
   rdText.style.display     = 'none';
   rdTextWrap.style.display = 'none';
   updateStub(null);
-  lpPicker.innerHTML = '<span style="font-size:11px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>';
+  lpPicker.innerHTML = '<span style="font-size:10px;color:rgba(200,195,185,.28);letter-spacing:.06em;text-transform:uppercase;">← выберите правило</span>';
   ezLabel.textContent = 'Упражнения';
   ezChips.innerHTML   = '<span id="ez-empty">← выберите правило</span>';
 }
