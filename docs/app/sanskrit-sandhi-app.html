@@ -23,8 +23,8 @@
   }
 
   #panel-sandhi {
-    flex: 0 0 368px;
-    width: 368px;
+    flex: 0 0 clamp(300px, 20vw, 368px);
+    width: clamp(300px, 20vw, 368px);
     height: 100vh;
     overflow: hidden;
     display: flex;
@@ -33,8 +33,8 @@
     gap: 6px;
   }
   #panel-alpha {
-    flex: 0 0 400px;
-    width: 400px;
+    flex: 0 0 clamp(340px, 23vw, 460px);
+    width: clamp(340px, 23vw, 460px);
     height: 100vh;
     overflow: visible;
     display: flex;
@@ -59,25 +59,25 @@
 
   /* ══ c5 — персиковые (висарга, назальные, взрывные 50–71) ══ */
   .c5 {
-    background: #F0BF88;
+    background: #AE987A;
     box-shadow: 0 .64px 1.28px rgba(210,165,100,.8),0 8px 6px rgba(0,0,0,.22),inset 0 -.64px .32px rgba(140,80,10,.4);
   }
-  .c5 .card-num { color: rgba(120,65,10,.50); }
-  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(100,50,5,.95); }
+  .c5 .card-num { color: rgba(92,60,16, 0.50); }
+  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(76,49,10, 0.95); }
 
   /* ══ Подсветка блока 17–29 ══ */
   .card.c3.group-active {
-    background: #9E93B5 !important;
-    box-shadow: 0 .64px 1.28px rgba(110,95,155,.85),0 8px 6px rgba(0,0,0,.28),inset 0 -.64px .32px rgba(60,48,95,.48) !important;
+    background: #839AB9 !important;
+    box-shadow: 0 .64px 1.28px rgba(106,135,175,.85),0 8px 6px rgba(0,0,0,.28),inset 0 -.64px .32px rgba(30,50,80,.48) !important;
   }
   .card.c3.primary-active {
-    background: #7060A0 !important;
-    box-shadow: 0 .64px 1.28px rgba(120,105,170,.9),0 8px 6px rgba(0,0,0,.32),inset 0 -.64px .32px rgba(65,48,108,.55) !important;
+    background: #3B639B !important;
+    box-shadow: 0 .64px 1.28px rgba(89,132,192,.9),0 8px 6px rgba(0,0,0,.32),inset 0 -.64px .32px rgba(18,32,55,.55) !important;
   }
-  .card.c3.primary-active .card-num { color: rgba(48,34,82,.80) !important; }
+  .card.c3.primary-active .card-num { color: rgba(16,28,46,.80) !important; }
   .card.c3.card-21-primary {
-    background: #504078 !important;
-    box-shadow: 0 .64px 1.28px rgba(100,80,155,.9),0 8px 6px rgba(0,0,0,.34),inset 0 -.64px .32px rgba(55,35,105,.58) !important;
+    background: #254A7E !important;
+    box-shadow: 0 .64px 1.28px rgba(57,105,172,.9),0 8px 6px rgba(0,0,0,.34),inset 0 -.64px .32px rgba(12,20,35,.58) !important;
   }
 
   /* ══ Маркеры подгрупп в панели сандхи ══ */
@@ -140,29 +140,29 @@
 
   /* Цвета прямоугольника — чуть светлее соответствующих плашек */
   .rd-bg-c1 {
-    background: #C0E898;
-    box-shadow: 0 1px 2px rgba(120,190,60,.28), 0 6px 14px rgba(0,0,0,.18),
-                inset 0 -1px 0.5px rgba(80,140,20,.22);
+    background: #C7D5E6;
+    box-shadow: 0 1px 2px rgba(150,175,210,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(70,105,155,.22);
   }
   .rd-bg-c2 {
-    background: #9DE0DA;
-    box-shadow: 0 1px 2px rgba(60,175,168,.28), 0 6px 14px rgba(0,0,0,.18),
-                inset 0 -1px 0.5px rgba(8,110,105,.22);
+    background: #9FB4D2;
+    box-shadow: 0 1px 2px rgba(110,140,185,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(45,75,120,.22);
   }
   .rd-bg-c3 {
-    background: #D8C8E8;
-    box-shadow: 0 1px 2px rgba(155,120,190,.28), 0 6px 14px rgba(0,0,0,.18),
-                inset 0 -1px 0.5px rgba(100,65,150,.22);
+    background: #7796BE;
+    box-shadow: 0 1px 2px rgba(105,140,180,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(25,50,85,.22);
   }
   .rd-bg-c4 {
-    background: #F0C4D4;
-    box-shadow: 0 1px 2px rgba(200,110,150,.28), 0 6px 14px rgba(0,0,0,.18),
-                inset 0 -1px 0.5px rgba(160,55,95,.22);
+    background: #E0D2BE;
+    box-shadow: 0 1px 2px rgba(200,175,140,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(140,110,65,.22);
   }
   .rd-bg-c5 {
-    background: #F8D4A0;
-    box-shadow: 0 1px 2px rgba(200,150,60,.28), 0 6px 14px rgba(0,0,0,.18),
-                inset 0 -1px 0.5px rgba(160,95,10,.22);
+    background: #C4AB8A;
+    box-shadow: 0 1px 2px rgba(175,145,100,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(95,70,35,.22);
   }
 
 
@@ -182,11 +182,11 @@
     transition: background 0.25s, border-color 0.25s;
   }
   /* Тёмные оттенки цветов по классу правила */
-  #group-stub.stub-c1 { background: rgba(100,130,70, 0.22); border-color: rgba(140,175,100, 0.35); }
-  #group-stub.stub-c2 { background: rgba(55,115,110, 0.22); border-color: rgba(80,155,150, 0.35); }
-  #group-stub.stub-c3 { background: rgba(90,55,130, 0.30); border-color: rgba(130,90,180, 0.40); }
-  #group-stub.stub-c4 { background: rgba(150,50,85, 0.30); border-color: rgba(200,80,120, 0.40); }
-  #group-stub.stub-c5 { background: rgba(140,80,10, 0.30); border-color: rgba(190,130,40, 0.40); }
+  #group-stub.stub-c1 { background: rgba(70,94,129, 0.22); border-color: rgba(100,131,175, 0.35); }
+  #group-stub.stub-c2 { background: rgba(70,94,129, 0.22); border-color: rgba(100,131,175, 0.35); }
+  #group-stub.stub-c3 { background: rgba(40,63,97, 0.30); border-color: rgba(70,94,129, 0.40); }
+  #group-stub.stub-c4 { background: rgba(129,104,70, 0.30); border-color: rgba(175,144,100, 0.40); }
+  #group-stub.stub-c5 { background: rgba(90,71,45, 0.30); border-color: rgba(129,104,70, 0.40); }
   #stub-label {
     font-size: 16px;
     font-family: 'Georgia', serif;
@@ -207,28 +207,28 @@
 
   /* ── c5 · персиковый (50–71) ── */
   .c5 {
-    background: #F0BF88;
-    box-shadow: 0 0.64px 1.28px rgba(210,165,100,.80), 0 8px 6px rgba(0,0,0,.22),
-                inset 0 -0.64px 0.32px rgba(140,80,10,.40);
+    background: #AE987A;
+    box-shadow: 0 0.64px 1.28px rgba(215,193,163,.80), 0 8px 6px rgba(0,0,0,.22),
+                inset 0 -0.64px 0.32px rgba(64,49,28,.40);
   }
-  .c5 .card-num { color: rgba(120,65,10,.50); }
-  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(100,50,5,.95); }
+  .c5 .card-num { color: rgba(92,60,16, 0.50); }
+  .c5.hovered .card-num, .c5.pinned .card-num { color: rgba(76,49,10, 0.95); }
 
   /* ── подсветка блока 17–29 ── */
   .c3.g-active {
-    background: #7060A0 !important;
-    box-shadow: 0 0.64px 1.28px rgba(130,120,175,.85), 0 8px 6px rgba(0,0,0,.25),
-                inset 0 -0.64px 0.32px rgba(70,55,110,.50) !important;
+    background: #3B639B !important;
+    box-shadow: 0 0.64px 1.28px rgba(89,132,192,.85), 0 8px 6px rgba(0,0,0,.25),
+                inset 0 -0.64px 0.32px rgba(18,32,55,.50) !important;
   }
-  .c3.g-active .card-num { color: rgba(48,35,85,.60) !important; }
+  .c3.g-active .card-num { color: rgba(16,28,46,.60) !important; }
   /* ── подсветка карточки 21 как базы ── */
   .c3.base-active {
-    background: #8E85B0 !important;
-    box-shadow: 0 0 0 2px rgba(110,95,160,.55),
+    background: #4F77B0 !important;
+    box-shadow: 0 0 0 2px rgba(83,120,172,.55),
                 0 8px 8px rgba(0,0,0,.30),
-                inset 0 -0.64px 0.32px rgba(60,45,100,.55) !important;
+                inset 0 -0.64px 0.32px rgba(20,35,58,.55) !important;
   }
-  .c3.base-active .card-num { color: rgba(38,25,75,.70) !important; }
+  .c3.base-active .card-num { color: rgba(16,28,46,.70) !important; }
 
   /* Зона 1/5 — заголовок + правило */
   #rule-display {
@@ -498,11 +498,11 @@
     user-select: none;
   }
   .ex-chip:hover { transform: translateY(-2px) scale(1.04); }
-  .ex-chip.c1 { background: rgba(100,130,70, 0.30); border: 1px solid rgba(140,175,100, 0.50); color: rgba(190,225,150,0.90); }
-  .ex-chip.c2 { background: rgba(55,115,110, 0.30); border: 1px solid rgba(80,155,150, 0.50); color: rgba(150,215,210,0.90); }
-  .ex-chip.c3 { background: rgba(90,55,130, 0.30); border: 1px solid rgba(130,90,180, 0.50); color: rgba(200,175,230,0.90); }
-  .ex-chip.c4 { background: rgba(150,50,85, 0.30); border: 1px solid rgba(200,80,120, 0.50); color: rgba(235,165,195,0.90); }
-  .ex-chip.c5 { background: rgba(140,80,10, 0.30); border: 1px solid rgba(190,130,40, 0.50); color: rgba(235,185,120,0.90); }
+  .ex-chip.c1 { background: rgba(70,94,129, 0.30); border: 1px solid rgba(100,131,175, 0.50); color: rgba(190,205,230,0.90); }
+  .ex-chip.c2 { background: rgba(70,94,129, 0.30); border: 1px solid rgba(100,131,175, 0.50); color: rgba(190,205,230,0.90); }
+  .ex-chip.c3 { background: rgba(70,94,129, 0.30); border: 1px solid rgba(100,131,175, 0.50); color: rgba(190,205,230,0.90); }
+  .ex-chip.c4 { background: rgba(129,104,70, 0.30); border: 1px solid rgba(175,144,100, 0.50); color: rgba(230,215,190,0.90); }
+  .ex-chip.c5 { background: rgba(129,104,70, 0.30); border: 1px solid rgba(175,144,100, 0.50); color: rgba(230,215,190,0.90); }
 
   /* Пилюли примеров в зоне 2 */
   .eg-chip {
@@ -520,11 +520,11 @@
   }
   .eg-chip:hover { transform: translateY(-3px) scale(1.04); }
   .eg-chip.active { transform: translateY(-3px) scale(1.04); }
-  .eg-chip.c1 { background: #A8D878; border: 1.5px solid #88C048; color: rgba(35,65,8,0.92); }
-  .eg-chip.c2 { background: #7DCFCA; border: 1.5px solid #50AFAA; color: rgba(5,50,45,0.92); }
-  .eg-chip.c3 { background: #C5B0D8; border: 1.5px solid #A088C0; color: rgba(48,22,72,0.92); }
-  .eg-chip.c4 { background: #E8A8C0; border: 1.5px solid #C87898; color: rgba(90,20,45,0.92); }
-  .eg-chip.c5 { background: #F0BF88; border: 1.5px solid #D09050; color: rgba(80,38,5,0.92); }
+  .eg-chip.c1 { background: #AFBFD4; border: 1.5px solid #497BC1; color: rgba(35,65,8,0.92); }
+  .eg-chip.c2 { background: #869EC1; border: 1.5px solid #497BC1; color: rgba(5,50,45,0.92); }
+  .eg-chip.c3 { background: #5B7EAE; border: 1.5px solid #497BC1; color: rgba(48,22,72,0.92); }
+  .eg-chip.c4 { background: #C7BAA8; border: 1.5px solid #C18F49; color: rgba(90,20,45,0.92); }
+  .eg-chip.c5 { background: #AE987A; border: 1.5px solid #C18F49; color: rgba(80,38,5,0.92); }
 
   .panel-title {
     font-size: 20px;
@@ -636,32 +636,32 @@
 
   /* Цвета сандхи — контрастные цифры */
   .c1 {
-    background: #A8D878;
-    box-shadow: 0 0.64px 1.28px rgba(140,190,90,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(50,90,15,.40);
+    background: #AFBFD4;
+    box-shadow: 0 0.64px 1.28px rgba(225,233,244,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(50,85,133,.40);
   }
-  .c1 .card-num { color: rgba(50,90,15, 0.50); }
-  .c1.hovered .card-num, .c1.pinned .card-num { color: rgba(40,75,10, 0.95); }
+  .c1 .card-num { color: rgba(16,47,92, 0.50); }
+  .c1.hovered .card-num, .c1.pinned .card-num { color: rgba(10,38,76, 0.95); }
 
   .c2 {
-    background: #7DCFCA;
-    box-shadow: 0 0.64px 1.28px rgba(90,185,178,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(10,90,85,.40);
+    background: #869EC1;
+    box-shadow: 0 0.64px 1.28px rgba(180,200,228,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(32,56,90,.40);
   }
-  .c2 .card-num { color: rgba(10,65,60, 0.50); }
-  .c2.hovered .card-num, .c2.pinned .card-num { color: rgba(5,55,50, 0.95); }
+  .c2 .card-num { color: rgba(16,47,92, 0.50); }
+  .c2.hovered .card-num, .c2.pinned .card-num { color: rgba(10,38,76, 0.95); }
 
   .c3 {
-    background: #C5B0D8;
-    box-shadow: 0 0.64px 1.28px rgba(175,148,200,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(90,55,130,.40);
+    background: #5B7EAE;
+    box-shadow: 0 0.64px 1.28px rgba(133,167,213,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(16,28,46,.40);
   }
-  .c3 .card-num { color: rgba(70,40,100, 0.50); }
-  .c3.hovered .card-num, .c3.pinned .card-num { color: rgba(55,28,88, 0.95); }
+  .c3 .card-num { color: rgba(16,47,92, 0.50); }
+  .c3.hovered .card-num, .c3.pinned .card-num { color: rgba(10,38,76, 0.95); }
 
   .c4 {
-    background: #E8A8C0;
-    box-shadow: 0 0.64px 1.28px rgba(210,145,175,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(140,50,85,.40);
+    background: #C7BAA8;
+    box-shadow: 0 0.64px 1.28px rgba(236,226,213,.80), 0 8px 6px rgba(0,0,0,.22), inset 0 -0.64px 0.32px rgba(112,87,51,.40);
   }
-  .c4 .card-num { color: rgba(130,40,70, 0.50); }
-  .c4.hovered .card-num, .c4.pinned .card-num { color: rgba(110,28,55, 0.95); }
+  .c4 .card-num { color: rgba(92,60,16, 0.50); }
+  .c4.hovered .card-num, .c4.pinned .card-num { color: rgba(76,49,10, 0.95); }
 
   /* ══ Поле цитаты ══ */
   #quote-box {
@@ -778,7 +778,7 @@
     width: 15px; height: 15px;
     border-radius: 5px;
     flex-shrink: 0;
-    background: #7DCFCA;
+    background: #869EC1;
   }
   .role-legend-sw.trg { background: transparent; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 2px; }
   .role-legend-sw.res { background: rgba(230,225,210,0.06); outline: 2px solid #fff; outline-offset: 2px; }
@@ -849,7 +849,7 @@
     display: grid;
     flex-shrink: 0;
     margin: 0 auto; /* сдвинуто вправо от левого края, но с зазором и справа тоже — не вплотную */
-    grid-template-columns: 58px repeat(5, var(--card));
+    grid-template-columns: 58px repeat(6, var(--card));
     gap: var(--gap);
     align-items: center;
     flex-shrink: 0;
@@ -860,12 +860,24 @@
     height: 6px;
   }
 
+  .col-head-corner { width: 58px; height: 100%; }
+  .col-head {
+    font-size: 9px;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    color: rgba(190,195,205,0.55);
+    padding-bottom: 4px;
+    align-self: end;
+  }
+
   .row-label {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: center;
-    padding-right: 4px;
+    padding-left: 4px;
     gap: 1px;
     height: var(--card);
     user-select: none;
@@ -876,13 +888,13 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: rgba(225,228,235,0.88);
-    text-align: right;
+    text-align: left;
   }
   .row-label .rl-sub {
-    font-size: 10px;
+    font-size: 13px; /* деванагари в фолбэк-шрифте визуально мельче латиницы на том же px — компенсирую размером */
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(190,195,205,0.65);
-    text-align: right;
+    text-align: left;
   }
 
   .lc {
@@ -1132,7 +1144,7 @@ const SECTIONS = [
   {
     id: 'internal',
     label: 'Внутренние сандхи · гласные и согласные',
-    color: '#A8D878',
+    color: '#AFBFD4',
     cards: [
       /* ── Гласные 1–7 ── */
       { n:1,  g:'c1', hint:"а/ā + дифтонг → долгий дифтонг (W127)",
@@ -1221,7 +1233,7 @@ const SECTIONS = [
   {
     id: 'external',
     label: 'Внешние сандхи · гласные и согласные',
-    color: '#C5B0D8',
+    color: '#5B7EAE',
     cards: [
       /* ── Гласные 41–49 ── */
       { n:41, g:'c4', hint:"прагрхья: нет сандхи после -ī/-ū/-e дв.ч., amī, межд. (W138)",
@@ -1663,8 +1675,8 @@ SECTIONS.forEach((sec, si) => {
   const lbl = document.createElement('div');
   lbl.className = 's-label';
   const dots = sec.id === 'internal'
-    ? `<span style="background:#A8D878"></span><span style="background:#7DCFCA"></span><span class="last-dot" style="background:#C5B0D8"></span>`
-    : `<span style="background:#E8A8C0"></span><span class="last-dot" style="background:#F0BF88"></span>`;
+    ? `<span style="background:#AFBFD4"></span><span style="background:#869EC1"></span><span class="last-dot" style="background:#5B7EAE"></span>`
+    : `<span style="background:#C7BAA8"></span><span class="last-dot" style="background:#AE987A"></span>`;
   lbl.innerHTML = `${dots}${sec.label}`;
   body.appendChild(lbl);
 
@@ -1730,12 +1742,14 @@ SECTIONS.forEach((sec, si) => {
 
 /* ═══════════════════ АЛФАВИТ ═══════════════════ */
 const ALPHA_ROWS = [
+  { header:true, cells:['заднеяз.','средненёб.','церебр.','зубн.','губн.','—'] },
   { label:'гласные', sub:'स्वर', cells:[
     {dv:'अ',tr:'a',  cls:'vel',  hint:'краткий велярный a'},
     {dv:'इ',tr:'i',  cls:'pal',  hint:'краткий нёбный i'},
     {dv:'ऋ',tr:'ṛ',  cls:'ret',  hint:'слоговой ṛ'},
     {dv:'ऌ',tr:'ḷ',  cls:'den',  hint:'слоговой ḷ (зубной)'},
     {dv:'उ',tr:'u',  cls:'lab',  hint:'краткий губной u'},
+    null,
   ]},
   { label:'', sub:'', cells:[
     {dv:'आ',tr:'ā',  cls:'vel',  hint:'долгий ā'},
@@ -1743,18 +1757,21 @@ const ALPHA_ROWS = [
     {dv:'ॠ',tr:'ṝ',  cls:'ret',  hint:'долгий слоговой ṝ'},
     null,
     {dv:'ऊ',tr:'ū',  cls:'lab',  hint:'долгий ū'},
+    null,
   ]},
   { label:'', sub:'', cells:[
-    {dv:'ं', tr:'ṃ',  cls:'dim',  hint:'анусвара — носовой призвук'},
+    null,
     {dv:'ए',tr:'e',  cls:'pal-s',hint:'дифтонг e (a+i)'},
     null, null,
     {dv:'ओ',tr:'o',  cls:'lab-s',hint:'дифтонг o (a+u)'},
+    {dv:'ं', tr:'ṃ',  cls:'dim',  hint:'анусвара — носовой призвук'},
   ]},
   { label:'', sub:'', cells:[
-    {dv:'ः', tr:'ḥ',  cls:'dim',  hint:'висарга — придыхание на паузе'},
+    null,
     {dv:'ऐ',tr:'ai', cls:'pal-s',hint:'дифтонг ai'},
     null, null,
     {dv:'औ',tr:'au', cls:'lab-s',hint:'дифтонг au'},
+    {dv:'ः', tr:'ḥ',  cls:'dim',  hint:'висарга — придыхание на паузе'},
   ]},
   { gap: true },
   { label:'глухой', sub:'अघोष', cells:[
@@ -1763,6 +1780,7 @@ const ALPHA_ROWS = [
     {dv:'ट',tr:'ṭa', cls:'ret', hint:'церебральный глухой ṭa'},
     {dv:'त',tr:'ta', cls:'den', hint:'зубной глухой ta'},
     {dv:'प',tr:'pa', cls:'lab', hint:'губной глухой pa'},
+    null,
   ]},
   { label:'гл.прид.', sub:'अघोष-ह', cells:[
     {dv:'ख',tr:'kha',cls:'vel', hint:'велярный глухой придыхательный kha'},
@@ -1770,6 +1788,7 @@ const ALPHA_ROWS = [
     {dv:'ठ',tr:'ṭha',cls:'ret', hint:'церебральный глухой придыхательный ṭha'},
     {dv:'थ',tr:'tha',cls:'den', hint:'зубной глухой придыхательный tha'},
     {dv:'फ',tr:'pha',cls:'lab', hint:'губной глухой придыхательный pha'},
+    null,
   ]},
   { label:'звонкий', sub:'घोष', cells:[
     {dv:'ग',tr:'ga', cls:'vel', hint:'велярный звонкий ga'},
@@ -1777,6 +1796,7 @@ const ALPHA_ROWS = [
     {dv:'ड',tr:'ḍa', cls:'ret', hint:'церебральный звонкий ḍa'},
     {dv:'द',tr:'da', cls:'den', hint:'зубной звонкий da'},
     {dv:'ब',tr:'ba', cls:'lab', hint:'губной звонкий ba'},
+    null,
   ]},
   { label:'зв.прид.', sub:'घोष-ह', cells:[
     {dv:'घ',tr:'gha',cls:'vel', hint:'велярный звонкий придыхательный gha'},
@@ -1784,6 +1804,7 @@ const ALPHA_ROWS = [
     {dv:'ढ',tr:'ḍha',cls:'ret', hint:'церебральный звонкий придыхательный ḍha'},
     {dv:'ध',tr:'dha',cls:'den', hint:'зубной звонкий придыхательный dha'},
     {dv:'भ',tr:'bha',cls:'lab', hint:'губной звонкий придыхательный bha'},
+    null,
   ]},
   { label:'носовой', sub:'अनुनासिक', cells:[
     {dv:'ङ',tr:'ṅa',cls:'vel', hint:'велярный носовой ṅa'},
@@ -1791,6 +1812,7 @@ const ALPHA_ROWS = [
     {dv:'ण',tr:'ṇa',cls:'ret', hint:'церебральный носовой ṇa'},
     {dv:'न',tr:'na', cls:'den', hint:'зубной носовой na'},
     {dv:'म',tr:'ma', cls:'lab', hint:'губной носовой ma'},
+    null,
   ]},
   { gap: true },
   { label:'полугл.', sub:'अन्तस्थ', cells:[
@@ -1799,6 +1821,7 @@ const ALPHA_ROWS = [
     {dv:'र',tr:'ra', cls:'ret', hint:'церебральный полугласный ra'},
     {dv:'ल',tr:'la', cls:'den', hint:'зубной полугласный la'},
     {dv:'व',tr:'va', cls:'lab', hint:'губной полугласный va'},
+    null,
   ]},
   { label:'сибил.', sub:'ऊष्मन्', cells:[
     null,
@@ -1806,6 +1829,7 @@ const ALPHA_ROWS = [
     {dv:'ष',tr:'ṣa', cls:'ret', hint:'церебральный сибилянт ṣa'},
     {dv:'स',tr:'sa', cls:'den', hint:'зубной сибилянт sa'},
     {dv:'ह',tr:'ha', cls:'dim', hint:'гортанный ha — стоит особняком'},
+    null,
   ]},
 ];
 
@@ -1837,6 +1861,16 @@ alphaDesc.appendChild(audioPanel);
 ALPHA_ROWS.forEach(row => {
   if (row.gap) {
     const g = document.createElement('div'); g.className = 'gap-row'; wrap.appendChild(g); return;
+  }
+  if (row.header) {
+    const corner = document.createElement('div'); corner.className = 'col-head-corner'; wrap.appendChild(corner);
+    row.cells.forEach(txt => {
+      const h = document.createElement('div');
+      h.className = 'col-head';
+      h.textContent = txt;
+      wrap.appendChild(h);
+    });
+    return;
   }
   const lbl = document.createElement('div');
   lbl.className = 'row-label';
