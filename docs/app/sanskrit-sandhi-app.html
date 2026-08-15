@@ -33,8 +33,8 @@
     gap: 6px;
   }
   #panel-alpha {
-    flex: 0 0 clamp(340px, 23vw, 460px);
-    width: clamp(340px, 23vw, 460px);
+    flex: 0 0 clamp(370px, 24vw, 480px);
+    width: clamp(370px, 24vw, 480px);
     height: 100vh;
     overflow: visible;
     display: flex;
@@ -712,7 +712,7 @@
     padding: 12px 14px 14px;
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 4px;
     margin-top: 0;
   }
   .guna-title {
@@ -819,9 +819,9 @@
   /* цвет по СТУПЕНИ (слаб/гуна/вридд), а не по месту образования — в этой
      таблице столбцы идут в другом порядке (a,i,u,ṛ,ḷ), чем в алфавите справа
      (vel,pal,ret,den,lab), и цвет по варге путал, а не помогал считывать */
-  .guna-table td.grade-weak    { background: #E8E6E1; color: #3a3428; }
-  .guna-table td.grade-guna    { background: #BDAC8C; color: #2e2308; }
-  .guna-table td.grade-vriddhi { background: #9F825E; color: #f5ecd8; }
+  .guna-table td.grade-weak    { background: #B9C6DC; color: #17284A; }
+  .guna-table td.grade-guna    { background: #8CA3C6; color: #17284A; }
+  .guna-table td.grade-vriddhi { background: #5B7EAE; color: #E8EDF6; }
   .guna-table td.gt-blank { background: transparent; }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
@@ -848,8 +848,8 @@
     flex: none;
     display: grid;
     flex-shrink: 0;
-    margin: 0 auto; /* сдвинуто вправо от левого края, но с зазором и справа тоже — не вплотную */
-    grid-template-columns: 58px repeat(6, var(--card));
+    margin: 0; /* к левому краю, не по центру — левый край подписей строк совпадает с краем панели */
+    grid-template-columns: 88px repeat(6, var(--card));
     gap: var(--gap);
     align-items: center;
     flex-shrink: 0;
@@ -860,16 +860,19 @@
     height: 6px;
   }
 
-  .col-head-corner { width: 58px; height: 100%; }
+  .col-head-corner { width: 88px; height: 100%; }
   .col-head {
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    text-align: center;
-    color: rgba(190,195,205,0.55);
-    padding-bottom: 4px;
+    color: rgba(225,228,235,0.88);
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    justify-self: center;
     align-self: end;
+    height: 145px;
+    padding-bottom: 4px;
   }
 
   .row-label {
@@ -1742,7 +1745,7 @@ SECTIONS.forEach((sec, si) => {
 
 /* ═══════════════════ АЛФАВИТ ═══════════════════ */
 const ALPHA_ROWS = [
-  { header:true, cells:['заднеяз.','средненёб.','церебр.','зубн.','губн.','—'] },
+  { header:true, cells:['заднеяз.','средненёб.','церебр.','зубные','губные','—'] },
   { label:'гласные', sub:'स्वर', cells:[
     {dv:'अ',tr:'a',  cls:'vel',  hint:'краткий велярный a'},
     {dv:'इ',tr:'i',  cls:'pal',  hint:'краткий нёбный i'},

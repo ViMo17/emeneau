@@ -16,10 +16,10 @@ container.innerHTML = `
   </div>
   <div class="eff-caption"><span class="eff-caption-text">&nbsp;</span></div>
   <div class="eff-legend">
-    <span><i style="background:#A8D878"></i> agni- (основа)</span>
-    <span><i style="background:#E8C860"></i> i (под гуной)</span>
-    <span><i style="background:#F0BF88"></i> -as (окончание)</span>
-    <span><i style="background:#7DCFCA"></i> e = a + y (одна группа)</span>
+    <span><i style="background:#A8D878"></i> a, g, a (vel)</span>
+    <span><i style="background:#7DCFCA"></i> i, e, y (pal)</span>
+    <span><i style="background:#E8A8C0"></i> n, s (den)</span>
+    <span><i style="background:#E8C860"></i> под гуной</span>
   </div>
 `;
 const stageEl = container.querySelector('.eff-stage');
@@ -108,7 +108,9 @@ const COL_DEN    = 0xE8A8C0; // s — official .den (было ошибочно �
 // .vel/.pal/.ret/.den/.lab, ни с золотым пульсом. Не зелёный — зелёный это
 // цвет .vel, уже занят (и именно поэтому старое схождение «в зелёный» ниже
 // было неточным для s/y, см. правки в makeDualCube-вызовах).
-const READY_COLOR = 0xF4F0E6;
+// Тёплый бежевый, не почти-белый — первая версия (F4F0E6) на экране
+// читалась как белый, не как «бежевый, ничей».
+const READY_COLOR = 0xDECDAF;
 
 function makeShadowFor(){
   const shadow = new THREE.Mesh(
@@ -185,12 +187,12 @@ function makeDualCube(colorA, colorB, glyph, seed){
 const cubes = {
   a1:   { ...makeCube(COL_STEM, 1, 'a'),  slot:0, word:'stem'   },
   g:    { ...makeCube(COL_STEM, 2, 'g'),  slot:1, word:'stem'   },
-  n:    { ...makeCube(COL_STEM, 3, 'n'),  slot:2, word:'stem'   },
-  ie:   { ...makeTriCube(COL_STEM,'i', COL_GUNA,'i', COL_NEW,'e', 4), slot:3, word:'stem' }, // зелёное i → жёлтое i → бирюзовое e; затем улетает
+  n:    { ...makeCube(COL_DEN,  3, 'n'),  slot:2, word:'stem'   }, // n = зубной носовой = den, было ошибочно vel с самого начала
+  ie:   { ...makeTriCube(COL_NEW,'i', COL_GUNA,'i', COL_NEW,'e', 4), slot:3, word:'stem' }, // i и e — оба нёбные (место не меняется при гуне), было зелёное i → жёлтое → бирюзовое e; теперь бирюзовое i (верно) → жёлтое → бирюзовое e
   aNew: { ...makeDualCube(COL_NEW, COL_STEM, 'a', 8),   slot:3, word:'new'    }, // прилетает из алфавита взамен e; a = vel, верно
   y:    { ...makeDualCube(COL_NEW, COL_NEW,  'y', 5),   slot:4, word:'new'    }, // y = pal с самого начала — было ошибочно уходило в vel на фазе 4, теперь остаётся собой
-  a2:   { ...makeDualCube(COL_ENDING, COL_STEM, 'a', 6), slot:5, word:'ending' }, // a = vel, верно
-  s:    { ...makeDualCube(COL_ENDING, COL_DEN,  's', 7), slot:6, word:'ending' }, // s = den (зубной), было ошибочно уходило в vel
+  a2:   { ...makeDualCube(COL_STEM, COL_STEM, 'a', 6), slot:5, word:'ending' }, // a = vel с самого начала (было тан-«группа окончания», теперь верный алфавитный цвет с кадра 1)
+  s:    { ...makeDualCube(COL_DEN,  COL_DEN,  's', 7), slot:6, word:'ending' }, // s = den с самого начала (было тан-«группа окончания», теперь верный алфавитный цвет с кадра 1)
 };
 
 // точки «за кадром», откуда прилетают a и y — сторона алфавитной панели.
@@ -251,7 +253,8 @@ const T = {
   yInDur: 1500,
   aInOffset: 240, aInDur: 1300,
 
-  pushStart: 12400, pushDur: 860,
+  pushStart: 13500, pushDur: 860,      // сдвинут за завершение обоих прилётов (было 12400 — начинался на ~1000мс раньше,
+                                        // чем aNew/y долетают, три одновременных анимации с разными easing = «дрожание»
 
   fadeStart: 15200, fadeDur: 900,
 
@@ -302,7 +305,7 @@ function resetScene(){
     c.mesh.rotation.set(0,0,0);
   }
   ['a1','g','n'].forEach(key => { cubes[key].mesh.material = cubes[key].matsDefault; }); // сброс фазы 5
-  cubes.ie.mesh.material = cubes.ie.matsA; // обратно к зелёному i (единое слово agni)
+  cubes.ie.mesh.material = cubes.ie.matsA; // обратно к бирюзовому i (нёбный, верный алфавитный цвет)
   [cubes.ie.matsA, cubes.ie.matsB, cubes.ie.matsC].forEach(mats => setCubeOpacity(mats, 1));
 
   for (const key of ['a2','s']){
