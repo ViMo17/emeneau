@@ -102,6 +102,13 @@ const COL_STEM   = 0xA8D878; // agni- — official .vel
 const COL_GUNA   = 0xE8C860; // «под гуной» — тот же золотой, что .gv-active
 const COL_ENDING = 0xF0BF88; // -as — official .lab
 const COL_NEW    = 0x7DCFCA; // e / a(новое) / y — official .pal
+const COL_DEN    = 0xE8A8C0; // s — official .den (было ошибочно зелёным на фазе 4, см. ниже)
+// Финальный «цвет готовности», фаза 5 — новый стандарт для всех примеров:
+// тёплый почти-белый, вне цветового круга категорий, не конфликтует ни с
+// .vel/.pal/.ret/.den/.lab, ни с золотым пульсом. Не зелёный — зелёный это
+// цвет .vel, уже занят (и именно поэтому старое схождение «в зелёный» ниже
+// было неточным для s/y, см. правки в makeDualCube-вызовах).
+const READY_COLOR = 0xF4F0E6;
 
 function makeShadowFor(){
   const shadow = new THREE.Mesh(
@@ -117,9 +124,12 @@ function makeShadowFor(){
 function makeCube(color, seed, glyph){
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const mats = buildChalkMaterials(color, seed*97+13, glyph);
+  const matsReady = buildChalkMaterials(READY_COLOR, seed*97+13, glyph); // фаза 5
+  mats.forEach(m => { m.transparent = true; });
+  matsReady.forEach(m => { m.transparent = true; });
   const mesh = new THREE.Mesh(geo, mats);
   scene.add(mesh);
-  return { mesh, shadow: makeShadowFor() };
+  return { mesh, shadow: makeShadowFor(), matsDefault: mats, matsReady };
 }
 
 // i живёт в трёх состояниях одной геометрии: сначала оно просто зелёное
@@ -156,14 +166,18 @@ function dimCube(cube, mix){
 }
 
 // два состояния цвета на одной геометрии и одной букве — для тех кубиков,
-// что в конце ролика становятся зелёными (слово снова единое, взаимодействия завершены)
+// что в конце ролика возвращаются к своему истинному цвету алфавита (не все
+// изначально его носят — a2/s стартуют цветом «-as», но a2 по факту гласная
+// a = vel, а s — зубной = den, не vel; см. фикс ниже в определении cubes).
 function makeDualCube(colorA, colorB, glyph, seed){
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const matsA = buildChalkMaterials(colorA, seed*97+13, glyph);
   const matsB = buildChalkMaterials(colorB, seed*97+14, glyph);
+  const matsReady = buildChalkMaterials(READY_COLOR, seed*97+15, glyph); // фаза 5
+  [matsA, matsB, matsReady].forEach(mats => mats.forEach(m => { m.transparent = true; }));
   const mesh = new THREE.Mesh(geo, matsA);
   scene.add(mesh);
-  return { mesh, shadow: makeShadowFor(), matsA, matsB };
+  return { mesh, shadow: makeShadowFor(), matsA, matsB, matsReady };
 }
 
 // порядок в покое: a-g-n-[пусто]-y-a-s — «e» в этот ряд не входит, оно улетает;
@@ -173,10 +187,10 @@ const cubes = {
   g:    { ...makeCube(COL_STEM, 2, 'g'),  slot:1, word:'stem'   },
   n:    { ...makeCube(COL_STEM, 3, 'n'),  slot:2, word:'stem'   },
   ie:   { ...makeTriCube(COL_STEM,'i', COL_GUNA,'i', COL_NEW,'e', 4), slot:3, word:'stem' }, // зелёное i → жёлтое i → бирюзовое e; затем улетает
-  aNew: { ...makeDualCube(COL_NEW, COL_STEM, 'a', 8),   slot:3, word:'new'    }, // прилетает из алфавита взамен e
-  y:    { ...makeDualCube(COL_NEW, COL_STEM, 'y', 5),   slot:4, word:'new'    },
-  a2:   { ...makeDualCube(COL_ENDING, COL_STEM, 'a', 6), slot:5, word:'ending' },
-  s:    { ...makeDualCube(COL_ENDING, COL_STEM, 's', 7), slot:6, word:'ending' },
+  aNew: { ...makeDualCube(COL_NEW, COL_STEM, 'a', 8),   slot:3, word:'new'    }, // прилетает из алфавита взамен e; a = vel, верно
+  y:    { ...makeDualCube(COL_NEW, COL_NEW,  'y', 5),   slot:4, word:'new'    }, // y = pal с самого начала — было ошибочно уходило в vel на фазе 4, теперь остаётся собой
+  a2:   { ...makeDualCube(COL_ENDING, COL_STEM, 'a', 6), slot:5, word:'ending' }, // a = vel, верно
+  s:    { ...makeDualCube(COL_ENDING, COL_DEN,  's', 7), slot:6, word:'ending' }, // s = den (зубной), было ошибочно уходило в vel
 };
 
 // точки «за кадром», откуда прилетают a и y — сторона алфавитной панели.
@@ -242,7 +256,8 @@ const T = {
   fadeStart: 15200, fadeDur: 900,
 
   settleStart: 16500, settleDur: 1700,
-  total: 18600,
+  readyStart: 19000, readyDur: 1700,   // фаза 5 — новая: волна докрашивает в READY_COLOR
+  total: 21200,
 };
 const NEAR_OFFSET = 0;      // "1 кубик от соседа" — расстояние по умолчанию между блоками
 const TOUCH_SHIFT = SLOT;   // вплотную к e = сдвиг на 1 слот влево от NEAR
@@ -286,6 +301,7 @@ function resetScene(){
     c.mesh.position.set(slotX(c.slot), 6 + Math.random()*2, 0);
     c.mesh.rotation.set(0,0,0);
   }
+  ['a1','g','n'].forEach(key => { cubes[key].mesh.material = cubes[key].matsDefault; }); // сброс фазы 5
   cubes.ie.mesh.material = cubes.ie.matsA; // обратно к зелёному i (единое слово agni)
   [cubes.ie.matsA, cubes.ie.matsB, cubes.ie.matsC].forEach(mats => setCubeOpacity(mats, 1));
 
@@ -543,6 +559,22 @@ function update(elapsed){
     cellRWI?.classList.remove('gv-active');
     cellRGYA?.classList.remove('gv-active');
   }
+
+  // фаза 5 — «слово готово»: отдельная волна ПОСЛЕ оседания (не вместе с ним),
+  // докрашивает весь ряд в READY_COLOR. Та же геометрия волны, что и LOCK_WAVE
+  // выше, просто сдвинута на T.readyStart и с другой целью свапа материала.
+  LOCK_WAVE.forEach(({cube}, i) => {
+    const start = T.readyStart + i*LOCK_STEP;
+    if (elapsed >= start && elapsed <= start + LOCK_HOP){
+      const t = clamp01((elapsed - start)/LOCK_HOP);
+      cube.mesh.position.y = REST_Y + Math.sin(t*Math.PI) * 0.12;
+      const key = 'ready' + i;
+      if (!flags[key] && t >= 0.4){
+        flags[key] = true;
+        if (cube.matsReady) cube.mesh.material = cube.matsReady;
+      }
+    }
+  });
 
   // притенение фона: a1/g/n/s гаснут вскоре после начала влияния (as → i),
   // держат внимание на активной паре (a2=nimitta, ie=sthānin), возвращаются

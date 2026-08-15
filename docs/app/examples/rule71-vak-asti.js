@@ -93,6 +93,11 @@ const WORD_GAP = 1.0;       // === граница слова === доп. пол�
                              // ни до, ни после перехода (в отличие от внутренних сандхи)
 
 const COL_VEL = 0xA8D878, COL_LAB = 0xF0BF88, COL_DEN = 0xE8A8C0, COL_PAL = 0x7DCFCA;
+// Финальный «цвет готовности» — новый стандарт для всех примеров впредь:
+// тёплый почти-белый, сознательно вне цветового круга категорий (vel/pal/
+// ret/den/lab), поэтому не конфликтует ни с одной из них. Не зелёный —
+// зелёный это цвет .vel, уже занят.
+const READY_COLOR = 0xF4F0E6;
 
 // Затемнение неактивных букв: MeshStandardMaterial.color умножается на карту
 // текстуры — можно приглушить кубик, просто перекрасив .color в серый тон,
@@ -129,9 +134,10 @@ function makeShadowFor(){
 function makeCube(color, seed, glyph){
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const mats = buildChalkMaterials(color, seed*97+13, glyph);
+  const matsReady = buildChalkMaterials(READY_COLOR, seed*97+13, glyph); // фаза 5 — «слово готово»
   const mesh = new THREE.Mesh(geo, mats);
   scene.add(mesh);
-  return { mesh, shadow: makeShadowFor() };
+  return { mesh, shadow: makeShadowFor(), matsDefault: mats, matsReady };
 }
 // sthānin (k→g): два готовых набора материалов на одной геометрии + пустой
 // на время оборота. Портировано из rule-assimilation-varga-t-d.html: буква
@@ -161,9 +167,10 @@ function makeSwapCube(color, glyphFrom, glyphTo, seed){
   const matsFrom  = buildDualFaceMaterials(color, glyphFrom);
   const matsBlank = buildDualFaceMaterials(color, null);
   const matsTo    = buildDualFaceMaterials(color, glyphTo);
+  const matsReady = buildDualFaceMaterials(READY_COLOR, glyphTo); // фаза 5 — уже после превращения, буква glyphTo
   const mesh = new THREE.Mesh(geo, matsFrom);
   scene.add(mesh);
-  return { mesh, shadow: makeShadowFor(), matsFrom, matsBlank, matsTo };
+  return { mesh, shadow: makeShadowFor(), matsFrom, matsBlank, matsTo, matsReady };
 }
 
 const cubes = {
@@ -296,7 +303,8 @@ const T = {
   influenceStart: 4200, influenceDur: 1120,   // = ×2 от проверенных значений оригинала (было 560)
   turnStart: 7200, turnDur: 3000,
   settleStart: 10800, settleDur: 1600,
-  total: 12800,
+  readyStart: 13000, readyDur: 1300,          // фаза 5 — новая: волна докрашивает в READY_COLOR
+  total: 15300,
 };
 const SWAP_AT = 0.15; // = проверенное значение из rule-assimilation-varga-t-d.html; работает
                        // теперь, когда обе торцевые грани куба несут одну и ту же букву
@@ -337,6 +345,7 @@ function resetScene(){
     c.mesh.position.set(X[i], 6 + Math.random()*2, 0);
     c.mesh.rotation.set(0,0,0);
     c._y0 = c.mesh.position.y; // стартовая высота падения фиксируется сразу здесь, не в update()
+    if (c.matsDefault) c.mesh.material = c.matsDefault; // сброс фазы 5 перед новым проигрыванием
   });
   cubes.k.mesh.material = cubes.k.matsFrom;
 }
@@ -417,6 +426,25 @@ function update(elapsed){
       flags.captioned = true;
       setCaption('<b>k</b> перед звонкой (гласной <b>a</b>) → <b>g</b> — правило 71');
     }
+  }
+
+  // фаза 5 — «слово готово»: отдельная волна (после оседания, не вместе с ним)
+  // докрашивает весь ряд в READY_COLOR — единый нейтральный цвет, ни с чем не
+  // связанный. WORD_GAP по-прежнему не схлопывается, оба слова красятся заодно.
+  if (elapsed >= T.readyStart){
+    const t = clamp01((elapsed - T.readyStart) / T.readyDur);
+    ORDER.forEach((key, idx) => {
+      const c = cubes[key];
+      const wavePos = t * (ORDER.length + 3) - 2;
+      const d = wavePos - idx;
+      const bounce = (d > 0 && d < 1.4) ? Math.sin(d/1.4*Math.PI) * 0.14 : 0;
+      c.mesh.position.y = REST_Y + bounce;
+      const rkey = 'ready'+idx;
+      if (!flags[rkey] && d >= 0.5){ // свап материала в момент, когда волна уже накрыла кубик
+        flags[rkey] = true;
+        c.mesh.material = c.matsReady;
+      }
+    });
   }
 
   // приглушение неактивных букв: внимание должно идти на пару nimitta/sthānin,
