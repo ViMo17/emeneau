@@ -870,7 +870,42 @@
     gap: var(--gap);
     align-items: center;
     flex-shrink: 0;
+    position: relative; /* точка отсчёта для #role-svg (линии связей источник/триггер/результат) */
     }
+
+  /* ══ Система ролей на алфавите (источник/триггер/результат) — подсветка по клику на пример ══ */
+  #role-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 60;
+  }
+  .role-line {
+    stroke: rgba(255,244,220,.85);
+    stroke-width: 1.5;
+    fill: none;
+  }
+  .role-line.dashed { stroke-dasharray: 3 3; }
+  .role-label-bg {
+    fill: rgba(24,23,19,.92);
+    stroke: rgba(255,244,220,.35);
+    stroke-width: 1;
+  }
+  .role-label {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    fill: rgba(255,244,220,.95);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .lc.role-dim { opacity: 0.22; }
+  .lc.role-source { z-index: 40; }
+  .lc.role-trigger { z-index: 40; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 2px; }
+  .lc.role-result  { z-index: 40; outline: 2px solid #fff; outline-offset: 2px; }
 
   .gap-row {
     grid-column: 1 / -1;
@@ -1399,6 +1434,14 @@ function hideQuote() {
 
 /* ═══════════════════ ПРИМЕРЫ К ПРАВИЛАМ (доп. к встроенным в текст) ═══════════════════ */
 const EXAMPLES = {};
+/* Правила 2, 6, 32, 33, 39 подключены к системе ролей на алфавите — 5 демо-паттернов
+   (см. handoff-alphabet-roles): чистое место-совпадение (39), частичная передача
+   звонкости (32), гуна-катализатор (2), полугласный-катализатор (6), целая варга разом (33). */
+EXAMPLES[39] = [{ desc: 'yuj- + -n- + mas → yuñjmas «соединяем»', roleDemo: true }];
+EXAMPLES[32] = [{ desc: 'śak- «мочь» + dhi → śagdhi «помоги»', roleDemo: true }];
+EXAMPLES[2]  = [{ desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»', roleDemo: true }];
+EXAMPLES[6]  = [{ desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»', roleDemo: true }];
+EXAMPLES[33] = [{ desc: 'likh- «писать» + s → citralik «художник»', roleDemo: true }];
 EXAMPLES[3] = [
   {
     desc: 'agni- «огонь» + guṇa + -as → agnayas «огни»',
@@ -1411,6 +1454,30 @@ EXAMPLES[71] = [
     module: './examples/rule71-vak-asti.js'
   }
 ];
+
+/* ═══════════════════ РОЛИ НА АЛФАВИТЕ: источник/триггер/результат ═══════════════════ */
+/* Геометрия (см. rules-1-71-analysis-consolidated.md, раздел «Модель ролей»):
+   - place  (место-ассимиляция, 37–40, 69): результат берёт РЯД от источника + СТОЛБЕЦ от триггера.
+     Две линии: источник→результат (общий ряд, горизонтальная, подпись «ряд»);
+                триггер→результат (общий столбец, вертикальная, подпись «столбец»).
+   - voicing (озвончение/оглушение, 31–33): результат берёт СТОЛБЕЦ от источника, только звонкость — от триггера.
+     Две линии: источник→результат (общий столбец, вертикальная, подпись «столбец»);
+                триггер→результат (по месту не совпадает ни с чем — диагональ, подпись «только звонкость»).
+   - grade  (гуна/вриддхи, катализатор): источник сдвигается внутри своего же столбца;
+     a/ā не даёт координат — только одна линия источник→результат (вертикальная, без подписи).
+   - wholevarga (правило 33 в целом): не один пример, а вся закономерность сразу —
+     все придыхательные смычные (10 клеток, 2 ряда × 5 столбцов) теряют придыхание одновременно.
+     Каждая пара — короткая вертикальная линия внутри своего столбца, без подписи. */
+const ROLE_DEMOS = {
+  39: { type:'place',   source:'na', trigger:'ja', result:'ña' },
+  32: { type:'voicing', source:'ka', trigger:'dha', result:'ga' },
+  2:  { type:'grade',   source:'ī',  trigger:'a',   result:'e' },
+  6:  { type:'grade',   source:'ṛ',  trigger:'o',   result:'ra' },
+  33: { type:'wholevarga', pairs:[
+          ['kha','ka'],['cha','ca'],['ṭha','ṭa'],['tha','ta'],['pha','pa'],
+          ['gha','ga'],['jha','ja'],['ḍha','ḍa'],['dha','da'],['bha','ba'],
+        ] },
+};
 
 /* ═══════════════════ УПРАЖНЕНИЯ ═══════════════════ */
 /* Ключ = номер правила, значение = массив номеров упражнений из Эмено. */
@@ -1512,6 +1579,7 @@ function unmountCurrentAnim() {
   }
   animWrap.style.display  = 'none';
   animEmpty.style.display = 'block';
+  clearRoleDemo();
 }
 
 async function mountAnimExample(modulePath) {
@@ -1579,6 +1647,7 @@ function showCenter(cd) {
         lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         if (ex.module) mountAnimExample(ex.module);
+        else if (ex.roleDemo) { unmountCurrentAnim(); renderRoleDemo(cd.n); }
       });
       lpPicker.appendChild(chip);
     });
@@ -1942,6 +2011,120 @@ ALPHA_ROWS.forEach(row => {
     wrap.appendChild(card);
   });
 });
+
+/* ═══════════════════ РОЛИ НА АЛФАВИТЕ: рендер (источник/триггер/результат) ═══════════════════ */
+const roleSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+roleSvg.setAttribute('id', 'role-svg');
+roleSvg.innerHTML = `
+  <defs>
+    <marker id="role-arrow" viewBox="0 0 10 10" refX="10" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,244,220,.9)"></path>
+    </marker>
+  </defs>`;
+wrap.appendChild(roleSvg);
+
+function cellEl(tr) { return document.getElementById('ac-' + tr); }
+
+function cellCenter(el) {
+  const r = el.getBoundingClientRect();
+  const w = wrap.getBoundingClientRect();
+  return { x: r.left - w.left + r.width / 2, y: r.top - w.top + r.height / 2 };
+}
+
+const ROLE_LINE_TRIM = 20; // px от центра клетки = половина --card (40px) — линия строго до края плашки, не заходит на неё
+const ROLE_LINE_SKIP_DIST = 60; // если клетки и так соседи по сетке (шаг ~42px) — после обрезки остался бы бессмысленный огрызок; не рисуем вообще, соседство и так видно по подсветке
+
+function svgRoleLine(a, b, { dashed = false, label = null } = {}) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  if (dist < ROLE_LINE_SKIP_DIST) return; // соседи по сетке — связь и так очевидна, линия не нужна
+  const ux = dx / dist, uy = dy / dist;
+  // обрезаем оба конца ровно до края клетки — линия никогда не лежит на плашке
+  const x1 = a.x + ux * ROLE_LINE_TRIM, y1 = a.y + uy * ROLE_LINE_TRIM;
+  const x2 = b.x - ux * ROLE_LINE_TRIM, y2 = b.y - uy * ROLE_LINE_TRIM;
+
+  const line = document.createElementNS(ns, 'line');
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('class', 'role-line' + (dashed ? ' dashed' : ''));
+  line.setAttribute('marker-end', 'url(#role-arrow)'); // остриё всегда указывает на результат
+  roleSvg.appendChild(line);
+  if (label) {
+    // подпись — ровно на середине линии (линия визуально ныряет под неё), всегда горизонтальная:
+    // повёрнутый вертикальный/диагональный текст плохо читается на короткой дистанции
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${mx},${my})`);
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('class', 'role-label');
+    text.textContent = label;
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('class', 'role-label-bg');
+    rect.setAttribute('rx', 3);
+    g.appendChild(rect);
+    g.appendChild(text);
+    roleSvg.appendChild(g);
+    // getBBox доступен только у элемента, реально прикреплённого к отрисовываемому документу
+    // (в jsdom-тестах его нет — тогда считаем ширину по числу символов, запасной вариант)
+    let bw, bh;
+    try {
+      const bbox = text.getBBox();
+      bw = bbox.width + 10; bh = bbox.height + 6;
+    } catch (e) {
+      bw = label.length * 5.4 + 10; bh = 13;
+    }
+    rect.setAttribute('x', -bw / 2); rect.setAttribute('y', -bh / 2);
+    rect.setAttribute('width', bw); rect.setAttribute('height', bh);
+  }
+}
+
+function clearRoleDemo() {
+  wrap.querySelectorAll('.lc').forEach(el =>
+    el.classList.remove('role-dim', 'role-source', 'role-trigger', 'role-result'));
+  roleSvg.querySelectorAll('line, g').forEach(el => el.remove()); // <defs> с маркером-стрелкой не трогаем
+}
+
+function activateRoleCell(tr, role) {
+  const el = cellEl(tr);
+  if (!el) { console.warn('Роль: буква не найдена на алфавите —', tr); return null; }
+  el.classList.remove('role-dim');
+  el.classList.add('role-' + role);
+  return el;
+}
+
+function renderRoleDemo(n) {
+  const demo = ROLE_DEMOS[n];
+  if (!demo) return;
+  clearRoleDemo();
+  wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
+
+  if (demo.type === 'place') {
+    const src = activateRoleCell(demo.source, 'source');
+    const trg = activateRoleCell(demo.trigger, 'trigger');
+    const res = activateRoleCell(demo.result, 'result');
+    if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), { label: 'ряд' });
+    if (trg && res) svgRoleLine(cellCenter(trg), cellCenter(res), { dashed: true, label: 'столбец' });
+  } else if (demo.type === 'voicing') {
+    const src = activateRoleCell(demo.source, 'source');
+    const trg = activateRoleCell(demo.trigger, 'trigger');
+    const res = activateRoleCell(demo.result, 'result');
+    if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), { label: 'столбец' });
+    if (trg && res) svgRoleLine(cellCenter(trg), cellCenter(res), { dashed: true, label: 'только звонкость' });
+  } else if (demo.type === 'grade') {
+    const src = activateRoleCell(demo.source, 'source');
+    activateRoleCell(demo.trigger, 'trigger'); // катализатор: подсвечен, но без координат — линия к нему не идёт
+    const res = activateRoleCell(demo.result, 'result');
+    if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
+  } else if (demo.type === 'wholevarga') {
+    demo.pairs.forEach(([s, r]) => {
+      const src = activateRoleCell(s, 'source');
+      const res = activateRoleCell(r, 'result');
+      if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
+    });
+  }
+}
 </script>
 </body>
 </html>
