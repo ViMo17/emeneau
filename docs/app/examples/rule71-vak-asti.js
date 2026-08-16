@@ -412,16 +412,10 @@ function update(elapsed){
     cubes.k.mesh.position.y = REST_Y;
   }
 
-  // оседание — единая волна по всему ряду; WORD_GAP не схлопывается никогда
+  // снятие затенения — БЕЗ бегущей волны: все буквы разом, одновременно
+  // (было — волна с подскоком, читалось как «дрожание»; убрано по запросу)
   if (elapsed >= T.settleStart){
     const t = clamp01((elapsed - T.settleStart) / T.settleDur);
-    ORDER.forEach((key, idx) => {
-      const c = cubes[key];
-      const wavePos = t * (ORDER.length + 3) - 2;
-      const d = wavePos - idx;
-      const bounce = (d > 0 && d < 1.4) ? Math.sin(d/1.4*Math.PI) * 0.18 : 0;
-      c.mesh.position.y = REST_Y + bounce;
-    });
     if (t >= 1 && !flags.captioned){
       flags.captioned = true;
       setCaption('<b>k</b> перед звонкой (гласной <b>a</b>) → <b>g</b> — правило 71');
@@ -449,21 +443,15 @@ function update(elapsed){
 
   // приглушение неактивных букв: внимание должно идти на пару nimitta/sthānin,
   // пока решается переход. Активные (a, k/g) — всегда полный цвет. Остальные
-  // гаснут вскоре после появления бейджей ролей и разгораются обратно вместе
-  // с волной оседания — тем же движением, что и подскок, не отдельным шагом.
+  // гаснут вскоре после появления бейджей ролей и разгораются обратно все
+  // разом (без волны — см. правку выше).
   const DIM_RAMP = 700; // ×2
   ORDER.forEach((key, idx) => {
     const c = cubes[key];
     if (c.isNimitta || c.isSthanin) { tintCube(c, 1); return; }
     let mix = 1;
     if (elapsed >= T.rolesStart) mix = 1 - clamp01((elapsed - T.rolesStart) / DIM_RAMP);
-    if (elapsed >= T.settleStart) {
-      const t = clamp01((elapsed - T.settleStart) / T.settleDur);
-      const wavePos = t * (ORDER.length + 3) - 2;
-      const d = wavePos - idx;
-      if (d >= 1.4) mix = 1;
-      else if (d > 0) mix = Math.max(mix, d/1.4);
-    }
+    if (elapsed >= T.settleStart) mix = clamp01((elapsed - T.settleStart) / T.settleDur);
     tintCube(c, mix);
   });
 }

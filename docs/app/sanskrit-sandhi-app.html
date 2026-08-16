@@ -740,6 +740,21 @@
     flex-shrink: 0;
     letter-spacing: 0.02em;
   }
+  #col-legend {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 2px 4px;
+    font-size: 10px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: rgba(220,224,232,0.70);
+    overflow-x: auto;
+  }
+  #col-legend span { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; white-space: nowrap; }
+  #col-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+
   #role-legend {
     flex: 0 0 auto;
     background: rgba(200,188,158, 0.10);
@@ -819,9 +834,11 @@
   /* цвет по СТУПЕНИ (слаб/гуна/вридд), а не по месту образования — в этой
      таблице столбцы идут в другом порядке (a,i,u,ṛ,ḷ), чем в алфавите справа
      (vel,pal,ret,den,lab), и цвет по варге путал, а не помогал считывать */
-  .guna-table td.grade-weak    { background: #B9C6DC; color: #17284A; }
-  .guna-table td.grade-guna    { background: #8CA3C6; color: #17284A; }
-  .guna-table td.grade-vriddhi { background: #5B7EAE; color: #E8EDF6; }
+  .guna-table td.grade-weak    { background: #E7E2DA; color: #3A362E; }
+  .guna-table td.grade-guna    { background: #CC7BCC; color: #380838; }
+  .guna-table td.grade-vriddhi { background: #A43DA4; color: #F5E4F5; }
+  .guna-table td.grade-guna-rev    { background: #C4A982; color: #382A10; }
+  .guna-table td.grade-vriddhi-rev { background: #967240; color: #F5EBDC; }
   .guna-table td.gt-blank { background: transparent; }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
@@ -1094,6 +1111,14 @@
     <div id="alpha-wrap"></div>
     <div id="alpha-desc"></div>
 
+    <div id="col-legend">
+      <span><i style="background:#A8D878"></i> зад.</span>
+      <span><i style="background:#7DCFCA"></i> срд.</span>
+      <span><i style="background:#C5B0D8"></i> цер.</span>
+      <span><i style="background:#E8A8C0"></i> зуб.</span>
+      <span><i style="background:#F0BF88"></i> губ.</span>
+    </div>
+
     <div id="role-legend">
       <div class="role-legend-title">Роли в примере</div>
       <div class="role-legend-row">
@@ -1114,11 +1139,11 @@
         </tr>
         <tr>
           <td class="gt-r">вридд ↑</td>
-          <td class="gt-blank"></td><td class="grade-vriddhi">yā</td><td class="grade-vriddhi">vā</td><td class="grade-vriddhi">rā</td><td class="gt-blank"></td>
+          <td class="gt-blank"></td><td class="grade-vriddhi-rev">yā</td><td class="grade-vriddhi-rev">vā</td><td class="grade-vriddhi-rev">rā</td><td class="gt-blank"></td>
         </tr>
         <tr>
           <td class="gt-r">гуна ↑</td>
-          <td class="gt-blank"></td><td class="grade-guna" id="main-cell-rg-ya">ya</td><td class="grade-guna">va</td><td class="grade-guna">ra</td><td class="gt-blank"></td>
+          <td class="gt-blank"></td><td class="grade-guna-rev" id="main-cell-rg-ya">ya</td><td class="grade-guna-rev">va</td><td class="grade-guna-rev">ra</td><td class="gt-blank"></td>
         </tr>
         <tr>
           <td class="gt-r">слаб</td>
@@ -1745,7 +1770,9 @@ SECTIONS.forEach((sec, si) => {
 
 /* ═══════════════════ АЛФАВИТ ═══════════════════ */
 const ALPHA_ROWS = [
-  { header:true, cells:['заднеяз.','средненёб.','церебр.','зубные','губные','—'] },
+  // header-строка убрана — вертикальные подписи столбцов заменены компактной
+  // легендой над role-legend (см. #col-legend), рендер-логика row.header
+  // оставлена в коде на случай, если понадобится другой формат впоследствии
   { label:'гласные', sub:'स्वर', cells:[
     {dv:'अ',tr:'a',  cls:'vel',  hint:'краткий велярный a'},
     {dv:'इ',tr:'i',  cls:'pal',  hint:'краткий нёбный i'},

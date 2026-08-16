@@ -197,8 +197,8 @@ const cubes = {
 
 // точки «за кадром», откуда прилетают a и y — сторона алфавитной панели.
 // Разнесены немного, чтобы два пути не сливались в один.
-const SRC_Y = { x:6.5, y:4.8,  z:-2.2 };
-const SRC_A = { x:5.8, y:5.4,  z:-1.6 };
+const SRC_Y = { x:7.6, y:4.8,  z:-2.2 };
+const SRC_A = { x:4.6, y:5.4,  z:-1.4 };
 
 // «отстойник» для e: вверх-влево от своего слота, чуть ближе к камере —
 // туда оно поднимается и там блёкнет, пока идёт замена на a+y.
@@ -546,18 +546,13 @@ function update(elapsed){
   ];
   const LOCK_STEP = 150;   // ×2, сдвиг импульса от кубика к кубику
   const LOCK_HOP  = 520;  // ×2, длительность подскока одного кубика
-  LOCK_WAVE.forEach(({cube}, i) => {
-    const start = T.settleStart + i*LOCK_STEP;
-    if (elapsed >= start && elapsed <= start + LOCK_HOP){
-      const t = clamp01((elapsed - start)/LOCK_HOP);
-      cube.mesh.position.y = REST_Y + Math.sin(t*Math.PI) * 0.14;
-      const key = 'lock' + i;
-      if (!flags[key] && t >= 0.4){
-        flags[key] = true;
-        if (cube.matsB) cube.mesh.material = cube.matsB; // → зелёный, как agni-
-      }
-    }
-  });
+  // снятие затенения / переход к истинному алфавитному цвету — БЕЗ бегущей
+  // волны, все семь кубиков разом (было — волна с подскоком, читалось как
+  // «дрожание»; убрано по запросу, волна остаётся только у фазы 5 ниже)
+  if (elapsed >= T.settleStart && !flags.settled){
+    flags.settled = true;
+    LOCK_WAVE.forEach(({cube}) => { if (cube.matsB) cube.mesh.material = cube.matsB; });
+  }
   if (elapsed > T.settleStart + T.settleDur){
     cellRWI?.classList.remove('gv-active');
     cellRGYA?.classList.remove('gv-active');
@@ -582,17 +577,15 @@ function update(elapsed){
   // притенение фона: a1/g/n/s гаснут вскоре после начала влияния (as → i),
   // держат внимание на активной паре (a2=nimitta, ie=sthānin), возвращаются
   // к полной яркости синхронно с LOCK_WAVE выше — тем же движением, что подскок
+  // притенение фона: a1/g/n/s гаснут вскоре после начала влияния (as → i),
+  // держат внимание на активной паре (a2=nimitta, ie=sthānin), возвращаются
+  // к полной яркости все разом при снятии затенения (без волны, см. выше)
   const DIM_RAMP = 700;
   const DIM_BG = [cubes.a1, cubes.g, cubes.n, cubes.s];
   DIM_BG.forEach((cube) => {
     let mix = 1;
     if (elapsed >= T.influenceStart) mix = 1 - clamp01((elapsed - T.influenceStart) / DIM_RAMP);
-    const idx = LOCK_WAVE.findIndex(w => w.cube === cube);
-    if (elapsed >= T.settleStart && idx !== -1){
-      const start = T.settleStart + idx*LOCK_STEP;
-      const localT = clamp01((elapsed - start) / LOCK_HOP);
-      if (elapsed >= start) mix = Math.max(mix, localT);
-    }
+    if (elapsed >= T.settleStart) mix = clamp01((elapsed - T.settleStart) / T.settleDur);
     dimCube(cube, mix);
   });
 }
