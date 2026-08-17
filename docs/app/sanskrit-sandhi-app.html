@@ -147,10 +147,11 @@
   #intro-reopen-btn:hover { background: rgba(200,188,158,.2); }
 
   #panel-sandhi {
-    flex: 0 0 clamp(300px, 20vw, 368px);
-    width: clamp(300px, 20vw, 368px);
+    flex: 0 0 clamp(360px, 22vw, 400px);
+    width: clamp(360px, 22vw, 400px);
     height: 100vh;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     padding: 16px 10px 12px;
@@ -293,7 +294,7 @@
   /* ══ Заглушка-контекст в левой панели ══ */
   #group-stub {
     flex: none;
-    min-height: 80px;
+    height: 92px;
     margin: 4px 0;
     border-radius: 10px;
     background: rgba(200,195,185, 0.08);
@@ -869,12 +870,17 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
+    justify-content: center;
+    /* центр — под первыми 5 колонками сетки (vel..lab), не под всеми 6:
+       6-я колонка (m/o/au/h) не участвует в цветовой легенде */
+    margin-left: calc(88px + var(--gap));
+    width: calc(5 * var(--card) + 4 * var(--gap));
     gap: 10px;
     padding: 2px 2px 4px;
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: rgba(220,224,232,0.70);
-    overflow-x: auto;
+    overflow-x: visible;
   }
   #col-legend span { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; white-space: nowrap; }
   #col-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
@@ -933,20 +939,22 @@
   .role-step-btn {
     font-family: 'Helvetica Neue', sans-serif;
     font-size: 11px;
-    letter-spacing: 0.03em;
-    color: rgba(225,215,190, 0.78);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(225,215,190, 0.65);
     background: rgba(200,188,158, 0.10);
-    border: 1px solid rgba(200,188,158, 0.30);
-    border-radius: 6px;
-    padding: 5px 10px;
+    border: 1px solid rgba(200,188,158, 0.28);
+    border-radius: 7px;
+    padding: 6px 11px;
     cursor: pointer;
     white-space: nowrap;
   }
-  .role-step-btn:hover { background: rgba(200,188,158, 0.18); }
+  .role-step-btn:hover { background: rgba(200,188,158, 0.20); color: rgba(225,215,190, 0.85); }
   .role-step-btn.active {
-    background: rgba(255,244,220, 0.16);
-    border-color: rgba(255,244,220, 0.55);
-    color: rgba(255,244,220, 0.98);
+    background: #E8C860;
+    border-color: #E8C860;
+    box-shadow: 0 0 0 2px rgba(232,200,96,.30);
+    color: #201a04;
   }
   #role-steps-text {
     margin-top: 8px;
@@ -963,10 +971,14 @@
     border-collapse: separate;
     border-spacing: 3px;
     flex-shrink: 0;
+    align-self: stretch;
+    width: 100%;
+    table-layout: fixed;
+    margin: 0;
   }
   .guna-table td {
-    font-size: 13px;
-    padding: 4px 9px;
+    font-size: 15px;
+    padding: 6px 4px;
     text-align: center;
     border-radius: 5px;
     font-family: 'Georgia', serif;
@@ -975,6 +987,7 @@
     background: rgba(230,225,210,0.06);
     color: rgba(220,210,190, 0.55);
   }
+  .guna-table td:first-child { width: 52px; }
   .gt-h {
     font-family: 'Helvetica Neue', sans-serif !important;
     font-size: 9px !important;
@@ -988,8 +1001,9 @@
     font-family: 'Helvetica Neue', sans-serif !important;
     font-size: 9px !important;
     color: rgba(225,215,190, 0.75) !important;
-    text-align: right !important;
-    padding-right: 8px !important;
+    text-align: left !important;
+    padding-right: 4px !important;
+    padding-left: 2px !important;
     background: none !important;
     font-weight: 400 !important;
   }
@@ -1002,6 +1016,11 @@
   .guna-table td.grade-guna-rev    { background: #C4A982; color: #382A10; }
   .guna-table td.grade-vriddhi-rev { background: #967240; color: #F5EBDC; }
   .guna-table td.gt-blank { background: transparent; }
+  /* мягкая подсветка ВСЕГО столбца (a / i·ī / u·ū / ṛ·ṝ / ḷ) — включается автоматически,
+     как только хоть одна клетка в этом столбце становится .gv-active (см. JS ниже, MutationObserver) */
+  .guna-table td.gv-col-active {
+    box-shadow: inset 0 0 0 2px rgba(232,200,96,.32);
+  }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
      не создавая свою копию. main-cell-w-i / main-cell-g-e / main-cell-rg-ya — уже
@@ -1276,6 +1295,7 @@
     <ul>
       <li><b>1–40 — внутренние сандхи</b>: стык корня и суффикса/окончания внутри одного слова.</li>
       <li><b>41–71 — внешние сандхи</b>: стык двух соседних слов в предложении.</li>
+      <li><b>17–29</b> — отдельная подгруппа: работают перед нулём и перед любым согласным, кроме полугласных и назальных. Внутри неё <b>20–26</b> — одна семья («как kṣ»): 21 задаёт норму для kṣ, 20 — лексическое исключение (jakṣ-→gh), 22–26 — тот же принцип для ch/śc/ṣ/ś/j.</li>
     </ul>
 
     <h2>Как пользоваться панелью слева</h2>
@@ -1307,6 +1327,40 @@
     <div id="group-stub">
       <div id="stub-label"></div>
       <div id="stub-sub" style="display:none"></div>
+    </div>
+
+    <!-- Гуна/вриддхи — закреплена внизу колонки -->
+    <div id="guna-box">
+      <div class="guna-title">Гуна · Вриддхи</div>
+      <table class="guna-table">
+        <tr>
+          <td class="gt-h"></td>
+          <td class="gt-h">a</td><td class="gt-h">i·ī</td>
+          <td class="gt-h">u·ū</td><td class="gt-h">ṛ·ṝ</td>
+          <td class="gt-h">ḷ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">вридд ↑</td>
+          <td class="gt-blank"></td><td class="grade-vriddhi-rev">yā</td><td class="grade-vriddhi-rev">vā</td><td class="grade-vriddhi-rev">rā</td><td class="gt-blank"></td>
+        </tr>
+        <tr>
+          <td class="gt-r">гуна ↑</td>
+          <td class="gt-blank"></td><td class="grade-guna-rev" id="main-cell-rg-ya">ya</td><td class="grade-guna-rev">va</td><td class="grade-guna-rev">ra</td><td class="gt-blank"></td>
+        </tr>
+        <tr>
+          <td class="gt-r">слаб</td>
+          <td class="grade-weak">a</td><td class="grade-weak" id="main-cell-w-i">i</td><td class="grade-weak">u</td><td class="grade-weak">ṛ</td><td class="grade-weak">ḷ</td>
+        </tr>
+        <tr>
+          <td class="gt-r">гуна</td>
+          <td class="grade-guna">a</td><td class="grade-guna" id="main-cell-g-e">e</td><td class="grade-guna">o</td><td class="grade-guna">ar</td><td class="grade-guna">al</td>
+        </tr>
+        <tr>
+          <td class="gt-r">вридд</td>
+          <td class="grade-vriddhi">ā</td><td class="grade-vriddhi">āi</td><td class="grade-vriddhi">āu</td><td class="grade-vriddhi">ār</td><td class="grade-vriddhi">āl</td>
+        </tr>
+      </table>
+      <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
     </div>
   </div>
 
@@ -1369,39 +1423,6 @@
         <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
         <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
       </div>
-    </div>
-
-    <div id="guna-box">
-      <div class="guna-title">Гуна · Вриддхи</div>
-      <table class="guna-table">
-        <tr>
-          <td class="gt-h"></td>
-          <td class="gt-h">a</td><td class="gt-h">i·ī</td>
-          <td class="gt-h">u·ū</td><td class="gt-h">ṛ·ṝ</td>
-          <td class="gt-h">ḷ</td>
-        </tr>
-        <tr>
-          <td class="gt-r">вридд ↑</td>
-          <td class="gt-blank"></td><td class="grade-vriddhi-rev">yā</td><td class="grade-vriddhi-rev">vā</td><td class="grade-vriddhi-rev">rā</td><td class="gt-blank"></td>
-        </tr>
-        <tr>
-          <td class="gt-r">гуна ↑</td>
-          <td class="gt-blank"></td><td class="grade-guna-rev" id="main-cell-rg-ya">ya</td><td class="grade-guna-rev">va</td><td class="grade-guna-rev">ra</td><td class="gt-blank"></td>
-        </tr>
-        <tr>
-          <td class="gt-r">слаб</td>
-          <td class="grade-weak">a</td><td class="grade-weak" id="main-cell-w-i">i</td><td class="grade-weak">u</td><td class="grade-weak">ṛ</td><td class="grade-weak">ḷ</td>
-        </tr>
-        <tr>
-          <td class="gt-r">гуна</td>
-          <td class="grade-guna">a</td><td class="grade-guna" id="main-cell-g-e">e</td><td class="grade-guna">o</td><td class="grade-guna">ar</td><td class="grade-guna">al</td>
-        </tr>
-        <tr>
-          <td class="gt-r">вридд</td>
-          <td class="grade-vriddhi">ā</td><td class="grade-vriddhi">āi</td><td class="grade-vriddhi">āu</td><td class="grade-vriddhi">ār</td><td class="grade-vriddhi">āl</td>
-        </tr>
-      </table>
-      <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
     </div>
   </div>
 
@@ -1651,7 +1672,7 @@ EXAMPLES[39] = [{
   desc: 'yuj- + -n- + mas → yuñjmas «соединяем»',
   roleDemo: { steps: [
     { tag: '39', type: 'place', source: 'na', trigger: 'ja', result: 'ña',
-      text: 'Назальный n стоит перед смычным j — это конечный согласный корня yuj- «соединять» (сам n — вставной инфикс перед ним, образующий основу настоящего времени: yu-n-j-mas). Место образования у результата берётся от триггера (j — палатальный звук), а «носовой» характер сохраняется от источника (n). Получается палатальный носовой — ñ.' }
+      text: 'Назальный n стоит перед j — конечным согласным корня yuj- (n — инфикс перед ним). Место образования результата — от триггера (j, палатальный), «носовой» характер — от источника (n). Итог: палатальный носовой ñ.' }
   ] }
 }];
 EXAMPLES[32] = [
@@ -1659,16 +1680,16 @@ EXAMPLES[32] = [
     desc: 'śak- «мочь» + dhi → śagdhi «помоги»',
     roleDemo: { steps: [
       { tag: '32', type: 'voicing', source: 'ka', trigger: 'dha', result: 'ga',
-        text: 'Глухой смычный k встречает звонкий dh (начало окончания -dhi «помоги»). Место образования (заднеязычный звук) сохраняется от источника, а звонкость передаётся от триггера. Получается звонкий g.' }
+        text: 'Глухой k перед звонким dh (начало -dhi). Место образования — от источника, звонкость — от триггера. Итог: g.' }
     ] }
   },
   {
     desc: 'diś- + bhyas → digbhyas «со сторон»',
     roleDemo: { steps: [
       { tag: '25', type: 'lexical', source: 'śa', result: 'ka',
-        text: 'Корень diś- «указывать» — особый случай: в конце слова его ś лексически заменяется на k. Это не выводится из соседних звуков, а просто нужно запомнить для этого конкретного корня (и ещё нескольких похожих: dṛś-, mṛś-, spṛś-).' },
+        text: 'diś- — лексическое исключение: конечная ś в этой позиции даёт k (как и dṛś-, mṛś-, spṛś-). Не выводится из контекста — просто нужно запомнить.' },
       { tag: '32', type: 'voicing', source: 'ka', trigger: 'bha', result: 'ga',
-        text: 'Теперь k (только что получившийся на шаге 1) стоит перед звонким bh (начало окончания -bhyas). Как и в śagdhi — место образования от источника, звонкость от триггера. Получается g. Один и тот же результат (g), но пришедший разными путями — это и есть смысл цепочки.' }
+        text: 'k (с шага 1) перед звонким bh (-bhyas). Тот же принцип, что в śagdhi: место — от источника, звонкость — от триггера. Итог снова g, но другим путём.' }
     ] }
   }
 ];
@@ -1676,14 +1697,14 @@ EXAMPLES[2] = [{
   desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»',
   roleDemo: { steps: [
     { tag: '2', type: 'grade', source: 'ī', trigger: 'a', result: 'e',
-      text: 'Гласный ī стоит рядом с a (конец основы bhava-) — но здесь работает не обычное слияние двух звуков, а гуна: источник поднимается на ступень выше (см. таблицу «Гуна · Вриддхи» ниже — там i/ī даёт e), место образования при этом не меняется. Соседний a — просто условие для этого сдвига (катализатор): сам он ничего не отдаёт результату, поэтому линии к нему нет — только пунктирная обводка. (В подсказке к правилу — «3 pl.» — опечатка источника: bhavet значит «он был бы», это форма 3 sg.)' }
+      text: 'ī рядом с a (конец bhava-) — это гуна, не слияние: источник поднимается на ступень (см. «Гуна · Вриддхи» слева — i/ī даёт e). a — только условие сдвига, сам ничего не отдаёт, линии к нему нет. (В подсказке — «3 pl.», опечатка источника: bhavet — форма 3 sg.)' }
   ] }
 }];
 EXAMPLES[6] = [{
   desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»',
   roleDemo: { steps: [
     { tag: '6', type: 'grade', source: 'ṛ', trigger: 'o', result: 'ra',
-      text: 'Гласный ṛ стоит перед другим гласным (o из окончания -os) — санскрит не терпит двух гласных подряд внутри слова, поэтому первый превращается в согласный того же места образования: слоговое ṛ становится полугласным r. Соседний гласный — снова просто условие (сработал бы любой), линии к нему нет.' }
+      text: 'ṛ перед гласным (o из -os) — два гласных подряд недопустимы, поэтому ṛ становится согласным того же места — r. Гласный-сосед лишь условие, линии к нему нет.' }
   ] }
 }];
 EXAMPLES[33] = [{
@@ -1693,7 +1714,7 @@ EXAMPLES[33] = [{
         ['kha','ka'],['cha','ca'],['ṭha','ṭa'],['tha','ta'],['pha','pa'],
         ['gha','ga'],['jha','ja'],['ḍha','ḍa'],['dha','da'],['bha','ba'],
       ],
-      text: 'Это не один пример, а сразу вся закономерность: любой придыхательный смычный (глухой или звонкий) теряет придыхание, если после него в слове идёт ещё один смычный, шипящий или конец слова. На конкретном примере это kh→k (likh-+s), но правило работает одинаково для всех десяти клеток сразу — обе строки придыхательных смычных на карте.' }
+      text: 'Не один пример, а вся закономерность: придыхательный смычный теряет придыхание перед смычным/шипящим/концом слова. Здесь — kh→k, но действует сразу на все десять клеток (обе строки придыхательных).' }
   ] }
 }];
 EXAMPLES[3] = [
@@ -1983,9 +2004,6 @@ function updateStub(cd, wRefs) {
   if (n >= 17 && n <= 29) {
     stubSub.textContent  = 'Правила 17–29 применяются перед нулём и перед всеми согласными, кроме полугласных и назальных.';
     stubSub.style.display = 'block';
-    if (n >= 20 && n <= 26) {
-      stubSub.textContent += '\nГруппа 20–26 · kṣ и аналогичные: пр. 21 — норма для kṣ · пр. 20 — исключение jakṣ- → gh · пр. 22–26 — ch, śc, ṣ, ś, j';
-    }
   } else {
     stubSub.style.display = 'none';
   }
@@ -2270,6 +2288,27 @@ roleSvg.innerHTML = `
   </defs>`;
 wrap.appendChild(roleSvg);
 
+/* ═══════════════════ ГУНА-ТАБЛИЦА: подсветка всего столбца по активной клетке ═══════════════════ */
+/* Не трогает rule3-agnayas.js / rule71-vak-asti.js — они как ставили .gv-active на
+   конкретные клетки, так и ставят; здесь только досчитываем, весь ли столбец подсветить. */
+(function () {
+  const gunaTable = document.querySelector('.guna-table');
+  if (!gunaTable) return;
+  function refreshGunaColumns() {
+    const rows = Array.from(gunaTable.querySelectorAll('tr'));
+    const ncols = Math.max(...rows.map(r => r.children.length));
+    for (let c = 0; c < ncols; c++) {
+      const cellsInCol = rows.map(r => r.children[c]).filter(Boolean);
+      const active = cellsInCol.some(td => td.classList.contains('gv-active'));
+      cellsInCol.forEach(td => td.classList.toggle('gv-col-active', active));
+    }
+  }
+  const gunaObserver = new MutationObserver(refreshGunaColumns);
+  gunaTable.querySelectorAll('td').forEach(td =>
+    gunaObserver.observe(td, { attributes: true, attributeFilter: ['class'] }));
+  refreshGunaColumns();
+})();
+
 const roleStepsWrap   = document.getElementById('role-steps');
 const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
@@ -2394,12 +2433,19 @@ function renderRoleDemo(demo) {
   clearRoleDemo();
   if (!demo || !demo.steps || !demo.steps.length) return;
 
+  if (demo.steps.length === 1) {
+    // один шаг — переключать нечего, лента не нужна, сразу показываем объяснение
+    roleStepsWrap.style.display = 'none';
+    renderRoleStep(demo.steps[0]);
+    return;
+  }
+
   roleStepsWrap.style.display = 'block';
   demo.steps.forEach((step, i) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'role-step-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = 'Шаг ' + (i + 1) + ' · [' + step.tag + ']';
+    btn.textContent = 'Шаг ' + (i + 1) + ' · прав. ' + step.tag;
     btn.addEventListener('click', () => {
       roleStepsRibbon.querySelectorAll('.role-step-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
