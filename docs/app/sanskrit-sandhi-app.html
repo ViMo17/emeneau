@@ -22,6 +22,130 @@
     overflow: hidden;
   }
 
+  /* ══ Предисловие (стартовый экран) ══ */
+  #intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(20,20,18,.72);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  #intro-card {
+    background: #363A44;
+    border: 1px solid rgba(200,188,158,.30);
+    border-radius: 14px;
+    max-width: 620px;
+    max-height: 86vh;
+    overflow-y: auto;
+    padding: 28px 32px 24px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: rgba(225,215,190,.92);
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  #intro-card h1 {
+    font-size: 18px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(220,224,232,0.92);
+    margin: 0 0 4px;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+  #intro-card .intro-sub {
+    font-size: 12px;
+    color: rgba(200,195,185,.55);
+    margin-bottom: 20px;
+  }
+  #intro-card h2 {
+    font-size: 11px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: rgba(255,244,220,.85);
+    margin: 20px 0 8px;
+  }
+  #intro-card p, #intro-card li {
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin: 0 0 8px;
+  }
+  #intro-card ul { margin: 0; padding-left: 18px; }
+  #intro-axiom {
+    background: rgba(200,188,158, 0.10);
+    border: 1px solid rgba(200,188,158, 0.26);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 8px 0 4px;
+  }
+  #intro-axiom-flow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin: 8px 0 10px;
+    font-size: 12px;
+    color: rgba(255,244,220,.9);
+  }
+  #intro-axiom-flow .n {
+    background: rgba(255,244,220,.10);
+    border: 1px solid rgba(255,244,220,.30);
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+  #intro-axiom-flow .arrow { color: rgba(255,244,220,.55); }
+  #intro-axiom-flow .no { color: rgba(230,140,140,.85); font-size: 11px; margin-left: 6px; }
+  #intro-legend-mini {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    margin: 6px 0 4px;
+  }
+  #intro-legend-mini span { display:flex; align-items:center; gap:6px; }
+  #intro-legend-mini i {
+    width: 13px; height: 13px; border-radius: 4px; flex-shrink: 0; display:inline-block;
+    background: #869EC1;
+  }
+  #intro-legend-mini i.trg { background: transparent; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 1px; }
+  #intro-legend-mini i.res { background: rgba(230,225,210,0.06); outline: 2px solid #fff; outline-offset: 1px; }
+  #intro-source {
+    font-size: 11px;
+    color: rgba(200,195,185,.45);
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(200,188,158,.15);
+  }
+  #intro-start-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 11px;
+    background: rgba(255,244,220,.14);
+    border: 1px solid rgba(255,244,220,.45);
+    border-radius: 8px;
+    color: rgba(255,244,220,.98);
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  #intro-start-btn:hover { background: rgba(255,244,220,.20); }
+  #intro-reopen-btn {
+    background: rgba(200,188,158,.12);
+    border: 1px solid rgba(200,188,158,.3);
+    border-radius: 6px;
+    color: rgba(225,215,190,.7);
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 4px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #intro-reopen-btn:hover { background: rgba(200,188,158,.2); }
+
   #panel-sandhi {
     flex: 0 0 clamp(300px, 20vw, 368px);
     width: clamp(300px, 20vw, 368px);
@@ -797,6 +921,44 @@
   }
   .role-legend-sw.trg { background: transparent; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 2px; }
   .role-legend-sw.res { background: rgba(230,225,210,0.06); outline: 2px solid #fff; outline-offset: 2px; }
+
+  /* ══ Лента шагов преобразования (для примеров-цепочек и для одношаговых — единый вид) ══ */
+  #role-steps { flex: 0 0 auto; margin-top: 4px; }
+  #role-steps-ribbon {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .role-step-btn {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: rgba(225,215,190, 0.78);
+    background: rgba(200,188,158, 0.10);
+    border: 1px solid rgba(200,188,158, 0.30);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .role-step-btn:hover { background: rgba(200,188,158, 0.18); }
+  .role-step-btn.active {
+    background: rgba(255,244,220, 0.16);
+    border-color: rgba(255,244,220, 0.55);
+    color: rgba(255,244,220, 0.98);
+  }
+  #role-steps-text {
+    margin-top: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(225,215,190, 0.88);
+    background: rgba(200,188,158, 0.08);
+    border: 1px solid rgba(200,188,158, 0.22);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
   .guna-table {
     border-collapse: separate;
     border-spacing: 3px;
@@ -1093,11 +1255,52 @@
 </head>
 <body>
 
+<div id="intro-overlay">
+  <div id="intro-card">
+    <h1>Звуки санскрита · сандхи</h1>
+    <div class="intro-sub">Как читать эти 71 правило, прежде чем начать</div>
+
+    <p>Санскрит устроен так, что звуки на стыке частей слова и на стыке слов в предложении часто меняются — это и называется <b>сандхи</b> («соединение»). Например: <i>tat</i> «то» + <i>ca</i> «и» на письме и в речи сливаются в <i>tacca</i>. Правил, описывающих такие изменения, конечное число — их и разбирает это приложение, пронумеровав от 1 до 71.</p>
+
+    <h2>Главное правило — как применять правила</h2>
+    <div id="intro-axiom">
+      <p style="margin-bottom:6px">Правила применяются <b>одним проходом, строго по возрастанию номера</b>. Дошли до правила 40 — к правилу 12 вернуться уже нельзя, даже если кажется, что оно снова подошло бы. Более позднее правило может отменить результат более раннего, но не наоборот.</p>
+      <div id="intro-axiom-flow">
+        <span class="n">1</span><span class="arrow">→</span><span class="n">2</span><span class="arrow">→</span><span class="n">…</span><span class="arrow">→</span><span class="n">40</span><span class="arrow">→</span><span class="n">…</span><span class="arrow">→</span><span class="n">71</span>
+        <span class="no">— только вперёд, никогда назад</span>
+      </div>
+      <p style="margin:0">Поэтому у многих примеров в приложении — не один шаг, а цепочка: слово проходит через несколько правил по порядку, и промежуточный результат одного шага становится исходным для следующего.</p>
+    </div>
+
+    <h2>Как устроены сами правила</h2>
+    <ul>
+      <li><b>1–40 — внутренние сандхи</b>: стык корня и суффикса/окончания внутри одного слова.</li>
+      <li><b>41–71 — внешние сандхи</b>: стык двух соседних слов в предложении.</li>
+    </ul>
+
+    <h2>Как пользоваться панелью слева</h2>
+    <p>Клик по номеру правила открывает его текст и примеры. Некоторые примеры кликабельны — они подсвечивают буквы прямо на алфавите справа:</p>
+    <div id="intro-legend-mini">
+      <span><i></i> источник — звук, который менялся</span>
+      <span><i class="trg"></i> триггер — сосед, из-за которого это случилось</span>
+      <span><i class="res"></i> результат — что получилось</span>
+    </div>
+    <p style="margin-top:6px">Если пример — цепочка из нескольких правил, под алфавитом появляется ряд кнопок-шагов: каждая кнопка — один шаг цепочки со своим объяснением простыми словами.</p>
+
+    <div id="intro-source">Правила основаны на переработке Whitney/Pāṇini, сделанной M. B. Emeneau и B. A. Van Nooten («Sanskrit Sandhi and Exercises», University of California Press). Переводы и сверка — по нескольким источникам параллельно; отдельные неточности переводов исправлены и отмечены по ходу.</div>
+
+    <button id="intro-start-btn">Понятно, к правилам →</button>
+  </div>
+</div>
+
 <div id="root">
 
   <!-- ══ ЛЕВАЯ ПАНЕЛЬ: САНДХИ ══ -->
   <div id="panel-sandhi">
-    <span class="panel-title">Правила сандхи</span>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <span class="panel-title">Правила сандхи</span>
+      <button id="intro-reopen-btn" type="button">Как читать?</button>
+    </div>
     <div id="sandhi-body"></div>
 
     <!-- Заглушка-контекст между карточками и гуна -->
@@ -1152,6 +1355,11 @@
       <span><i style="background:#C5B0D8"></i> цер.</span>
       <span><i style="background:#E8A8C0"></i> зуб.</span>
       <span><i style="background:#F0BF88"></i> губ.</span>
+    </div>
+
+    <div id="role-steps" style="display:none">
+      <div id="role-steps-ribbon"></div>
+      <div id="role-steps-text"></div>
     </div>
 
     <div id="role-legend">
@@ -1436,12 +1644,58 @@ function hideQuote() {
 const EXAMPLES = {};
 /* Правила 2, 6, 32, 33, 39 подключены к системе ролей на алфавите — 5 демо-паттернов
    (см. handoff-alphabet-roles): чистое место-совпадение (39), частичная передача
-   звонкости (32), гуна-катализатор (2), полугласный-катализатор (6), целая варга разом (33). */
-EXAMPLES[39] = [{ desc: 'yuj- + -n- + mas → yuñjmas «соединяем»', roleDemo: true }];
-EXAMPLES[32] = [{ desc: 'śak- «мочь» + dhi → śagdhi «помоги»', roleDemo: true }];
-EXAMPLES[2]  = [{ desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»', roleDemo: true }];
-EXAMPLES[6]  = [{ desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»', roleDemo: true }];
-EXAMPLES[33] = [{ desc: 'likh- «писать» + s → citralik «художник»', roleDemo: true }];
+   звонкости (32), гуна-катализатор (2), полугласный-катализатор (6), целая варга разом (33).
+   roleDemo.steps — цепочка преобразований; у каждого шага своя лента-кнопка и текст
+   simple-language объяснения (пользователь не обязан знать санскрит). */
+EXAMPLES[39] = [{
+  desc: 'yuj- + -n- + mas → yuñjmas «соединяем»',
+  roleDemo: { steps: [
+    { tag: '39', type: 'place', source: 'na', trigger: 'ja', result: 'ña',
+      text: 'Назальный n стоит перед смычным j — это конечный согласный корня yuj- «соединять» (сам n — вставной инфикс перед ним, образующий основу настоящего времени: yu-n-j-mas). Место образования у результата берётся от триггера (j — палатальный звук), а «носовой» характер сохраняется от источника (n). Получается палатальный носовой — ñ.' }
+  ] }
+}];
+EXAMPLES[32] = [
+  {
+    desc: 'śak- «мочь» + dhi → śagdhi «помоги»',
+    roleDemo: { steps: [
+      { tag: '32', type: 'voicing', source: 'ka', trigger: 'dha', result: 'ga',
+        text: 'Глухой смычный k встречает звонкий dh (начало окончания -dhi «помоги»). Место образования (заднеязычный звук) сохраняется от источника, а звонкость передаётся от триггера. Получается звонкий g.' }
+    ] }
+  },
+  {
+    desc: 'diś- + bhyas → digbhyas «со сторон»',
+    roleDemo: { steps: [
+      { tag: '25', type: 'lexical', source: 'śa', result: 'ka',
+        text: 'Корень diś- «указывать» — особый случай: в конце слова его ś лексически заменяется на k. Это не выводится из соседних звуков, а просто нужно запомнить для этого конкретного корня (и ещё нескольких похожих: dṛś-, mṛś-, spṛś-).' },
+      { tag: '32', type: 'voicing', source: 'ka', trigger: 'bha', result: 'ga',
+        text: 'Теперь k (только что получившийся на шаге 1) стоит перед звонким bh (начало окончания -bhyas). Как и в śagdhi — место образования от источника, звонкость от триггера. Получается g. Один и тот же результат (g), но пришедший разными путями — это и есть смысл цепочки.' }
+    ] }
+  }
+];
+EXAMPLES[2] = [{
+  desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»',
+  roleDemo: { steps: [
+    { tag: '2', type: 'grade', source: 'ī', trigger: 'a', result: 'e',
+      text: 'Гласный ī стоит рядом с a (конец основы bhava-) — но здесь работает не обычное слияние двух звуков, а гуна: источник поднимается на ступень выше (см. таблицу «Гуна · Вриддхи» ниже — там i/ī даёт e), место образования при этом не меняется. Соседний a — просто условие для этого сдвига (катализатор): сам он ничего не отдаёт результату, поэтому линии к нему нет — только пунктирная обводка. (В подсказке к правилу — «3 pl.» — опечатка источника: bhavet значит «он был бы», это форма 3 sg.)' }
+  ] }
+}];
+EXAMPLES[6] = [{
+  desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»',
+  roleDemo: { steps: [
+    { tag: '6', type: 'grade', source: 'ṛ', trigger: 'o', result: 'ra',
+      text: 'Гласный ṛ стоит перед другим гласным (o из окончания -os) — санскрит не терпит двух гласных подряд внутри слова, поэтому первый превращается в согласный того же места образования: слоговое ṛ становится полугласным r. Соседний гласный — снова просто условие (сработал бы любой), линии к нему нет.' }
+  ] }
+}];
+EXAMPLES[33] = [{
+  desc: 'likh- «писать» + s → citralik «художник»',
+  roleDemo: { steps: [
+    { tag: '33', type: 'wholevarga', pairs: [
+        ['kha','ka'],['cha','ca'],['ṭha','ṭa'],['tha','ta'],['pha','pa'],
+        ['gha','ga'],['jha','ja'],['ḍha','ḍa'],['dha','da'],['bha','ba'],
+      ],
+      text: 'Это не один пример, а сразу вся закономерность: любой придыхательный смычный (глухой или звонкий) теряет придыхание, если после него в слове идёт ещё один смычный, шипящий или конец слова. На конкретном примере это kh→k (likh-+s), но правило работает одинаково для всех десяти клеток сразу — обе строки придыхательных смычных на карте.' }
+  ] }
+}];
 EXAMPLES[3] = [
   {
     desc: 'agni- «огонь» + guṇa + -as → agnayas «огни»',
@@ -1456,28 +1710,20 @@ EXAMPLES[71] = [
 ];
 
 /* ═══════════════════ РОЛИ НА АЛФАВИТЕ: источник/триггер/результат ═══════════════════ */
-/* Геометрия (см. rules-1-71-analysis-consolidated.md, раздел «Модель ролей»):
+/* Геометрия шага (данные — прямо в EXAMPLES[n].roleDemo.steps, см. выше):
    - place  (место-ассимиляция, 37–40, 69): результат берёт РЯД от источника + СТОЛБЕЦ от триггера.
      Две линии: источник→результат (общий ряд, горизонтальная, подпись «ряд»);
                 триггер→результат (общий столбец, вертикальная, подпись «столбец»).
    - voicing (озвончение/оглушение, 31–33): результат берёт СТОЛБЕЦ от источника, только звонкость — от триггера.
      Две линии: источник→результат (общий столбец, вертикальная, подпись «столбец»);
                 триггер→результат (по месту не совпадает ни с чем — диагональ, подпись «только звонкость»).
-   - grade  (гуна/вриддхи, катализатор): источник сдвигается внутри своего же столбца;
-     a/ā не даёт координат — только одна линия источник→результат (вертикальная, без подписи).
+   - grade  (гуна/вриддхи/полугласный, катализатор): источник сдвигается внутри своего же столбца;
+     триггер не даёт координат — только одна линия источник→результат, без подписи.
+   - lexical (лексическое исключение, без триггера вообще — не катализатор, а позиционный факт):
+     одна линия источник→результат, без подписи, триггер-клетка не подсвечивается вообще (её нет).
    - wholevarga (правило 33 в целом): не один пример, а вся закономерность сразу —
      все придыхательные смычные (10 клеток, 2 ряда × 5 столбцов) теряют придыхание одновременно.
      Каждая пара — короткая вертикальная линия внутри своего столбца, без подписи. */
-const ROLE_DEMOS = {
-  39: { type:'place',   source:'na', trigger:'ja', result:'ña' },
-  32: { type:'voicing', source:'ka', trigger:'dha', result:'ga' },
-  2:  { type:'grade',   source:'ī',  trigger:'a',   result:'e' },
-  6:  { type:'grade',   source:'ṛ',  trigger:'o',   result:'ra' },
-  33: { type:'wholevarga', pairs:[
-          ['kha','ka'],['cha','ca'],['ṭha','ṭa'],['tha','ta'],['pha','pa'],
-          ['gha','ga'],['jha','ja'],['ḍha','ḍa'],['dha','da'],['bha','ba'],
-        ] },
-};
 
 /* ═══════════════════ УПРАЖНЕНИЯ ═══════════════════ */
 /* Ключ = номер правила, значение = массив номеров упражнений из Эмено. */
@@ -1647,7 +1893,7 @@ function showCenter(cd) {
         lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         if (ex.module) mountAnimExample(ex.module);
-        else if (ex.roleDemo) { unmountCurrentAnim(); renderRoleDemo(cd.n); }
+        else if (ex.roleDemo) { unmountCurrentAnim(); renderRoleDemo(ex.roleDemo); }
       });
       lpPicker.appendChild(chip);
     });
@@ -2024,6 +2270,10 @@ roleSvg.innerHTML = `
   </defs>`;
 wrap.appendChild(roleSvg);
 
+const roleStepsWrap   = document.getElementById('role-steps');
+const roleStepsRibbon = document.getElementById('role-steps-ribbon');
+const roleStepsText   = document.getElementById('role-steps-text');
+
 function cellEl(tr) { return document.getElementById('ac-' + tr); }
 
 function cellCenter(el) {
@@ -2084,6 +2334,9 @@ function clearRoleDemo() {
   wrap.querySelectorAll('.lc').forEach(el =>
     el.classList.remove('role-dim', 'role-source', 'role-trigger', 'role-result'));
   roleSvg.querySelectorAll('line, g').forEach(el => el.remove()); // <defs> с маркером-стрелкой не трогаем
+  roleStepsWrap.style.display = 'none';
+  roleStepsRibbon.innerHTML = '';
+  roleStepsText.textContent = '';
 }
 
 function activateRoleCell(tr, role) {
@@ -2094,37 +2347,87 @@ function activateRoleCell(tr, role) {
   return el;
 }
 
-function renderRoleDemo(n) {
-  const demo = ROLE_DEMOS[n];
-  if (!demo) return;
-  clearRoleDemo();
+/* Рисует ОДИН шаг цепочки на алфавите (подсветка + линии) — не трогает ленту кнопок/текст,
+   вызывается и при первом открытии примера, и при клике на любую кнопку шага. */
+function renderRoleStep(step) {
+  wrap.querySelectorAll('.lc').forEach(el =>
+    el.classList.remove('role-dim', 'role-source', 'role-trigger', 'role-result'));
+  roleSvg.querySelectorAll('line, g').forEach(el => el.remove());
   wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
 
-  if (demo.type === 'place') {
-    const src = activateRoleCell(demo.source, 'source');
-    const trg = activateRoleCell(demo.trigger, 'trigger');
-    const res = activateRoleCell(demo.result, 'result');
+  if (step.type === 'place') {
+    const src = activateRoleCell(step.source, 'source');
+    const trg = activateRoleCell(step.trigger, 'trigger');
+    const res = activateRoleCell(step.result, 'result');
     if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), { label: 'ряд' });
     if (trg && res) svgRoleLine(cellCenter(trg), cellCenter(res), { dashed: true, label: 'столбец' });
-  } else if (demo.type === 'voicing') {
-    const src = activateRoleCell(demo.source, 'source');
-    const trg = activateRoleCell(demo.trigger, 'trigger');
-    const res = activateRoleCell(demo.result, 'result');
+  } else if (step.type === 'voicing') {
+    const src = activateRoleCell(step.source, 'source');
+    const trg = activateRoleCell(step.trigger, 'trigger');
+    const res = activateRoleCell(step.result, 'result');
     if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), { label: 'столбец' });
     if (trg && res) svgRoleLine(cellCenter(trg), cellCenter(res), { dashed: true, label: 'только звонкость' });
-  } else if (demo.type === 'grade') {
-    const src = activateRoleCell(demo.source, 'source');
-    activateRoleCell(demo.trigger, 'trigger'); // катализатор: подсвечен, но без координат — линия к нему не идёт
-    const res = activateRoleCell(demo.result, 'result');
+  } else if (step.type === 'grade') {
+    const src = activateRoleCell(step.source, 'source');
+    activateRoleCell(step.trigger, 'trigger'); // катализатор: подсвечен, но без координат — линия к нему не идёт
+    const res = activateRoleCell(step.result, 'result');
     if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
-  } else if (demo.type === 'wholevarga') {
-    demo.pairs.forEach(([s, r]) => {
+  } else if (step.type === 'lexical') {
+    // позиционно-лексическое правило: триггера нет вообще (не катализатор — его просто нет)
+    const src = activateRoleCell(step.source, 'source');
+    const res = activateRoleCell(step.result, 'result');
+    if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
+  } else if (step.type === 'wholevarga') {
+    step.pairs.forEach(([s, r]) => {
       const src = activateRoleCell(s, 'source');
       const res = activateRoleCell(r, 'result');
       if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
     });
   }
+
+  roleStepsText.textContent = step.text || '';
 }
+
+/* Открывает пример целиком: строит ленту кнопок-шагов (даже если шаг один — единый вид
+   для всех примеров, не только для цепочек) и показывает первый шаг. */
+function renderRoleDemo(demo) {
+  clearRoleDemo();
+  if (!demo || !demo.steps || !demo.steps.length) return;
+
+  roleStepsWrap.style.display = 'block';
+  demo.steps.forEach((step, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'role-step-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = 'Шаг ' + (i + 1) + ' · [' + step.tag + ']';
+    btn.addEventListener('click', () => {
+      roleStepsRibbon.querySelectorAll('.role-step-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderRoleStep(step);
+    });
+    roleStepsRibbon.appendChild(btn);
+  });
+  renderRoleStep(demo.steps[0]);
+}
+
+/* ═══════════════════ ПРЕДИСЛОВИЕ (стартовый экран) ═══════════════════ */
+const introOverlay = document.getElementById('intro-overlay');
+const introStartBtn = document.getElementById('intro-start-btn');
+const introReopenBtn = document.getElementById('intro-reopen-btn');
+
+function closeIntro() {
+  introOverlay.style.display = 'none';
+  try { localStorage.setItem('emeneau-intro-seen', '1'); } catch (e) { /* приватный режим — просто не запомнится между визитами */ }
+}
+function openIntro() { introOverlay.style.display = 'flex'; }
+
+introStartBtn.addEventListener('click', closeIntro);
+introReopenBtn.addEventListener('click', openIntro);
+
+let introAlreadySeen = false;
+try { introAlreadySeen = localStorage.getItem('emeneau-intro-seen') === '1'; } catch (e) {}
+if (introAlreadySeen) introOverlay.style.display = 'none';
+
 </script>
 </body>
 </html>
