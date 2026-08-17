@@ -584,7 +584,6 @@ function makeShadowFor(x){
 const geoYa = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 11);
 const matYaFull   = buildChalkMaterials(COL_FULL,     301, 'ya');
 const matYaWFull  = buildChalkMaterials(0xD3DAC8,     302, 'ya');
-const matBlankFull = buildChalkMaterials(COL_WEAK,    305, null); // на время оборота — без буквы, уже в целевом цвете
 const matIFull    = buildChalkMaterials(COL_WEAK,     303, 'i');
 const matIGreenFull = buildChalkMaterials(COL_FULL,   304, 'i');
 const cubeYa = new THREE.Mesh(geoYa, matYaFull);
@@ -652,8 +651,7 @@ const T = {
   whiteDelay: 560,
 
   spinStart: 4100, spinDur: 1300,
-  // обратный оборот: пусто лишь на самое начало (скрывает переход от ya),
-  // дальше i едет с гранью через весь оборот (см. ниже)
+  iAt: 0.55,
 
   approach2Start: 5700, approach2Dur: 650,
 
@@ -783,17 +781,12 @@ function update(elapsed){
 
   // ослабление: обратный оборот на дистанции (t/v/ā ещё далеко — есть где крутиться)
   if (elapsed >= T.spinStart && elapsed <= T.spinStart + T.spinDur){
-    if (!flags.blanked){
-      flags.blanked = true;
-      cubeYa.material = matBlankFull; // с началом оборота буква пропадает — не мелькает бледная ya
-    }
     const t = clamp01((elapsed - T.spinStart)/T.spinDur);
     cubeYa.position.y = REST_Y + Math.sin(t*Math.PI)*0.34;
-    cubeYa.rotation.y = -CW * easeOutCubic(t) * Math.PI * 2; // противоход усиливающим эффектам, плавно
-    // i наносится рано — почти сразу после начала оборота
-    if (!flags.toWeak && t >= 0.15){
+    cubeYa.rotation.y = -CW * t * Math.PI * 2; // противоход усиливающим эффектам
+    if (!flags.toWeak && t >= T.iAt){
       flags.toWeak = true;
-      cubeYa.material = matIFull; // пусто → белая i (весь кубик)
+      cubeYa.material = matIFull; // бледная ya → белая i (весь кубик)
       setCaption('i- <span style="opacity:.5">+</span> -tvā <span class="gloss">→ iṣṭvā «принеся жертву»</span>');
       if (!flags.targetDone){ flags.targetDone = true; badgeTarget.classList.remove('show'); }
     }

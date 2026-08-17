@@ -106,7 +106,7 @@
 <div id="page">
   <div id="rule-chip">
     <div class="num">Ассимиляция по звонкости · आदेश · правило Эмено 34, 57</div>
-    <div class="txt">Куб — поддающаяся в составе дентального ряда (варга). Противоположные грани по-прежнему пары по звонкости (t↔d перёд/зад, th↔dh право/лево, наверху n) — но не выражены ни буквой, ни цветом, только подразумеваются; показана лишь активная пара, t и d. Озвончение — поворот на 180° по часовой: буква и цвет наносятся рано, целиком, и едут с гранью до конца поворота. dh влияет (nimitta), t поддаётся (sthānin).</div>
+    <div class="txt">Куб — весь дентальный ряд (варга). Противоположные грани — пара по звонкости: t↔d (перёд/зад), th↔dh (право/лево), сверху носовой n. Озвончение t → d — поворот на 180° к противоположной грани. dh влияет (nimitta), t поддаётся (sthānin).</div>
   </div>
 
   <div id="stage">
@@ -520,6 +520,7 @@ const SLOT = 1.45;
 
 const COL_VLESS  = 0xC0E898; // глухой — зелёный
 const COL_VOICED = 0x7DCFCA; // звонкий — бирюзовый
+const COL_NASAL  = 0xC9A8E0; // носовой — лавандовый
 
 // ── один материал одной грани (мел + опц. глиф) ──
 function faceMat(color, seed, faceName, variant, glyph){
@@ -573,31 +574,24 @@ function redrawPulseFace(pf, radiusFrac, alpha){
   pf.texture.needsUpdate = true;
 }
 
-/* Поддающаяся (sthānin): куб t/d. Раньше цвет менялся «сам собой» через
-   физический поворот — на разных гранях были разные цвета (в т.ч. на
-   неиспользуемых th/dh/n), и это читалось как подсветка, которой не должно
-   быть. Теперь куб везде однородного цвета, как и остальные превращающиеся
-   кубики в проекте: два готовых набора материалов (t — зелёный, d —
-   бирюзовый), между ними — явная, целевая замена в середине поворота (не
-   раскрытие другой грани). Места th/dh/n по-прежнему подразумеваются, но
-   не выражены ни буквой, ни отдельным цветом.
-   Важно: поворот честный, на 180° — значит к зрителю в итоге повёрнута
-   именно противоположная грань куба (перёд стал задом). Букву поэтому
-   ставим на обе «фронтальные» позиции разом (индексы 4 и 5), иначе после
-   поворота куб оказался бы пустой гранью к зрителю. */
-function buildUniformCube(color, glyph, seed){
+/* Дентальная варга на одном кубе. Порядок материалов BoxGeometry:
+   [0]+X(правая) [1]−X(левая) [2]+Y(верх) [3]−Y(низ) [4]+Z(перёд) [5]−Z(зад).
+   Раскладка по парам звонкости на противоположных гранях:
+     перёд(+Z) = t,  зад(−Z) = d   → пара по ЗВОНКОСТИ, поворот 180°
+     право(+X) = th, лево(−X) = dh → придыхательная пара (места закреплены,
+        но в правиле t↔d НЕ участвуют — грани оставляем пустыми, без букв)
+     верх(+Y) = носовой n (тоже пусто в этом правиле)
+   Поворот вокруг вертикали не зеркалит и не переворачивает букву. */
+function buildDentalVarga(seed){
   return [
-    faceMat(color, seed+1, 'side',   0, null),
-    faceMat(color, seed+2, 'side',   1, null),
-    faceMat(color, seed+3, 'top',    0, null),
-    faceMat(color, seed+4, 'bottom', 2, null),
-    faceMat(color, seed+5, 'front',  2, glyph),
-    faceMat(color, seed+6, 'front',  3, glyph),
+    faceMat(COL_VLESS,  seed+10, 'side',   0, null), // +X правая  (th — место есть, буквы нет)
+    faceMat(COL_VOICED, seed+20, 'side',   1, null), // −X левая   (dh — место есть, буквы нет)
+    faceMat(COL_NASAL,  seed+30, 'top',    0, null), // +Y верх    (n  — место есть, буквы нет)
+    faceMat(COL_VLESS,  seed+40, 'bottom', 2, null), // −Y низ
+    faceMat(COL_VLESS,  seed+50, 'front',  2, 't'),  // +Z перёд   — t
+    faceMat(COL_VOICED, seed+60, 'front',  3, 'd'),  // −Z зад     — d (озвончённая, 180°)
   ];
 }
-const matsT = buildUniformCube(COL_VLESS,  't', 310);
-const matsD = buildUniformCube(COL_VOICED, 'd', 320);
-const matsBlank = buildUniformCube(COL_VOICED, null, 330); // на время поворота — без буквы, уже в целевом цвете
 
 function makeShadowFor(x){
   const sh = new THREE.Mesh(
@@ -610,8 +604,9 @@ function makeShadowFor(x){
   return sh;
 }
 
+// поддающаяся (sthānin): куб-варга t. Поворот +90° Y покажет грань d.
 const geoT = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 11);
-const cubeT = new THREE.Mesh(geoT, matsT);
+const cubeT = new THREE.Mesh(geoT, buildDentalVarga(300));
 scene.add(cubeT);
 const shT = makeShadowFor(-SLOT/2);
 
@@ -651,8 +646,7 @@ const T = {
   rolesStart: 1500,                   // проявляются роли: кольцо-пульс у влияющей, бейджи, стрелка
   influenceStart: 2200, influenceDur: 900, // волны от dh к t (медленнее, чтобы взгляд успевал)
   turnStart: 3500, turnDur: 1800,     // t поворачивается на 180° (ещё медленнее)
-  // поворот идёт без буквы на грани — d появляется только перед самой
-  // остановкой (см. ниже)
+  colorAt: 0.55,                      // доля поворота, на которой грань d уже смотрит вперёд
   settleStart: 5600, settleDur: 900,
   total: 6000,
 };
@@ -701,7 +695,7 @@ let pulseActive = true;
 
 function resetScene(){
   flags = {};
-  cubeT.material = matsT;
+  cubeT.material = buildDentalVarga(300); // свежий набор (порядок граней тот же)
   cubeT.position.set(LEFT_X, 5.5, 0);
   cubeT.rotation.set(0,0,0);
   cubeDh.position.set(RIGHT_X, 5.8, 0);
@@ -745,7 +739,7 @@ function update(elapsed){
     }
   }
 
-  // волна влияния dh → t
+  // волна влияния dh → t; t «чувствует» приближение — та же дрожь, что у i в гунировании
   if (elapsed >= T.influenceStart && elapsed <= T.influenceStart + T.influenceDur){
     [0, 260].forEach((off,i)=>{
       const kf='wave'+i;
@@ -759,26 +753,22 @@ function update(elapsed){
       }
     });
     if (!flags.opTag){ flags.opTag=true; tagOp.textContent='озвончение'; tagOp.classList.add('show'); }
+    const ti = clamp01((elapsed - T.influenceStart)/T.influenceDur);
+    cubeT.rotation.z = Math.sin(elapsed*0.025) * 0.05 * Math.sin(ti*Math.PI);
+  }
+  if (elapsed > T.influenceStart + T.influenceDur && elapsed < T.turnStart){
+    cubeT.rotation.z = 0;
   }
 
-  // t поворачивается на 180° вокруг Y — гуляет по кругу и возвращается
-  // тем же лицом (не раскрытием другой грани). Пусто лишь на самое начало
-  // поворота (скрывает переход от t), дальше буква d едет с гранью через
-  // весь оборот (см. ниже).
+  // t поворачивается на 180° вокруг Y — противоположная грань d (звонкая)
+  // выходит к зрителю. Противолежащие грани = пара по звонкости.
   // Вращение — по часовой стрелке (CW = -1; см. константу выше файла).
   if (elapsed >= T.turnStart && elapsed <= T.turnStart + T.turnDur){
-    if (!flags.blanked){
-      flags.blanked = true;
-      cubeT.material = matsBlank; // с началом поворота буква пропадает — не мелькает зелёная t
-    }
     const t = clamp01((elapsed - T.turnStart)/T.turnDur);
     cubeT.rotation.y = CW * easeOutCubic(t) * Math.PI;  // 180°: перёд(t) → зад, зад(d) → перёд
     cubeT.position.y = REST_Y + Math.sin(t*Math.PI)*0.16;
-    // d наносится рано — почти сразу после начала поворота, и едет
-    // вместе с гранью через всё оставшееся вращение
-    if (!flags.toVoiced && t >= 0.15){
+    if (!flags.toVoiced && t >= T.colorAt){
       flags.toVoiced = true;
-      cubeT.material = matsD; // пусто → бирюзовое d, целиком
       setVarga('vc-d');
       setCaption('d <span style="opacity:.5">+</span> dh <span class="gloss">→ taddhi</span>');
       // влияние состоялось — кольцо под буквой dh останавливается

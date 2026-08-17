@@ -655,12 +655,11 @@ function makeVrddhiCube(seed){
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const matU        = buildChalkMaterials(COL_STEM,   seed*97+13, 'u');
   const matUorange  = buildChalkMaterials(COL_VRDDHI, seed*97+15, 'u');
-  const matBlank    = buildChalkMaterials(COL_VRDDHI, seed*97+18, null); // на время самого оборота — без буквы
   const matAU        = buildChalkMaterials(COL_VRDDHI, seed*97+16, 'au');
   const matAUgreen  = buildChalkMaterials(COL_STEM,   seed*97+17, 'au');
   const mesh = new THREE.Mesh(geo, matU);
   scene.add(mesh);
-  return { mesh, matU, matUorange, matBlank, matAU, matAUgreen };
+  return { mesh, matU, matUorange, matAU, matAUgreen };
 }
 
 // порядок в покое: s - t - (u/au) - t - i
@@ -703,9 +702,7 @@ const T = {
 
   // вриддхирование — на дистанции (u ещё не тронуто соседом, есть место крутиться)
   spinStart: 4100, spinDur: 1900,      // двойной оборот u (CW), затем u → au
-  // двойной оборот u (CW): пусто первую половину с лишним (первый оборот
-  // целиком + четверть второго), au появляется когда остаётся 3 грани
-  // (270°) до конца — см. ниже
+  auAt: 0.82,                          // доля внутри оборота, на которой u → au
 
   // только теперь, когда u уже стало au, -ti придвигается вплотную —
   // цельным слово становится именно после преобразования, не раньше
@@ -866,21 +863,14 @@ function update(elapsed){
   // держится всю операцию — гаснет только вместе с остановкой оборота,
   // и лишь потом начинается сближение. ──
   if (elapsed >= T.spinStart && elapsed <= T.spinStart + T.spinDur){
-    if (!flags.blanked){
-      flags.blanked = true;
-      cubes.u.mesh.material = cubes.u.matBlank; // на время оборота — без буквы
-    }
     const t = clamp01((elapsed - T.spinStart)/T.spinDur);
     const clearance = Math.sin(t*Math.PI) * 0.35; // выезд вправо и обратно, один жест
     cubes.u.mesh.position.x = slotX(2) + clearance;
     cubes.u.mesh.position.y = REST_Y + Math.sin(t*Math.PI)*0.40;
-    cubes.u.mesh.rotation.y = CW * easeOutCubic(t) * Math.PI * 4; // два полных оборота, плавно
-    // au наносится ровно на середине оборота (t=0.5) — раньше стоявший
-    // порог 3 грани (t=0.625) совпадал с моментом, когда грань видна
-    // зрителю напрямую, и буква выскакивала «из ниоткуда»
-    if (!flags.toVrddhi && t >= 0.5){
+    cubes.u.mesh.rotation.y = CW * t * Math.PI * 4; // два полных оборота
+    if (!flags.toVrddhi && t >= T.auAt){
       flags.toVrddhi = true;
-      cubes.u.mesh.material = cubes.u.matAU; // пусто → оранжевое au
+      cubes.u.mesh.material = cubes.u.matAU; // оранжевое u → оранжевое au
       setCaption('stauti <span class="gloss">«он восхваляет» · вриддхи u → au</span>');
       if (!flags.targetDone){ flags.targetDone = true; badgeTarget.classList.remove('show'); }
     }
