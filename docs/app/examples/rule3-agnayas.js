@@ -265,7 +265,7 @@ const T = {
   total: 21200,
 };
 const NEAR_OFFSET = 0;      // "1 кубик от соседа" — расстояние по умолчанию между блоками
-const TOUCH_SHIFT = SLOT;   // вплотную к e = сдвиг на 1 слот влево от NEAR
+const TOUCH_SHIFT = SLOT;   // БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — было «вплотную к e», манёвр приближения AS убран целиком
 const WAVE_TRAVEL_MS = 1100; // ×2, время в пути одной волны-пульса от as до i
 
 function clamp01(t){ return Math.max(0, Math.min(1, t)); }
@@ -344,16 +344,16 @@ function update(elapsed){
     c.mesh.position.y = y;
   });
 
-  // ── падение as (a s), сразу на дистанцию «1 кубик» от i — сближать
-  // отдельным движением больше не нужно ──
+  // ── падение as (a s), сразу на дистанцию «1 кубик» от i.
+  // Раньше здесь же был манёвр «подойти вплотную к e, потом отойти» — убран:
+  // из-за него AS оказывался слишком близко к месту, куда прилетают AY,
+  // и они наезжали друг на друга. Теперь AS весь ролик стоит на своём слоте. ──
   ['a2','s'].forEach((key,idx)=>{
     const c = cubes[key];
     const start = T.endStart + idx*T.endStagger;
     const y = fallY(7, REST_Y, elapsed, start, T.endDur);
     c.mesh.position.y = y;
-    if (elapsed < T.approach2Start){
-      c.mesh.position.x = slotX(c.slot) + NEAR_OFFSET;
-    }
+    c.mesh.position.x = slotX(c.slot) + NEAR_OFFSET;
   });
 
   // подписи после приземления
@@ -433,18 +433,9 @@ function update(elapsed){
     }
   }
 
-  // ── ШАГ 4: as делает второй, короткий шаг — вплотную к e. Это уже
-  // настоящий контакт: по прибытии запускается сама подстановка. ──
-  if (elapsed >= T.approach2Start && elapsed < T.pushStart){
-    const t = clamp01((elapsed - T.approach2Start)/T.approach2Dur);
-    const te = easeOutCubic(t);
-    ['a2','s'].forEach(key=>{
-      const c = cubes[key];
-      const from = slotX(c.slot) + NEAR_OFFSET;
-      const to = slotX(c.slot) - TOUCH_SHIFT;
-      c.mesh.position.x = lerp(from, to, te);
-    });
-  }
+  // ── ШАГ 4 отменён: AS больше не делает шаг вплотную к e (см. комментарий
+  // выше, у падения AS) — контакт-триггер теперь по времени (substStart),
+  // не по физическому касанию кубиков. ──
 
   // ── ШАГ 5: по контакту — вся подстановка разом. e поднимается вверх-влево
   // и блёкнет, «уходя с дороги» и ожидая замены; там, полупрозрачное, оно
@@ -520,17 +511,7 @@ function update(elapsed){
     }
   }
 
-  // ── as отодвигается назад: y на подлёте «отталкивает» его к дистанции в 1 кубик ──
-  if (elapsed >= T.pushStart){
-    const t = clamp01((elapsed - T.pushStart)/T.pushDur);
-    const te = easeOutCubic(t);
-    ['a2','s'].forEach(key=>{
-      const c = cubes[key];
-      const from = slotX(c.slot) - TOUCH_SHIFT;
-      const to = slotX(c.slot) + NEAR_OFFSET;
-      c.mesh.position.x = lerp(from, to, te);
-    });
-  }
+  // ── (фаза отступления AS убрана вместе с приближением, см. выше) ──
 
   // ── итог: слово собрано. Импульс-волна пробегает по всей строке слева
   // направо — каждый кубик коротко подпрыгивает, когда волна его проходит,
