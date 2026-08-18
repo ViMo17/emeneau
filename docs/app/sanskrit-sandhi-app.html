@@ -1019,7 +1019,7 @@
   /* мягкая подсветка ВСЕГО столбца (a / i·ī / u·ū / ṛ·ṝ / ḷ) — включается автоматически,
      как только хоть одна клетка в этом столбце становится .gv-active (см. JS ниже, MutationObserver) */
   .guna-table td.gv-col-active {
-    box-shadow: inset 0 0 0 2px rgba(232,200,96,.32);
+    box-shadow: inset 0 0 0 1px rgba(232,200,96,.18);
   }
   /* подсветка ячеек по id — общий контракт для всех mount()-модулей анимации:
      любой пример может подсветить соответствующие ячейки этой (единственной) таблицы,
@@ -1029,8 +1029,8 @@
   .guna-table td.gv-active {
     background: #E8C860 !important;
     color: #2a2205 !important;
-    box-shadow: 0 0 0 2px rgba(232,200,96,0.55), 0 0 14px 2px rgba(232,200,96,0.45);
-    transform: scale(1.12);
+    box-shadow: 0 0 0 1.5px rgba(232,200,96,0.45);
+    transform: scale(1.06);
     transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
     z-index: 1;
     position: relative;
@@ -1074,6 +1074,19 @@
     fill: rgba(24,23,19,.92);
     stroke: rgba(255,244,220,.35);
     stroke-width: 1;
+  }
+  .role-badge-bg {
+    fill: rgba(232,200,96,.92);
+    stroke: rgba(20,20,15,.5);
+    stroke-width: 1;
+  }
+  .role-badge-text {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    fill: #201a04;
+    text-anchor: middle;
+    dominant-baseline: central;
   }
   .role-label {
     font-family: 'Helvetica Neue', sans-serif;
@@ -1341,23 +1354,23 @@
         </tr>
         <tr>
           <td class="gt-r">вридд ↑</td>
-          <td class="gt-blank"></td><td class="grade-vriddhi-rev">yā</td><td class="grade-vriddhi-rev">vā</td><td class="grade-vriddhi-rev">rā</td><td class="gt-blank"></td>
+          <td class="gt-blank"></td><td class="grade-vriddhi-rev" id="gc-vriddhi-rev-i">yā</td><td class="grade-vriddhi-rev" id="gc-vriddhi-rev-u">vā</td><td class="grade-vriddhi-rev" id="gc-vriddhi-rev-r">rā</td><td class="gt-blank"></td>
         </tr>
         <tr>
           <td class="gt-r">гуна ↑</td>
-          <td class="gt-blank"></td><td class="grade-guna-rev" id="main-cell-rg-ya">ya</td><td class="grade-guna-rev">va</td><td class="grade-guna-rev">ra</td><td class="gt-blank"></td>
+          <td class="gt-blank"></td><td class="grade-guna-rev" id="gc-guna-rev-i">ya</td><td class="grade-guna-rev" id="gc-guna-rev-u">va</td><td class="grade-guna-rev" id="gc-guna-rev-r">ra</td><td class="gt-blank"></td>
         </tr>
         <tr>
           <td class="gt-r">слаб</td>
-          <td class="grade-weak">a</td><td class="grade-weak" id="main-cell-w-i">i</td><td class="grade-weak">u</td><td class="grade-weak">ṛ</td><td class="grade-weak">ḷ</td>
+          <td class="grade-weak" id="gc-weak-a">a</td><td class="grade-weak" id="gc-weak-i">i</td><td class="grade-weak" id="gc-weak-u">u</td><td class="grade-weak" id="gc-weak-r">ṛ</td><td class="grade-weak" id="gc-weak-l">ḷ</td>
         </tr>
         <tr>
           <td class="gt-r">гуна</td>
-          <td class="grade-guna">a</td><td class="grade-guna" id="main-cell-g-e">e</td><td class="grade-guna">o</td><td class="grade-guna">ar</td><td class="grade-guna">al</td>
+          <td class="grade-guna" id="gc-guna-a">a</td><td class="grade-guna" id="gc-guna-i">e</td><td class="grade-guna" id="gc-guna-u">o</td><td class="grade-guna" id="gc-guna-r">ar</td><td class="grade-guna" id="gc-guna-l">al</td>
         </tr>
         <tr>
           <td class="gt-r">вридд</td>
-          <td class="grade-vriddhi">ā</td><td class="grade-vriddhi">āi</td><td class="grade-vriddhi">āu</td><td class="grade-vriddhi">ār</td><td class="grade-vriddhi">āl</td>
+          <td class="grade-vriddhi" id="gc-vriddhi-a">ā</td><td class="grade-vriddhi" id="gc-vriddhi-i">āi</td><td class="grade-vriddhi" id="gc-vriddhi-u">āu</td><td class="grade-vriddhi" id="gc-vriddhi-r">ār</td><td class="grade-vriddhi" id="gc-vriddhi-l">āl</td>
         </tr>
       </table>
       <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
@@ -1697,6 +1710,7 @@ EXAMPLES[2] = [{
   desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 pl.) → bhavet «был бы»',
   roleDemo: { steps: [
     { tag: '2', type: 'grade', source: 'ī', trigger: 'a', result: 'e',
+      gunaCells: ['gc-weak-i', 'gc-guna-i'],
       text: 'ī рядом с a (конец bhava-) — это гуна, не слияние: источник поднимается на ступень (см. «Гуна · Вриддхи» слева — i/ī даёт e). a — только условие сдвига, сам ничего не отдаёт, линии к нему нет. (В подсказке — «3 pl.», опечатка источника: bhavet — форма 3 sg.)' }
   ] }
 }];
@@ -1704,7 +1718,29 @@ EXAMPLES[6] = [{
   desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»',
   roleDemo: { steps: [
     { tag: '6', type: 'grade', source: 'ṛ', trigger: 'o', result: 'ra',
+      gunaCells: ['gc-weak-r', 'gc-guna-rev-r'],
       text: 'ṛ перед гласным (o из -os) — два гласных подряд недопустимы, поэтому ṛ становится согласным того же места — r. Гласный-сосед лишь условие, линии к нему нет.' }
+  ] }
+}];
+EXAMPLES[7] = [{
+  desc: 'a (аугмент) + as- «быть» + īt → āsīt «был»',
+  roleDemo: { steps: [
+    { tag: '7', type: 'lexical', source: 'a', result: 'ā',
+      text: 'Два одинаковых кратких a встречаются на стыке (аугмент a- + начальный a корня as-) — оба сливаются в один долгий ā. Не гуна и не вриддхи — здесь нет разных гласных, просто слияние одинаковых.' }
+  ] }
+}];
+EXAMPLES[13] = [{
+  desc: 'havis- «жертва» + su → haviḥ + su → haviḥsu «в жертвах»',
+  roleDemo: { steps: [
+    { tag: '13', type: 'lexical', source: 'sa', result: 'ḥ',
+      text: 's перед окончанием (здесь -su) заменяется на висаргу ḥ. Без соседней буквы-причины — просто позиция перед окончанием.' }
+  ] }
+}];
+EXAMPLES[14] = [{
+  desc: 'vas- «обитать» + syati → vatsyati «будет жить»',
+  roleDemo: { steps: [
+    { tag: '14', type: 'lexical', source: 'sa', result: 'ta',
+      text: 'Конечное s корня перед s начала окончания (-syati) — тоже, по сути, встреча двух одинаковых звуков, но результат другой, чем при гласных: не долгое s, а t.' }
   ] }
 }];
 EXAMPLES[33] = [{
@@ -1717,16 +1753,423 @@ EXAMPLES[33] = [{
       text: 'Не один пример, а вся закономерность: придыхательный смычный теряет придыхание перед смычным/шипящим/концом слова. Здесь — kh→k, но действует сразу на все десять клеток (обе строки придыхательных).' }
   ] }
 }];
+
+/* ═══ Блок 8–40 продолжение ═══ */
+EXAMPLES[11] = [{
+  desc: 'agam- + va → aganva «шли (мы оба)»',
+  roleDemo: { steps: [
+    { tag: '11', type: 'lexical', source: 'ma', result: 'na',
+      text: 'm перед v или m — лексикализованная замена: всегда на n, независимо от места образования соседа (не место-ассимиляция в чистом виде).' }
+  ] }
+}];
+EXAMPLES[16] = [{
+  desc: 'han + anti → ghnanti «гонят»',
+  roleDemo: { steps: [
+    { tag: '16', type: 'lexical', source: 'ha', result: 'gha',
+      text: 'h корня han- становится gh, когда корневой a выпадает по грамматическому правилу (сам выпад — не сандхи, отдельный грамматический факт).' }
+  ] }
+}];
+EXAMPLES[17] = [{
+  desc: 'nah- + syati → nadh- + syati → (31, 33) natsyati «свяжет»',
+  roleDemo: { steps: [
+    { tag: '17', type: 'lexical', source: 'ha', result: 'dha',
+      text: 'h корня nah- всегда трактуется как dh — лексический факт этого конкретного корня, не звуковое окружение.' },
+    { tag: '31', type: 'voicing', source: 'dha', trigger: 'sa', result: 'tha',
+      text: 'dh перед глухим s оглушается — столбец (место) сохраняется, глухость приходит от триггера.' },
+    { tag: '33', type: 'lexical', source: 'tha', result: 'ta',
+      text: 'th теряет придыхание перед ещё одним согласным (s) — та же логика, что в citralik.' }
+  ] }
+}];
+EXAMPLES[18] = [{
+  desc: 'duh- «доить» + -ta- → dugdha- «доеная»',
+  roleDemo: { steps: [
+    { tag: '18', type: 'lexical', source: 'ha', result: 'gha',
+      text: 'h корня duh- (и ещё нескольких корней на d-) трактуется как gh — тоже лексический факт, не окружение.' },
+    { tag: '30', type: 'voicing', source: 'ta', trigger: 'gha', result: 'dha',
+      text: 'Суффиксальный t после звонкого придыхательного gh сам становится звонким придыхательным dh.' },
+    { tag: '33', type: 'voicing', source: 'gha', trigger: 'dha', result: 'ga',
+      text: 'А корневой gh, оказавшись перед ещё одним смычным (только что получившимся dh), теряет придыхание — g.' }
+  ] }
+}];
+EXAMPLES[28] = [{
+  desc: 'vac- «говорить»: vakṣyati «скажет»; ukta- «сказано»',
+  roleDemo: { steps: [
+    { tag: '28', type: 'lexical', source: 'ca', result: 'ka',
+      text: 'c корня vac- лексически трактуется как k перед согласными окончаниями — не звуковой переход, факт конкретного корня.' }
+  ] }
+}];
+EXAMPLES[29] = [{
+  desc: 'yuj- «соединять»: yokṣyati «соединит»; yukta- «запряжён»',
+  roleDemo: { steps: [
+    { tag: '29', type: 'lexical', source: 'ja', result: 'ga',
+      text: 'j корня yuj- трактуется как g (общее правило для j, не только в этом корне).' },
+    { tag: '31', type: 'voicing', source: 'ga', trigger: 'ta', result: 'ka',
+      text: 'Получившийся g перед глухим t сам оглушается — k.' }
+  ] }
+}];
+EXAMPLES[30] = [{
+  desc: 'budh- «бдеть» + -ta- → buddha- «пробуждённый»',
+  roleDemo: { steps: [
+    { tag: '30', type: 'voicing', source: 'ta', trigger: 'dha', result: 'dha',
+      text: 'Суффиксальный t после звонкого придыхательного dh корня сам становится dh — полностью уподобляется соседу.' }
+  ] }
+}];
+EXAMPLES[31] = [{
+  desc: 'vid- «знать»: vetsi «знаешь»',
+  roleDemo: { steps: [
+    { tag: '31', type: 'voicing', source: 'da', trigger: 'sa', result: 'ta',
+      text: 'Звонкий d перед глухим окончанием -si сам оглушается — t. Место (столбец) не меняется.' }
+  ] }
+}];
+EXAMPLES[35] = [{
+  desc: 'man- «мнить»: maṃsyate «подумает»',
+  roleDemo: { steps: [
+    { tag: '35', type: 'lexical', source: 'na', result: 'ṃ',
+      text: 'Назальный n перед шипящим (s) заменяется анусварой — n теряет собственное место образования, остаётся только «носовой призвук».' }
+  ] }
+}];
+EXAMPLES[36] = [{
+  desc: 'agni- + su → agniṣu «среди огней»',
+  roleDemo: { steps: [
+    { tag: '36', type: 'grade', source: 'sa', trigger: 'i', result: 'ṣa',
+      text: 'RUKI: s после i (не после a/ā) становится ṣ. Соседний гласный — просто условие, сам не меняется, линии к нему нет.' }
+  ] }
+}];
+EXAMPLES[37] = [{
+  desc: 'nara- + nām → narāṇām «у людей»',
+  roleDemo: { steps: [
+    { tag: '37', type: 'place', source: 'na', trigger: 'ra', result: 'ṇa',
+      text: 'Вставной n «слышит» более ранний r через гласные (они не мешают) — становится церебральным ṇ. Ряд (носовой) от источника, столбец (место) от триггера — на расстоянии, не по соседству.' }
+  ] }
+}];
+EXAMPLES[38] = [{
+  desc: 'dviṣ- + ta → dviṣṭa «ненавидимый»',
+  roleDemo: { steps: [
+    { tag: '38', type: 'place', source: 'ta', trigger: 'ṣa', result: 'ṭa',
+      text: 'Зубной t после церебрального ṣ сам становится церебральным ṭ — ряд (глухой) от источника, столбец (место) от триггера.' }
+  ] }
+}];
+EXAMPLES[40] = [{
+  desc: 'yaj- + -na- → yajña «жертвоприношение»',
+  roleDemo: { steps: [
+    { tag: '40', type: 'place', source: 'na', trigger: 'ja', result: 'ña',
+      text: 'Тот же принцип, что в правиле 39, отдельно для случая n после средненёбного: ряд (носовой) от источника, место — от триггера.' }
+  ] }
+}];
+
+/* ═══ Блок 41–71 ═══ */
+EXAMPLES[42] = [{
+  desc: 'tatra eti → tatraiti «туда идёт»',
+  roleDemo: { steps: [
+    { tag: '42', type: 'grade', source: 'e', trigger: 'a', result: 'ai',
+      text: 'Внешний аналог правила 1: a на конце tatra встречает e в начале eti — e поднимается до вриддхи ai. a — только условие, сам не меняется.' }
+  ] }
+}];
+EXAMPLES[44] = [{
+  desc: 'tatra + asti → tatrāsti «там есть»',
+  roleDemo: { steps: [
+    { tag: '44', type: 'lexical', source: 'a', result: 'ā',
+      text: 'Внешний аналог правила 7: два одинаковых a на стыке слов сливаются в один долгий ā.' }
+  ] }
+}];
+EXAMPLES[45] = [{
+  desc: 'asti «есть» + atra «здесь» → astyatra «есть здесь»',
+  roleDemo: { steps: [
+    { tag: '45', type: 'grade', source: 'i', trigger: 'a', result: 'ya',
+      text: 'Внешний аналог правила 6: i перед другим гласным становится полугласным y. Соседний гласный — просто условие.' }
+  ] }
+}];
+EXAMPLES[47] = [{
+  desc: 'vane + iha → vana iha «здесь в лесу»',
+  roleDemo: { steps: [
+    { tag: '47', type: 'grade', source: 'e', trigger: 'i', result: 'a',
+      text: 'e перед гласным, отличным от a, опускается обратно к a (не вверх, как в гуне, а вниз) — то же семейство эффектов, обратное направление.' }
+  ] }
+}];
+EXAMPLES[57] = [{
+  desc: 'agnis → agniḥ «огонь» (m N. sg.)',
+  roleDemo: { steps: [
+    { tag: '57', type: 'lexical', source: 'sa', result: 'ḥ',
+      text: 'Конечное s слова (перед паузой) переходит в висургу — «стыковка по умолчанию» для внешних сандхи, тот же переход, что в правиле 13, но в конце слова, а не перед окончанием.' }
+  ] }
+}];
+EXAMPLES[58] = [{
+  desc: 'agniḥ + asti → agnirasti «огонь есть»',
+  roleDemo: { steps: [
+    { tag: '58', type: 'lexical', source: 'ḥ', result: 'ra',
+      text: 'Висарга перед звонким звуком (здесь — гласным) переходит в r.' }
+  ] }
+}];
+EXAMPLES[59] = [{
+  desc: 'tataḥ + ca → tataśca «и оттого»',
+  roleDemo: { steps: [
+    { tag: '59', type: 'place', source: 'ḥ', trigger: 'ca', result: 'śa',
+      text: 'Висарга перед глухим средненёбным c становится соответствующим шипящим ś — место образования берётся от триггера.' }
+  ] }
+}];
+EXAMPLES[63] = [{
+  desc: 'devān + jayati → devāñjayati «побеждает богов»',
+  roleDemo: { steps: [
+    { tag: '63', type: 'place', source: 'na', trigger: 'ja', result: 'ña',
+      text: 'Тот же принцип, что в правиле 39/40, но между словами: конечный n перед звонким j становится палатальным ñ.' }
+  ] }
+}];
+EXAMPLES[66] = [{
+  desc: 'tat + śṛṇoti → tat chṛṇoti → (67) tacchṛṇoti «он слышит»',
+  roleDemo: { steps: [
+    { tag: '66', type: 'lexical', source: 'śa', result: 'cha',
+      text: 'ś после -t становится ch — лексикализованная замена именно в этой позиции, не общее место-совпадение.' }
+  ] }
+}];
+EXAMPLES[67] = [{
+  desc: 'tat + ca → tacca «и то»',
+  roleDemo: { steps: [
+    { tag: '67', type: 'lexical', source: 'ta', result: 'ca',
+      text: 't перед палатальным смычным полностью уподобляется ему — становится тем же звуком c.' }
+  ] }
+}];
+EXAMPLES[68] = [{
+  desc: 'tat + labhate → tallabhate «получает то»',
+  roleDemo: { steps: [
+    { tag: '68', type: 'lexical', source: 'ta', result: 'la',
+      text: 't перед l полностью уподобляется ему — становится l.' }
+  ] }
+}];
+EXAMPLES[69] = [{
+  desc: 'tat + mitram «друг» → tanmitram «тот друг»',
+  roleDemo: { steps: [
+    { tag: '69', type: 'voicing', source: 'ta', trigger: 'ma', result: 'na',
+      text: 'Смычный перед назальным сам становится назальным того же места образования — столбец (место) сохраняется от источника, «насальность» приходит от триггера.' }
+  ] }
+}];
+EXAMPLES[70] = [{
+  desc: 'tat + hiraṇyam «золото» → tat + dhiraṇyam → taddhiraṇyam «то золото»',
+  roleDemo: { steps: [
+    { tag: '70', type: 'voicing', source: 'ha', trigger: 'ta', result: 'dha',
+      text: 'h после смычного t становится звонким придыхательным того же места (столбец от триггера t, звонкость+придыхание — своя, лексическая для h).' },
+    { tag: '71', type: 'voicing', source: 'ta', trigger: 'dha', result: 'da',
+      text: 'А сам исходный t, оказавшись перед новым звонким dh, тоже озвончается — d.' }
+  ] }
+}];
+
+/* ═══ Выпадение (elide) ═══ */
+EXAMPLES[46] = [{
+  desc: 'vane «в лесу» + asti → vane\'sti «есть в лесу»',
+  roleDemo: { steps: [
+    { tag: '46', type: 'elide', source: 'a',
+      text: 'После краткого дифтонга (здесь e) следующий a пропадает совсем — не переходит в другую букву, просто исчезает (на письме — апостроф).' }
+  ] }
+}];
+EXAMPLES[51] = [{
+  desc: 'devas + iha → deva iha «бог здесь»',
+  roleDemo: { steps: [
+    { tag: '51', type: 'elide', source: 'sa',
+      text: 'Конечное -s основы -as перед гласным (кроме a) пропадает совсем, остаётся только -a.' }
+  ] }
+}];
+EXAMPLES[52] = [{
+  desc: 'sas gacchati → sa gacchati «он идёт»',
+  roleDemo: { steps: [
+    { tag: '52', type: 'elide', source: 'sa',
+      text: 'У местоимений sas/eṣas конечное -s перед любым согласным пропадает совсем — лексикализованное правило, не общее для всех -as.' }
+  ] }
+}];
+EXAMPLES[54] = [{
+  desc: 'bhos bhos deva → bho bho deva «Эй! Эй бог!»',
+  roleDemo: { steps: [
+    { tag: '54', type: 'elide', source: 'sa',
+      text: 'У слова bhos конечное -s перед звонким пропадает совсем — тоже лексикализованное, только для этого слова.' }
+  ] }
+}];
+
+/* ═══ Удвоение (double) ═══ */
+EXAMPLES[10] = [{
+  desc: 'gach- «идти» + ati → gacchati «идёт»',
+  roleDemo: { steps: [
+    { tag: '10', type: 'double', source: 'cha',
+      text: 'ch между двумя гласными удваивается — становится cch. Результат не другая буква, а та же самая, просто вдвоём.' }
+  ] }
+}];
+EXAMPLES[49] = [{
+  desc: 'tava «у тебя» + chāyā «тень» → tava cchāyā «твоя тень»',
+  roleDemo: { steps: [
+    { tag: '49', type: 'double', source: 'cha',
+      text: 'Тот же принцип, что в правиле 10, но между словами: ch после краткого гласного (или приставки ā-/mā-) удваивается.' }
+  ] }
+}];
+EXAMPLES[61] = [{
+  desc: 'hasan «смеющийся» + agacchat «шёл» → hasannagacchat «шёл смеющийся»',
+  roleDemo: { steps: [
+    { tag: '61', type: 'double', source: 'na',
+      text: 'После краткого простого гласного конечный назальный (здесь n) удваивается перед следующим гласным.' }
+  ] }
+}];
+
+/* ═══ Составной источник/результат (compound) — семья kṣ и родственные ═══ */
+EXAMPLES[20] = [{
+  desc: 'jakṣ- + ta → jagdha- «съеденный»',
+  roleDemo: { steps: [
+    { tag: '20', type: 'compound', source: ['ka', 'ṣa'], result: 'gha',
+      text: 'kṣ в этом конкретном корне (jakṣ-) трактуется как один составной звук gh — лексический факт именно этого корня.' },
+    { tag: '30', type: 'voicing', source: 'ta', trigger: 'gha', result: 'dha',
+      text: 'Суффиксальный t после звонкого придыхательного gh сам становится dh.' },
+    { tag: '33', type: 'voicing', source: 'gha', trigger: 'dha', result: 'ga',
+      text: 'А корневой gh перед новым смычным (dh) теряет придыхание — g.' }
+  ] }
+}];
+EXAMPLES[21] = [{
+  desc: 'takṣ- + syati → takṣyati «отрубит»',
+  roleDemo: { steps: [
+    { tag: '21', type: 'compound', source: ['ka', 'ṣa'], trigger: 'sa', result: 'ka',
+      text: 'kṣ перед глухим s (в глагольной форме) сводится к одному k — составной источник, простой результат.' },
+    { tag: '36', type: 'voicing', source: 'sa', trigger: 'ka', result: 'ṣa',
+      text: 'RUKI: получившийся k «оглядывается» на s после себя — s становится ṣ.' }
+  ] }
+}];
+EXAMPLES[22] = [{
+  desc: 'prakṣyati «спросит» → ch (в prach-) трактуется как kṣ',
+  roleDemo: { steps: [
+    { tag: '22', type: 'compound', source: 'cha', result: ['ka', 'ṣa'],
+      text: 'ch корня prach- трактуется как составной звук kṣ (тот же принцип, что и для настоящего kṣ, — дальше цепочка идёт как в правиле 21).' }
+  ] }
+}];
+EXAMPLES[25] = [{
+  desc: 'diś- «направление» → dikṣu «в направлениях»',
+  roleDemo: { steps: [
+    { tag: '25', type: 'lexical', source: 'śa', result: 'ka',
+      text: 'В корнях diś-, dṛś-, mṛś-, spṛś- (и опционально naś-) конечная ś лексически заменяется на k — не общее правило для всех ś, только для этого списка корней.' }
+  ] }
+}];
+EXAMPLES[26] = [{
+  desc: 'parivrāj- → parivrāṭ «нищий» (N.sg.)',
+  roleDemo: { steps: [
+    { tag: '26', type: 'lexical', source: 'ja', result: 'ṭa',
+      text: 'j в определённом списке корней (bhṛj-, bhrāj-, mṛj-, yaj-, rāj-, sṛj-, parivrāj-) в именной форме лексически даёт ṭ — тот же принцип, что у kṣ-семьи, только для j.' }
+  ] }
+}];
+
+/* ═══ Составной результат за пределами kṣ-семьи ═══ */
+EXAMPLES[48] = [{
+  desc: 'tau «они оба» + atra «здесь» → tāvatra «они оба здесь»',
+  roleDemo: { steps: [
+    { tag: '48', type: 'compound', source: 'au', trigger: 'a', result: ['ā', 'va'],
+      text: 'au перед гласным распадается на два звука сразу: долгое ā (сохраняет исходную долготу) и полугласный v (сохраняет исходное качество u-компонента дифтонга).' }
+  ] }
+}];
+EXAMPLES[62] = [{
+  desc: 'aśvān + corayati → aśvāṃścorayati «ворует коней»',
+  roleDemo: { steps: [
+    { tag: '62', type: 'compound', source: 'na', trigger: 'ca', result: ['ṃ', 'śa'],
+      text: 'Конечный n перед глухим средненёбным c распадается на два звука сразу: анусвара ṃ (носовой призвук без своего места) и шипящий ś (место образования — от триггера c).' }
+  ] }
+}];
+
+/* ═══ Оставшиеся десять — цепочки на уже готовых типах ═══ */
+EXAMPLES[12] = [{
+  desc: 'acchid- + s-ta → acchitta «отрезал»',
+  roleDemo: { steps: [
+    { tag: '10', type: 'double', source: 'cha',
+      text: 'ch между гласными сначала удваивается — cch (та же логика, что в gacchati).' },
+    { tag: '31', type: 'voicing', source: 'da', trigger: 'sa', result: 'ta',
+      text: 'Звонкий d перед глухим s оглушается — t.' },
+    { tag: '12', type: 'elide', source: 'sa',
+      text: 'А сам s, оказавшись между двумя смычными (t и t), исчезает совсем без следа.' }
+  ] }
+}];
+EXAMPLES[19] = [{
+  desc: 'lih- + syati → lekṣyati «будет лизать»',
+  roleDemo: { steps: [
+    { tag: '19', type: 'lexical', source: 'i', result: 'e',
+      text: 'Гласный корня гунируется перед показателем будущего времени -sya- (общее правило образования будущего, не только для этого корня).' },
+    { tag: '19', type: 'voicing', source: 'ha', trigger: 'sa', result: 'ka',
+      text: 'h корня lih- перед s становится k.' },
+    { tag: '36', type: 'voicing', source: 'sa', trigger: 'ka', result: 'ṣa',
+      text: 'RUKI: получившийся k тянет за собой s→ṣ.' }
+  ] }
+}];
+EXAMPLES[23] = [{
+  desc: 'vrakṣyati «отрежет»',
+  roleDemo: { steps: [
+    { tag: '23', type: 'compound', source: ['śa', 'ca'], result: ['ka', 'ṣa'],
+      text: 'śc корня vraśc- (единственный корень с этим сочетанием) трактуется как составной звук kṣ — дальше цепочка идёт так же, как в правиле 21.' }
+  ] }
+}];
+EXAMPLES[24] = [{
+  desc: 'dviṣ- «враждовать»: dvekṣyati «будет враждовать»',
+  roleDemo: { steps: [
+    { tag: '24', type: 'lexical', source: 'i', result: 'e',
+      text: 'Тот же принцип гунирования перед -sya-, что и в правиле 19.' },
+    { tag: '24', type: 'compound', source: 'ṣa', result: ['ka', 'ṣa'],
+      text: 'А корневой ṣ трактуется как составной kṣ — аналогично kṣ-семье, только для ṣ.' }
+  ] }
+}];
+EXAMPLES[50] = [{
+  desc: 'devas «бог» + asti → devo\'sti «бог есть»',
+  roleDemo: { steps: [
+    { tag: '50', type: 'compound', source: ['a', 'sa'], trigger: 'a', result: 'o',
+      text: 'Составное окончание -as (a+s) вместе со следующим a сливаются в одно o. Оба компонента источника участвуют разом, не по отдельности.' }
+  ] }
+}];
+EXAMPLES[53] = [{
+  desc: 'devas gacchati → devo gacchati «бог идёт»',
+  roleDemo: { steps: [
+    { tag: '53', type: 'compound', source: ['a', 'sa'], result: 'o',
+      text: 'Тот же принцип, что в правиле 50, но перед любым звонким согласным, не только перед a — составное -as целиком даёт o.' }
+  ] }
+}];
+EXAMPLES[55] = [{
+  desc: 'devās āsate → devā āsate «боги сидят»',
+  roleDemo: { steps: [
+    { tag: '7', type: 'lexical', source: 'a', result: 'ā',
+      text: 'Сначала (ещё при образовании самого devās) два одинаковых a сливаются в ā — по общему правилу 7.' },
+    { tag: '55', type: 'elide', source: 'sa',
+      text: 'А затем s перед любым звонким звуком пропадает совсем.' }
+  ] }
+}];
+EXAMPLES[56] = [{
+  desc: 'agniḥ + rocate → agnī rocate «огонь светит»',
+  roleDemo: { steps: [
+    { tag: '56', type: 'elide', source: 'ḥ',
+      text: 'Перед r финальные -s/-r (здесь уже в виде висарги) исчезают совсем.' },
+    { tag: '56', type: 'lexical', source: 'i', result: 'ī',
+      text: 'А краткий гласный перед пропавшим звуком удлиняется — компенсация исчезнувшей буквы.' }
+  ] }
+}];
+EXAMPLES[64] = [{
+  desc: 'devān + śṛṇoti «слышит» → devāñchṛṇoti «слышит богов»',
+  roleDemo: { steps: [
+    { tag: '64', type: 'compound', source: 'na', trigger: 'śa', result: ['ña', 'cha'],
+      text: 'Сочетание n+ś даёт сразу два звука: палатальный носовой ñ (место — от триггера) и ch (шипящий трактуется как смычный).' }
+  ] }
+}];
+EXAMPLES[65] = [{
+  desc: 'aśvān + labhate «получает» → aśvāṃllabhate «получает коней»',
+  roleDemo: { steps: [
+    { tag: '65', type: 'lexical', source: 'na', result: 'ṃ',
+      text: 'Конечный n перед l заменяется анусварой — теряет собственное место образования.' },
+    { tag: '65', type: 'double', source: 'la',
+      text: 'А сам l после этого удваивается.' }
+  ] }
+}];
+
+EXAMPLES[71] = [
+  {
+    desc: 'ap- «вода» + ja «рождённый» → abja «рождённый в воде, лотос»',
+    roleDemo: { steps: [
+      { tag: '71', type: 'voicing', source: 'pa', trigger: 'ja', result: 'ba',
+        text: 'Любой глухой смычный перед звонким сам озвончается — тот же принцип, что в правиле 32 (śagdhi), только здесь губной p→b.' }
+    ] }
+  },
+  {
+    desc: 'vāk + asti → vāg asti «есть голос»',
+    module: './examples/rule71-vak-asti.js'
+  }
+];
+
 EXAMPLES[3] = [
   {
     desc: 'agni- «огонь» + guṇa + -as → agnayas «огни»',
     module: './examples/rule3-agnayas.js'
-  }
-];
-EXAMPLES[71] = [
-  {
-    desc: 'vāk «голос» + asti «есть» → vāg asti «есть голос»',
-    module: './examples/rule71-vak-asti.js'
   }
 ];
 
@@ -2369,6 +2812,23 @@ function svgRoleLine(a, b, { dashed = false, label = null } = {}) {
   }
 }
 
+/* Маленький значок у клетки, без линии — для эффектов, у которых нет отдельной клетки-результата
+   на алфавите (буква пропадает совсем, или результат — та же самая буква, только удвоенная). */
+function svgBadge(center, text, { dx = 15, dy = -15 } = {}) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const x = center.x + dx, y = center.y + dy;
+  const g = document.createElementNS(ns, 'g');
+  const circle = document.createElementNS(ns, 'circle');
+  circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', 10);
+  circle.setAttribute('class', 'role-badge-bg');
+  const t = document.createElementNS(ns, 'text');
+  t.setAttribute('x', x); t.setAttribute('y', y);
+  t.setAttribute('class', 'role-badge-text');
+  t.textContent = text;
+  g.appendChild(circle); g.appendChild(t);
+  roleSvg.appendChild(g);
+}
+
 function clearRoleDemo() {
   wrap.querySelectorAll('.lc').forEach(el =>
     el.classList.remove('role-dim', 'role-source', 'role-trigger', 'role-result'));
@@ -2376,6 +2836,7 @@ function clearRoleDemo() {
   roleStepsWrap.style.display = 'none';
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
+  document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
 }
 
 function activateRoleCell(tr, role) {
@@ -2386,13 +2847,31 @@ function activateRoleCell(tr, role) {
   return el;
 }
 
+/* То же самое, но роль может занимать НЕСКОЛЬКО клеток сразу (составной источник/результат —
+   например kṣ как источник в семье правил 20–26, или au→ā+v как составной результат). Принимает
+   строку (одна клетка) или массив строк (несколько), всегда возвращает массив — не подставляет
+   вымышленную «одну» клетку туда, где реально их несколько, и не сужает несколько до одной. */
+function activateRoleCells(trOrArr, role) {
+  const ids = Array.isArray(trOrArr) ? trOrArr : [trOrArr];
+  return ids.map(tr => activateRoleCell(tr, role)).filter(Boolean);
+}
+
 /* Рисует ОДИН шаг цепочки на алфавите (подсветка + линии) — не трогает ленту кнопок/текст,
-   вызывается и при первом открытии примера, и при клике на любую кнопку шага. */
+   вызывается и при первом открытии примера, и при клике на любую кнопку шага.
+   step.gunaCells — необязательный список id клеток таблицы «Гуна · Вриддхи» (см. gc-<ступень>-<столбец>
+   в разметке таблицы), которые нужно подсветить для этого шага — например ['gc-weak-i','gc-guna-i']
+   для перехода i→e. Столбец целиком подсветится сам — это уже общий MutationObserver, не здесь. */
 function renderRoleStep(step) {
   wrap.querySelectorAll('.lc').forEach(el =>
     el.classList.remove('role-dim', 'role-source', 'role-trigger', 'role-result'));
   roleSvg.querySelectorAll('line, g').forEach(el => el.remove());
   wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
+  document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
+  (step.gunaCells || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('gv-active');
+    else console.warn('Роль: клетка гуна-таблицы не найдена —', id);
+  });
 
   if (step.type === 'place') {
     const src = activateRoleCell(step.source, 'source');
@@ -2422,6 +2901,23 @@ function renderRoleStep(step) {
       const res = activateRoleCell(r, 'result');
       if (src && res) svgRoleLine(cellCenter(src), cellCenter(res), {});
     });
+  } else if (step.type === 'elide') {
+    // буква пропадает без следа — нет клетки-результата на алфавите, только значок «∅» у источника
+    const src = activateRoleCell(step.source, 'source');
+    if (src) svgBadge(cellCenter(src), '∅');
+  } else if (step.type === 'double') {
+    // результат — та же самая буква, что источник, только удвоенная — значок «×2», не вторая клетка
+    const src = activateRoleCell(step.source, 'source');
+    if (src) svgBadge(cellCenter(src), '×2');
+  } else if (step.type === 'compound') {
+    // составной источник и/или результат — несколько клеток на одну роль
+    // (kṣ как источник, или au→ā+v как составной результат). Роли, которых нет
+    // (например, триггера), просто не обозначаем — не выдумываем недостающее.
+    const srcArr = step.source ? activateRoleCells(step.source, 'source') : [];
+    const trgArr = step.trigger ? activateRoleCells(step.trigger, 'trigger') : [];
+    const resArr = step.result ? activateRoleCells(step.result, 'result') : [];
+    srcArr.forEach(src => resArr.forEach(res => svgRoleLine(cellCenter(src), cellCenter(res), {})));
+    trgArr.forEach(trg => resArr.forEach(res => svgRoleLine(cellCenter(trg), cellCenter(res), { dashed: true })));
   }
 
   roleStepsText.textContent = step.text || '';
