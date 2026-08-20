@@ -29,13 +29,15 @@
 // Материал/геометрия кубика — не здесь, берутся из уже готового chalk-module.js.
 
 import * as THREE from 'three';
-import { buildChalkMaterials, makeChalkGeo } from './chalk-module.js';
+import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
 
 export const N_SLOTS = 10;
 export const CUBE_SIZE = 1.1;
 export const SLOT = 1.2;
 export const MS_PER_360 = 3600; // эталонная скорость — ассимиляция (t+dh), см. чат
 export const READY_COLOR = 0xDECDAF; // тот же тёплый бежевый, что и в rule3-agnayas.js
+const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
+let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
 
 /* ═══════════════════ ТОКЕНИЗАТОР ═══════════════════
    Один кубик = один звук. Придыхательные и дифтонги — двухбуквенные в IAST,
@@ -77,13 +79,24 @@ export const COL_VEL = 0xA8D878, COL_PAL = 0x7DCFCA, COL_RET = 0xC5B0D8,
              COL_DEN = 0xE8A8C0, COL_LAB = 0xF0BF88, COL_DIM = 0xEDE8D8;
 
 function colorFor(tr) {
+  // гласные — по традиционному месту образования (то же самое место, что и у
+  // одноимённой группы согласных): a/ā гортанные, i/ī/e/ai нёбные,
+  // ṛ/ṝ церебральные, ḷ зубная, u/ū/o/au губные. Раньше эта часть отсутствовала
+  // вовсе — гласные проваливались в нейтральный цвет по умолчанию (отсюда были
+  // «серая А» при прилёте и небеленая А в столбце — оба чинятся этим же местом).
+  if (tr === 'a' || tr === 'ā') return COL_VEL;
+  if (tr === 'i' || tr === 'ī' || tr === 'e' || tr === 'ai') return COL_PAL;
+  if (tr === 'ṛ' || tr === 'ṝ') return COL_RET;
+  if (tr === 'ḷ') return COL_DEN;
+  if (tr === 'u' || tr === 'ū' || tr === 'o' || tr === 'au') return COL_LAB;
+  // согласные
   const c = tr[0];
   if ('kgṅ'.includes(c) || tr === 'kh' || tr === 'gh') return COL_VEL;
-  if ('cjñyśh'.includes(c) || tr === 'ch' || tr === 'jh' || tr === 'ai') return COL_PAL;
-  if ('ṭḍṇr ṣ'.includes(c) || tr === 'ṭh' || tr === 'ḍh') return COL_RET;
-  if ('tdnlsṃ'.includes(c) || tr === 'th' || tr === 'dh') return COL_DEN;
-  if ('pbmv'.includes(c) || tr === 'ph' || tr === 'bh' || tr === 'au') return COL_LAB;
-  return COL_DIM;
+  if ('cjñyś'.includes(c) || tr === 'ch' || tr === 'jh') return COL_PAL;
+  if ('ṭḍṇr'.includes(c) || c === 'ṣ' || tr === 'ṭh' || tr === 'ḍh') return COL_RET;
+  if ('tdnl'.includes(c) || c === 's' || tr === 'th' || tr === 'dh') return COL_DEN;
+  if ('pbmv'.includes(c) || tr === 'ph' || tr === 'bh') return COL_LAB;
+  return COL_DIM; // ṃ, ḥ, h — без единого места образования
 }
 
 function clamp01(t) { return Math.max(0, Math.min(1, t)); }
@@ -102,6 +115,17 @@ function easeOutBounce(t) {
    текстуру на лету) — тот же приём, что в rule3-agnayas.js: заранее собранный
    «пустой» вариант (без буквы, для момента вращения) и «ready»-вариант
    (READY_COLOR, для финальной волны). */
+function makeShadow() {
+  if (!_shadowTex) _shadowTex = makeShadowBlobTexture();
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(CUBE_SIZE * 1.6, CUBE_SIZE * 1.6),
+    new THREE.MeshBasicMaterial({ map: _shadowTex, transparent: true, depthWrite: false, fog: false })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(0, FLOOR_Y + 0.01, 0.05);
+  return shadow;
+}
+
 function makeCube(tr, seed) {
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const color = colorFor(tr);
@@ -110,7 +134,24 @@ function makeCube(tr, seed) {
   const matsReady = buildChalkMaterials(READY_COLOR, seed + 2, tr);
   [matsMain, matsBlank, matsReady].forEach(mats => mats.forEach(m => { m.transparent = true; }));
   const mesh = new THREE.Mesh(geo, matsMain);
-  return { tr, mesh, seed, matsMain, matsBlank, matsReady, _settled: false };
+  const shadow = makeShadow();
+  return { tr, mesh, shadow, seed, matsMain, matsBlank, matsReady, _settled: false };
+}
+
+/* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —
+   никогда не исчезает совсем даже высоко в воздухе), плюс учитывает текущую
+   прозрачность самого кубика (бледный кубик — бледная тень). Тот же расчёт,
+   что уже проверен в rule3-agnayas.js, перенесён без изменений. */
+function updateShadow(cube) {
+  cube.shadow.visible = cube.mesh.visible;
+  cube.shadow.position.x = cube.mesh.position.x + 0.08;
+  cube.shadow.position.z = cube.mesh.position.z + 0.05;
+  const heightAbove = Math.max(0, cube.mesh.position.y - FLOOR_Y);
+  const heightK = Math.max(0.35, 1 - heightAbove * 0.14);
+  const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
+  const matOpacity = mats[0].opacity ?? 1;
+  cube.shadow.scale.setScalar(heightK);
+  cube.shadow.material.opacity = heightK * matOpacity;
 }
 
 function setOpacity(mesh, val) {
@@ -171,6 +212,7 @@ export function mountSlotExample(container, data) {
     c._fallDur = data.fallDur ?? 900;
     c._fallDone = false;
     scene.add(c.mesh);
+    scene.add(c.shadow);
     cubes[slot] = c;
   });
 
@@ -257,6 +299,7 @@ export function mountSlotExample(container, data) {
         nc._fallDone = true; // прилетает через отстойник, не через обычное падение
         nc.mesh.visible = false;
         scene.add(nc.mesh);
+        scene.add(nc.shadow);
         cubes[arr.newSlot] = nc;
         op._arrived = op._arrived || {};
         op._arrived[arr.newSlot] = nc;
@@ -272,8 +315,19 @@ export function mountSlotExample(container, data) {
       );
     });
 
-    // фаза 3: после паузы для сравнения — исходный растворяется совсем
-    const fadeStart = riseEnd + holdDur;
+    // фаза 3: после паузы для сравнения — исходный растворяется совсем.
+    // Момент старта угасания зависит от того, что случится ПОЗЖЕ — источник
+    // поднялся в отстойник, ИЛИ все результаты долетели и сели (какой из
+    // прилётов дольше — с учётом собственной задержки старта). Раньше здесь
+    // был фиксированный отсчёт от подъёма источника, не связанный с прилётом —
+    // если бы прилёт занял дольше, источник начал бы таять ДО того, как AY
+    // реально появится в кадре целиком. Теперь так не получится.
+    const arrivals = op.arrivals || [];
+    const lastArrivalEnd = arrivals.length
+      ? Math.max(...arrivals.map(a => a.delay + a.dur))
+      : 0;
+    const compareReadyAt = Math.max(riseEnd, op.start + lastArrivalEnd);
+    const fadeStart = compareReadyAt + holdDur; // holdDur = пауза ПОСЛЕ того, как всё уже видно вместе
     if (elapsed >= fadeStart) {
       const t = clamp01((elapsed - fadeStart) / fadeDur);
       setOpacity(src.mesh, lerp(holdOpacity, 0, t));
@@ -298,17 +352,48 @@ export function mountSlotExample(container, data) {
     });
   }
 
+  /* 4. DIM — притенение неактивных букв. Буквы, НЕ участвующие в текущей
+     операции, гаснут почти до прозрачности, пока идёт действие — фокус
+     внимания читается яснее на фоне того, что реально меняется. Гаснет и
+     возвращается плавно (рампа в начале и в конце), не рывком. Полная
+     видимость возвращается САМА к моменту `end` — это отдельный, более
+     ранний момент «все буквы снова видны в своих цветах», ДО того как по
+     слову пройдёт финальная волна READY_COLOR (см. applySettle выше) —
+     не одновременно с ней, а раньше.
+     { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 }
+     Планирование конфликтов (например, если dim и split управляют
+     прозрачностью одного и того же кубика одновременно) — забота автора
+     данных примера, не движка: не проверяется намеренно, минимум кода. */
+  function applyDim(op, elapsed) {
+    const dimOpacity = op.dimOpacity ?? 0.22;
+    const ramp = op.ramp ?? 700;
+    op.slots.forEach(slot => {
+      const cube = cubes[slot];
+      if (!cube) return;
+      let opacity;
+      if (elapsed < op.start) opacity = 1;
+      else if (elapsed < op.start + ramp) opacity = lerp(1, dimOpacity, clamp01((elapsed - op.start) / ramp));
+      else if (elapsed < op.end - ramp) opacity = dimOpacity;
+      else if (elapsed < op.end) opacity = lerp(dimOpacity, 1, clamp01((elapsed - (op.end - ramp)) / ramp));
+      else opacity = 1;
+      setOpacity(cube.mesh, opacity);
+    });
+  }
+
   function frame(now) {
     const elapsed = now - t0;
     Object.values(cubes).forEach(cube => {
-      if (cube._fallDone) return;
-      cube.mesh.position.y = fallY(elapsed, cube);
-      if (elapsed >= cube._fallStart + cube._fallDur) cube._fallDone = true;
+      if (!cube._fallDone) {
+        cube.mesh.position.y = fallY(elapsed, cube);
+        if (elapsed >= cube._fallStart + cube._fallDur) cube._fallDone = true;
+      }
+      updateShadow(cube);
     });
     (data.ops || []).forEach(op => {
       if (op.type === 'transform') applyTransform(op, elapsed);
       else if (op.type === 'split') applySplit(op, elapsed);
       else if (op.type === 'settle') applySettle(op, elapsed);
+      else if (op.type === 'dim') applyDim(op, elapsed);
     });
     camera.position.copy(camBase);
     renderer.render(scene, camera);
