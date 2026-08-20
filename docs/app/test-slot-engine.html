@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (agnayas)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(70vh,400px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:600px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Проверка слот-движка: agnayas данными, не кодом. Слоты 0-2,3(i→e),4(пусто→y),5,6 — те же номера, что в оригинальном файле. Открывать через живой сайт (https://), не file:// — здесь обычный import, без вшивания.</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mountSlotExample } from './lib/slot-engine.js';
+
+// Данные agnayas: начальное состояние ДО сандхи (agni+guna+as → до i→e ещё не дошло)
+// a-g-n-i-[пусто]-a-s — слот 4 нарочно пуст, туда прилетит y на шаге split.
+const data = {
+  initial: [
+    { slot: 0, tr: 'a' },
+    { slot: 1, tr: 'g' },
+    { slot: 2, tr: 'n' },
+    { slot: 3, tr: 'i' },
+    { slot: 5, tr: 'a' },
+    { slot: 6, tr: 's' },
+  ],
+  ops: [
+    { type: 'recolor', at: 3, toGlyph: 'e', toColor: 0x7DCFCA, start: 1200 },
+    { type: 'split', at: 3, into: ['a', 'y'], newSlot: 4, start: 3200, dur: 1800 },
+  ]
+};
+
+mountSlotExample(document.getElementById('anim-container'), data);
+</script>
+</body>
+</html>
