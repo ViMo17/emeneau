@@ -2203,7 +2203,14 @@ EXAMPLES[71] = [
 EXAMPLES[3] = [
   {
     desc: 'agni- «огонь» + guṇa + -as → agnayas «огни»',
-    module: './examples/rule3-agnayas.js'
+    module: './examples/rule3-agnayas.js',
+    roleDemo: { steps: [
+      { tag: 'грам.', type: 'lexical', source: 'i', result: 'e',
+        gunaCells: ['gc-weak-i', 'gc-guna-i'],
+        text: 'Не правило 3 — грамматика: i-основа гунируется в сильном падеже (им.мн.) ещё до контакта с окончанием. i становится e.' },
+      { tag: '3', type: 'compound', source: 'e', trigger: 'a', result: ['a', 'ya'],
+        text: 'А вот это уже само правило 3: e перед гласным (a из окончания -as) распадается на a (та же долгота, что у дифтонга) и новый полугласный y.' }
+    ] }
   }
 ];
 
@@ -2391,7 +2398,9 @@ function showCenter(cd) {
         lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         if (ex.module) mountAnimExample(ex.module);
-        else if (ex.roleDemo) { unmountCurrentAnim(); renderRoleDemo(ex.roleDemo); }
+        else unmountCurrentAnim();
+        if (ex.roleDemo) renderRoleDemo(ex.roleDemo);
+        else clearRoleDemo();
       });
       lpPicker.appendChild(chip);
     });
