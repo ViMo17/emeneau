@@ -28,10 +28,10 @@ const labelsEl = container.querySelector('.eff-labels');
 const captionTextEl = container.querySelector('.eff-caption-text');
 // Подсвечиваем ячейки ЕДИНСТВЕННОЙ таблицы гуна/вриддхи (панель алфавита справа) —
 // свою копию таблицы внутри анимации не строим, чтобы не дублировать и не расходиться в стилях.
-const cellWI  = document.getElementById('main-cell-w-i');
-const cellGE  = document.getElementById('main-cell-g-e');
+const cellWI  = document.getElementById('gc-weak-i');
+const cellGE  = document.getElementById('gc-guna-i');
 const cellRWI = cellWI; // строка "слаб" в таблице теперь одна на обе ветки (гуна и полугласный)
-const cellRGYA = document.getElementById('main-cell-rg-ya');
+const cellRGYA = document.getElementById('gc-guna-rev-i');
 
 
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
