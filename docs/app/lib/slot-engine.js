@@ -109,6 +109,37 @@ function colorFor(tr) {
   return COL_DIM; // ṃ, ḥ, h — без единого места образования
 }
 
+/* Цвет кольца-пульса — НЕ фиксированный золотой, а оттенок СОБСТВЕННОГО цвета
+   кубика (светлее и насыщеннее), тот же приём, что уже был найден и провере
+   для 2D-примера ассимиляции (examples/rule71-vak-asti.js, ringColorFrom) —
+   перенесено дословно (формулы hexToHsl/hslToRgbStr идентичны), чтобы кольцо
+   у любого кубика в 3D читалось как «его собственное свечение», не как один
+   и тот же безликий жёлтый сигнал на всех. */
+function hexToHsl(hex) {
+  const r = ((hex >> 16) & 255) / 255, g = ((hex >> 8) & 255) / 255, b = (hex & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; } else {
+    const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; default: h = (r - g) / d + 4; }
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hslToRgbStr(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; } else {
+    const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return `${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)}`;
+}
+function ringColorFrom(hex) {
+  const [h, s, l] = hexToHsl(hex);
+  return hslToRgbStr(h, Math.min(1, s + 0.25), Math.min(0.86, l + 0.22)); // тот же тон, заметно светлее
+}
+
 function clamp01(t) { return Math.max(0, Math.min(1, t)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
@@ -124,11 +155,12 @@ function easeOutBounce(t) {
   if (t < 2.5/d1) return n1*(t-=2.25/d1)*t+0.9375;
   return n1*(t-=2.625/d1)*t+0.984375;
 }
-// падение: раньше чистый easeOutBounce — несколько заметных отскоков подряд,
-// на медленном тайминге читалось как дребезжание, не как мягкая посадка.
-// Смесь с easeOutCubic (глушит бо́льшую часть отскоков, тень характера
-// остаётся) — общий приём для ЛЮБОГО падающего кубика, не частность.
-function easeFall(t) { return lerp(easeOutCubic(t), easeOutBounce(t), 0.35); }
+// падение: было чистый easeOutBounce, потом смесь 65/35 с easeOutCubic — по
+// прямой обратной связи даже эта смесь ещё читалась как «дёргается», не как
+// плавный ход (остаточные мелкие отскоки от easeOutBounce всё ещё заметны на
+// медленном тайминге падения). Убрана вся примесь bounce — чистое плавное
+// торможение без единого отскока. Общий приём для ЛЮБОГО падающего кубика.
+function easeFall(t) { return easeOutCubic(t); }
 
 /* ═══════════════════ КУБИК ═══════════════════
    Каждый кубик хранит НЕСКОЛЬКО готовых наборов материалов (не перерисовывает
@@ -399,31 +431,51 @@ export function mountSlotExample(container, data) {
   }
 
   function flashStepBoundary(step) {
+    // Раньше здесь ещё была верхняя полоса-вспышка (.slot-step-flashbar,
+    // золотая, во всю ширину сцены) — по обратной связи читалась как
+    // «мелькающая оранжевая полоса сверху», лишний шум. Убрана: чипа-вспышки
+    // снизу и самой (теперь последовательной, см. applyStepDim) развидки
+    // букв достаточно как сигнала смены шага, отдельная полоса не нужна.
     const chip = step._chipEl;
     if (chip) {
       chip.classList.remove('flash'); void chip.offsetWidth; // рестарт CSS-анимации
       chip.classList.add('flash');
     }
-    const bar = document.createElement('div');
-    bar.className = 'slot-step-flashbar';
-    stageEl.appendChild(bar);
-    setTimeout(() => bar.remove(), 650);
   }
 
+  /* Развидка (снятие притенения) — ПОСЛЕДОВАТЕЛЬНАЯ, слева направо, не
+     одновременная. Раньше все буквы разом ре-таргетировались одним общим
+     RAMP — по прямой обратной связи после просмотра это читалось как
+     «нелогичные вздрагивания и мелькания», а не как ясный сигнал «шаг
+     закончен». Теперь у каждой буквы свой сдвиг старта (по её порядку слева
+     направо среди занятых слотов), и сам переход медленнее и мягче обычного
+     межшагового RAMP — «не спеша», её слово. Действует только на РАЗВИДКУ
+     (переход к activeSlots:'ALL' — пауза между шагами и финальный хвост
+     перед settle); сужение притенения под НОВЫЙ узкий шаг (обратное
+     направление) остаётся одновременным, как раньше — туда претензий не
+     было, и резкое «внимание сузилось» там уместнее плавного расползания. */
   function applyStepDim(elapsed) {
     if (!runtimeSteps) return;
     const dimOpacity = data.dimOpacity ?? 0.22;
     const RAMP = data.stepRamp ?? 550;
+    const REVEAL_STAGGER = data.revealStagger ?? 130;
+    const REVEAL_RAMP = data.revealRamp ?? 700;
     const idx = stepIndexAt(elapsed, runtimeSteps);
     const cur = runtimeSteps[idx];
     const prev = runtimeSteps[idx - 1];
     const next = runtimeSteps[idx + 1];
-    Object.keys(cubes).forEach(key => {
-      if (!/^\d+$/.test(key)) return; // временные ключи отстойника — не трогаем
-      const slot = Number(key);
-      const cube = cubes[key];
+    const orderedSlots = Object.keys(cubes)
+      .filter(key => /^\d+$/.test(key))
+      .map(Number)
+      .sort((a, b) => a - b); // порядок слева направо — тот самый, что просила пользователь
+    const enteringReveal = prev && cur.activeSlots === 'ALL';
+    orderedSlots.forEach((slot, order) => {
+      const cube = cubes[slot];
       let target = stepTargetOpacity(cur, slot, dimOpacity);
-      if (prev && elapsed - cur.start < RAMP) {
+      if (enteringReveal) {
+        const t = clamp01((elapsed - cur.start - order * REVEAL_STAGGER) / REVEAL_RAMP);
+        target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
+      } else if (prev && elapsed - cur.start < RAMP) {
         const t = clamp01((elapsed - cur.start) / RAMP);
         target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
       }
@@ -461,15 +513,19 @@ export function mountSlotExample(container, data) {
   }
 
   /* Кольцо-пульс НА МЕСТЕ (не бежит от точки к точке, а расходится вокруг
-     одной) — сигнал «вот-вот изменится», используется в паузе-осознании
-     перед split (см. applySplit ниже). Общая утилита, не частность agnayas. */
-  function spawnPulseRing(atVec3, dur) {
+     одной) — сигнал «вот-вот изменится» (пауза-осознание перед split) ИЛИ
+     «я источник, я влияю» (сустейн-кольца у нимитты в influence, см. ниже).
+     rgbStr — необязательный: без него кольцо золотое (CSS по умолчанию,
+     как раньше), с ним — оттенок СОБСТВЕННОГО цвета конкретного кубика
+     (см. ringColorFrom) — общая утилита, не частность agnayas. */
+  function spawnPulseRing(atVec3, dur, rgbStr) {
     const p = project(atVec3);
     const ring = document.createElement('div');
     ring.className = 'slot-pulse-ring';
     ring.style.left = p.x + 'px';
     ring.style.top = p.y + 'px';
     ring.style.setProperty('--pulse-dur', dur + 'ms');
+    if (rgbStr) ring.style.borderColor = `rgba(${rgbStr},.55)`;
     labelsEl.appendChild(ring);
     setTimeout(() => ring.remove(), dur + 80);
   }
@@ -518,21 +574,36 @@ export function mountSlotExample(container, data) {
   let rafId = null;
 
   /* 0. INFLUENCE — дальнодействие до самого превращения: несколько волн-
-     пульсов (2D-кольца поверх сцены) бегут от триггера к цели с задержкой
-     между собой, цель мелко дрожит, пока волны идут, и переключается на
-     сигнальный (золотой) цвет ровно тогда, когда ПЕРВАЯ волна долетает —
-     не раньше и не одновременно со стартом.
+     пульсов бегут от триггера к цели с задержкой между собой, и цель мелко
+     дрожит, пока волны идут.
      { type:'influence', from, to, start, waveCount=3, waveGap=550, waveTravel=1400 }
 
-     ВАЖНО (правка по обратной связи): «нимитта» (то, что физически влияет) — это
-     часто НЕ одна буква, а вся грамматическая единица целиком (например всё
-     окончание -as, а не только его первая буква a). `from` теперь принимает не
-     только одно число, но и массив ([6,7]) или ссылку на группу слов ({word:2},
-     см. resolveSlotRef/computeWordGroups выше) — тогда волна идёт от КАЖДОГО
-     кубика группы одновременно (несколько сходящихся колец, не одно), а сами
-     кубики-источники синхронно чуть подпрыгивают масштабом в момент каждой
-     волны — общий «пульс» на всю группу, чтобы она читалась как одно целое, а
-     не как несколько случайно соседствующих кубиков. */
+     ПРАВКА (по обратной связи после просмотра): цель БОЛЬШЕ НЕ меняет цвет на
+     сигнальный (золотой/оранжевый) — раньше делала это в момент signalAt, и
+     этот оранжевый потом «доживал» до самого начала transform. По прямой
+     формулировке пользователя «больше оранжевый не допустим» — оставлена
+     только дрожь, без смены цвета; единственный цветовой переход у цели — уже
+     сам transform.
+
+     «Нимитта» (то, что физически влияет) часто НЕ одна буква, а вся
+     грамматическая единица целиком (например всё окончание -as). `from`
+     принимает не только одно число, но и массив/ссылку на группу слов
+     ({word:2}, см. resolveSlotRef/computeWordGroups) — тогда волна идёт от
+     КАЖДОГО кубика группы одновременно, они синхронно подпрыгивают масштабом
+     в момент каждой волны — читаются как одно целое.
+
+     ЭТАЛОН ДЛЯ КОЛЕЦ (по прямой ссылке пользователя на examples/rule71-
+     vak-asti.js, redrawPulseFace): у самого источника-нимитты, помимо бегущих
+     волн к цели, ДОЛЖНЫ расходиться широкие размытые светлые кольца оттенка
+     СОБСТВЕННОГО цвета кубика, и держаться до конца связанной трансформации —
+     не только на время короткой фазы волн. Здесь — упрощённая DOM-версия
+     того же языка (не текстура на грани кубика, как в rule71-vak-asti.js —
+     та техника глубже, взята только цветовая формула ringColorFrom и сам
+     характер кольца), длительность управляется отдельно от `dur` через
+     `ringHoldDur` (по умолчанию = `dur`, но пример может продлить её до конца
+     transform). Это одновременно и ответ на «не вижу выделения АС как единой
+     группы» — сустейн-кольца на ОБОИХ кубиках группы одновременно и есть
+     видимое выделение. */
   function applyInfluence(op, elapsed) {
     const target = cubes[op.to];
     const sourceSlots = resolveSlotRef(op.from, wordGroupsList);
@@ -541,18 +612,27 @@ export function mountSlotExample(container, data) {
     const waveCount = op.waveCount ?? 3;
     const waveGap = op.waveGap ?? 550; // было 440
     const waveTravel = op.waveTravel ?? 1400; // было 1100
-    // ПАУЗА между «импульс долетел» и «буква заметно среагировала» — раньше
-    // цель переключалась на сигнальный цвет МГНОВЕННО в момент прилёта первой
-    // волны, одним кадром: причина и следствие сливались в один момент,
-    // реакция читалась как случайное совпадение по времени, а не как ответ
-    // НА импульс. Теперь между ними — заметный зазор (signalDelay), и сам
-    // момент переключения отмечен коротким «дзинь» — упругий скачок масштаба,
-    // не молчаливая подмена материала.
-    const signalDelay = op.signalDelay ?? 350;
     const dur = (waveCount - 1) * waveGap + waveTravel;
+
+    // Сустейн-кольца на источниках — независимо от фазы волн, до ringHoldDur.
+    const ringHoldDur = op.ringHoldDur ?? dur;
+    const ringGap = op.ringGap ?? 900;
+    if (elapsed >= op.start && elapsed <= op.start + ringHoldDur) {
+      const ringIdx = Math.floor((elapsed - op.start) / ringGap);
+      const key = '_ring' + ringIdx;
+      if (!op[key]) {
+        op[key] = true;
+        sources.forEach(src => spawnPulseRing(
+          src.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          1300,
+          ringColorFrom(colorFor(src.tr))
+        ));
+      }
+    }
+
     if (elapsed < op.start || elapsed > op.start + dur) {
       if (elapsed > op.start + dur) {
-        target.mesh.rotation.z = 0; target.mesh.scale.setScalar(1);
+        target.mesh.rotation.z = 0;
         sources.forEach(src => src.mesh.scale.setScalar(1));
       }
       return;
@@ -583,16 +663,6 @@ export function mountSlotExample(container, data) {
 
     const t = clamp01((elapsed - op.start) / dur);
     target.mesh.rotation.z = Math.sin(elapsed * 0.0125) * 0.05 * Math.sin(t * Math.PI);
-    const signalAt = op.start + waveTravel + signalDelay;
-    if (!op._signalled && elapsed >= signalAt) {
-      op._signalled = true;
-      target.mesh.material = target.matsSignal; // импульс дошёл, пауза выдержана — теперь заметно реагирует
-      op._signalPopStart = elapsed;
-    }
-    if (op._signalPopStart !== undefined) {
-      const pt = clamp01((elapsed - op._signalPopStart) / 260);
-      target.mesh.scale.setScalar(1 + Math.sin(pt * Math.PI) * 0.08);
-    }
   }
 
   /* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
@@ -603,7 +673,14 @@ export function mountSlotExample(container, data) {
      невидимой преградой. Подход к пику — плавный разгон/торможение
      (easeInOutCubic, было easeOutCubic — убран рывок в самом начале хода).
      { type:'approach', mover, target, start, approachDur=1150, holdDur=550,
-       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16 } */
+       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16 }
+
+     ПРАВКА (по обратной связи): цель БОЛЬШЕ НЕ перекрашивается в сигнальный
+     (оранжевый) цвет на пике — прямо названо ошибкой («Е становится
+     оранжевой на время»). Вместо смены цвета цели — один тёплый кольцевой
+     пульс оттенка ПОДХОДЯЩЕГО кубика (не цели) ровно на пике, той же техникой
+     ringColorFrom, что и у сустейн-колец influence — сигнал «момент
+     напряжения» остаётся, но летящий кубик не перекрашивает саму цель. */
   function applyApproach(op, elapsed) {
     // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
     // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
@@ -639,21 +716,16 @@ export function mountSlotExample(container, data) {
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
       if (op.pulse !== false && !op._pulsed) {
         op._pulsed = true;
-        target.mesh.material = target.matsSignal;
+        spawnPulseRing(
+          target.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          900,
+          ringColorFrom(colorFor(movers[0].tr))
+        );
       }
     } else {
       const t = clamp01((elapsed - peakEnd) / retreatDur);
       const te = easeOutBack(t); // пружина остаётся — это осознанный характер отскока
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * (1 - te); });
-      if (op._pulsed && !op._unpulsed) {
-        op._unpulsed = true;
-        // ВАЖНО: берём ТЕКУЩИЙ материал цели по её актуальному состоянию
-        // (target.matsMain уже пересобран под актуальную букву, если до этого
-        // был transform — см. regenMats). Раньше здесь заново собирался
-        // материал вручную с тем же tr, но risk остаться со старым tr не
-        // исчезал сам по себе — теперь просто возвращаемся на matsMain.
-        target.mesh.material = target.matsMain;
-      }
     }
 
     // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
@@ -816,9 +888,13 @@ export function mountSlotExample(container, data) {
     }
   }
 
+  // stepDelay/bounceDur слегка увеличены (было 150/500) — по обратной связи
+  // финал должен идти ПЛАВНО, не спеша; цвет меняется РОВНО на вершине волны
+  // (t=0.5, было t>=0.4 — заметно раньше пика), «буква заменяет цвет на
+  // вершине волны», её формулировка.
   function applySettle(op, elapsed) {
-    const stepDelay = op.stepDelay ?? 150;
-    const bounceDur = op.bounceDur ?? 500;
+    const stepDelay = op.stepDelay ?? 180;
+    const bounceDur = op.bounceDur ?? 600;
     op.slots.forEach((slot, i) => {
       const cube = cubes[slot];
       if (!cube) return;
@@ -826,7 +902,7 @@ export function mountSlotExample(container, data) {
       if (elapsed < start || elapsed > start + bounceDur) return;
       const t = clamp01((elapsed - start) / bounceDur);
       cube.mesh.position.y = Math.sin(t * Math.PI) * 0.12;
-      if (!cube._settled && t >= 0.4) {
+      if (!cube._settled && t >= 0.5) {
         cube._settled = true;
         cube.mesh.material = cube.matsReady;
       }
@@ -920,27 +996,26 @@ function injectStylesOnce() {
       35%  { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(232,200,96,0); }
       100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,0); }
     }
-    .slot-step-flashbar { position:absolute; left:0; right:0; top:0; height:2px;
-      background:linear-gradient(90deg, transparent, #E8C860, transparent);
-      animation: slot-step-sweep .6s ease-out forwards; pointer-events:none; }
-    @keyframes slot-step-sweep {
-      0%   { opacity:0; transform: scaleX(0.3); }
-      30%  { opacity:1; }
-      100% { opacity:0; transform: scaleX(1); }
-    }
+    /* Кольцо-пульс на кубике-источнике (нимитта) — эталон: широкое, размытое,
+       светлое кольцо оттенка СОБСТВЕННОГО цвета кубика (см. ringColorFrom),
+       не жёсткий однотонный золотой диск. border-color переопределяется
+       инлайном под конкретный кубик — здесь только форма/характер движения.
+       Цвет по умолчанию (золотой) остаётся для мест, где инлайн не задан
+       (пауза-осознание перед split). */
     .slot-pulse-ring {
       position: absolute;
       width: 18px; height: 18px;
       margin: -9px 0 0 -9px;
       border-radius: 50%;
-      border: 2px solid rgba(232,200,96,.8);
+      border: 3px solid rgba(232,200,96,.5);
+      filter: blur(1.5px);
       animation: slot-pulse-out var(--pulse-dur) ease-out forwards;
       pointer-events: none;
     }
     @keyframes slot-pulse-out {
-      0%   { transform: scale(0.5); opacity: 0; }
-      20%  { opacity: .9; }
-      100% { transform: scale(2.6); opacity: 0; }
+      0%   { transform: scale(0.4); opacity: 0; border-width: 4px; }
+      18%  { opacity: .6; }
+      100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; }
     }
   `;
   document.head.appendChild(style);
