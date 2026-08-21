@@ -48,21 +48,26 @@ const data = {
     { slot: 7, tr: 's' },
   ],
   ops: [
-    // притенение, шаг 1: активны И(4) и А-триггер(6) — все прочие гаснут
-    { type: 'dim', slots: [1,2,3,7], start: 2000, end: 8100, dimOpacity: 0.22, ramp: 700 },
+    // притенение, шаг 1: активны И→Е(4) и А(6) — на всё время, пока они
+    // взаимодействуют (волна влияния + превращение + подход/отскок)
+    { type: 'dim', slots: [1,2,3,7], start: 2000, end: 10300, dimOpacity: 0.22, ramp: 700 },
 
     // волна влияния: А (окончание -as, слот 6) — причина гунирования И (слот 4)
     { type: 'influence', from: 6, to: 4, start: 2200, waveCount: 3, waveGap: 440, waveTravel: 1100 },
 
-    // гунирование: i → e, на месте (слот 4). Боковой отъезд при вращении — по умолчанию (0.35)
+    // гунирование: i → e, на месте (слот 4)
     { type: 'transform', at: 4, toGlyph: 'e', toColor: 0x7DCFCA, start: 4500, spinTurns: 1 },
 
-    // притенение, шаг 2: активен только Е/распад (4) — А-триггер(6) уже сделал своё дело
-    { type: 'dim', slots: [1,2,3,6], start: 8100, end: 13200, dimOpacity: 0.22, ramp: 700 },
+    // иллюстрация несовместимости: А подходит к Е наполовину, задерживается,
+    // пружинисто отскакивает назад — это и запускает распад
+    { type: 'approach', mover: 6, target: 4, start: 8400, approachDur: 800, holdDur: 400, retreatDur: 700, distance: 0.5, pulse: true },
 
-    // распад: e уходит в отстойник (выше — holdOffset.y увеличен), a и y прилетают
+    // притенение, шаг 2: активен только распад (4) — А своё дело уже сделала
+    { type: 'dim', slots: [1,2,3,6], start: 10300, end: 15400, dimOpacity: 0.22, ramp: 700 },
+
+    // распад: e уходит в отстойник, a и y прилетают
     {
-      type: 'split', at: 4, start: 8300,
+      type: 'split', at: 4, start: 10500,
       riseDur: 1000, holdOpacity: 0.55, holdDur: 2000, fadeDur: 900,
       holdOffset: { x: -1.6, y: 2.4, z: 0.4 },
       arrivals: [
@@ -72,7 +77,7 @@ const data = {
     },
 
     // финал: волна READY_COLOR слева направо по всему слову
-    { type: 'settle', slots: [1,2,3,4,5,6,7], start: 13500, stepDelay: 150 },
+    { type: 'settle', slots: [1,2,3,4,5,6,7], start: 15700, stepDelay: 150 },
   ]
 };
 

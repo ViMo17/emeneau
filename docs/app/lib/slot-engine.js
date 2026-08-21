@@ -103,6 +103,7 @@ function colorFor(tr) {
 function clamp01(t) { return Math.max(0, Math.min(1, t)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeOutBack(t) { const s = 1.7; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
 function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
   if (t < 1/d1) return n1*t*t;
@@ -298,6 +299,68 @@ export function mountSlotExample(container, data) {
     }
   }
 
+  /* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
+     кубик (mover) трогается с места и проходит часть расстояния до цели
+     (target), не долетая (distance — доля пути, по умолчанию половина),
+     задерживается на пике, затем пружинисто отскакивает назад — не плавно,
+     а с небольшим перелётом за исходную позицию (easeOutBack), как от
+     столкновения с невидимой преградой. Цель всё это время дрожит —
+     амплитуда растёт по мере сближения, пик — в момент максимального
+     подхода, обрыв резкий (не плавный спад) — ровно в момент начала
+     отскока, как задержанный вдох и внезапный выдох. Опционально — на пике
+     цель на мгновение вспыхивает сигнальным цветом (тот же жёлтый, что и в
+     influence — переиспользуется, отдельный материал под это не заводится).
+     { type:'approach', mover, target, start, approachDur=800, holdDur=400,
+       retreatDur=700, distance=0.5, pulse=true, jitterAmp=0.09 } */
+  function applyApproach(op, elapsed) {
+    const mover = cubes[op.mover];
+    const target = cubes[op.target];
+    if (!mover || !target) return;
+    const approachDur = op.approachDur ?? 800;
+    const holdDur = op.holdDur ?? 400;
+    const retreatDur = op.retreatDur ?? 700;
+    const distance = op.distance ?? 0.5;
+    const jitterAmp = op.jitterAmp ?? 0.09;
+    const peakStart = op.start + approachDur;
+    const peakEnd = peakStart + holdDur;
+    const retreatEnd = peakEnd + retreatDur;
+    if (elapsed < op.start || elapsed > retreatEnd) {
+      if (elapsed > retreatEnd) { mover.mesh.position.x = slotX(op.mover); target.mesh.rotation.z = 0; }
+      return;
+    }
+
+    const baseX = slotX(op.mover);
+    const gap = slotX(op.target) - baseX;
+    const nearX = baseX + gap * distance;
+
+    if (elapsed <= peakStart) {
+      const t = clamp01((elapsed - op.start) / approachDur);
+      mover.mesh.position.x = lerp(baseX, nearX, easeOutCubic(t));
+    } else if (elapsed <= peakEnd) {
+      mover.mesh.position.x = nearX;
+      if (op.pulse !== false && !op._pulsed) {
+        op._pulsed = true;
+        target.mesh.material = target.matsSignal;
+      }
+    } else {
+      const t = clamp01((elapsed - peakEnd) / retreatDur);
+      mover.mesh.position.x = lerp(nearX, baseX, easeOutBack(t));
+      if (op._pulsed && !op._unpulsed) {
+        op._unpulsed = true;
+        const restoreColor = op.targetColorAfter ?? colorFor(target.tr);
+        target.mesh.material = buildChalkMaterials(restoreColor, target.seed + 4, target.tr);
+      }
+    }
+
+    // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
+    if (elapsed <= peakEnd) {
+      const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
+      target.mesh.rotation.z = Math.sin(elapsed * 0.02) * jitterAmp * growT;
+    } else {
+      target.mesh.rotation.z = 0; // обрыв резкий, не спад
+    }
+  }
+
   function applyTransform(op, elapsed) {
     const cube = cubes[op.at];
     if (!cube) return;
@@ -443,17 +506,23 @@ export function mountSlotExample(container, data) {
      прозрачностью одного и того же кубика одновременно) — забота автора
      данных примера, не движка: не проверяется намеренно, минимум кода. */
   function applyDim(op, elapsed) {
+    // Вне своего окна — НЕ трогаем прозрачность вообще (не сбрасываем в 1
+    // принудительно). Раньше сбрасывали — и если два dim-окна подряд делят
+    // общие слоты (как здесь: 1,2,3 участвуют в обеих фазах), та, что идёт
+    // позже в data.ops, каждый кадр перезатирала то, что выставила первая,
+    // пока не наступило её же собственное начало. Теперь конфликта нет —
+    // клетка остаётся в состоянии, которое ей оставила последняя АКТИВНАЯ
+    // операция, а не любая операция, которой она вообще упомянута.
+    if (elapsed < op.start || elapsed > op.end) return;
     const dimOpacity = op.dimOpacity ?? 0.22;
     const ramp = op.ramp ?? 700;
     op.slots.forEach(slot => {
       const cube = cubes[slot];
       if (!cube) return;
       let opacity;
-      if (elapsed < op.start) opacity = 1;
-      else if (elapsed < op.start + ramp) opacity = lerp(1, dimOpacity, clamp01((elapsed - op.start) / ramp));
+      if (elapsed < op.start + ramp) opacity = lerp(1, dimOpacity, clamp01((elapsed - op.start) / ramp));
       else if (elapsed < op.end - ramp) opacity = dimOpacity;
-      else if (elapsed < op.end) opacity = lerp(dimOpacity, 1, clamp01((elapsed - (op.end - ramp)) / ramp));
-      else opacity = 1;
+      else opacity = lerp(dimOpacity, 1, clamp01((elapsed - (op.end - ramp)) / ramp));
       setOpacity(cube.mesh, opacity);
     });
   }
@@ -469,6 +538,7 @@ export function mountSlotExample(container, data) {
     });
     (data.ops || []).forEach(op => {
       if (op.type === 'influence') applyInfluence(op, elapsed);
+      else if (op.type === 'approach') applyApproach(op, elapsed);
       else if (op.type === 'transform') applyTransform(op, elapsed);
       else if (op.type === 'split') applySplit(op, elapsed);
       else if (op.type === 'settle') applySettle(op, elapsed);
