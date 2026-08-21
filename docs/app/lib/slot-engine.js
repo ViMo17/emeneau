@@ -59,9 +59,32 @@ export const READY_COLOR = 0xDECDAF; // тот же тёплый бежевый,
 // Для обычной гуны (и вообще для «вот-вот изменится» по умолчанию) — новый
 // SILVER_COLOR, металлический холодный оттенок, не пересекается ни с одной
 // категорией алфавитной палитры (vel/pal/ret/den/lab) и с READY_COLOR.
-export const SIGNAL_COLOR = 0xE8C860; // зарезервировано под вриддхи — не трогать без явного решения
-export const SILVER_COLOR = 0xCDD3D9; // «под влиянием» по умолчанию (гуна и т.п.) — металлический блеск
+// ИСПРАВЛЕНО (заход 8, прямая жалоба «Е становится оранжевым после
+// воздействия А перед заменой»): matsSignal строился из SIGNAL_COLOR
+// (золото) — ровно то золото, которое заход 7 «зарезервировал под
+// вриддхи», но не убрал из ЭТОГО, единственного места, где сигнальный
+// материал реально надевается на кубик (пауза-осознание перед split).
+// Теперь matsSignal — из SILVER_COLOR, тот же металлический тон, что и у
+// колец влияния. SIGNAL_COLOR (золото) остаётся объявленным, но НИГДЕ не
+// используется до появления настоящего вриддхи-механизма — когда он
+// понадобится, ему нужен будет СВОЙ путь (не matsSignal), иначе золото
+// снова тихо просочится в обычные примеры через общий код.
+export const SIGNAL_COLOR = 0xE8C860; // зарезервировано под вриддхи — намеренно не используется нигде в движке
+export const SILVER_COLOR = 0xCDD3D9; // «под влиянием/вот-вот изменится» по умолчанию — металлический блеск
 const SILVER_RGB = '205,211,217'; // тот же тон в rgb-строке — для DOM-колец (spawnWave/spawnPulseRing)
+// РЕШЕНО (заход 9, «объединить АС как единую грамматическую единицу»).
+// Раньше сустейн-кольца у каждого кубика группы были тонированы в СВОЙ
+// собственный фонетический цвет (a — vel-зелёный, s — den-розовый) — из-за
+// этого пара визуально читалась как «два разных события рядом», а не как
+// одно целое, хотя по факту синхронна. Перекрашивать сами КУБИКИ в общий
+// цвет — отдельно уже решённый и закрытый вопрос (цвет кубика = место
+// образования звука, не роль в слове) — трогать нельзя. Поэтому общий цвет
+// применяется только к ВРЕМЕННЫМ индикаторам группы (сустейн-кольца и новая
+// рамка-подчёркивание ниже) — нейтральный тёплый тон, вне фонетической
+// палитры (vel/pal/ret/den/lab), не пересекается ни с READY_COLOR (тёплый,
+// но холоднее и суше), ни с SILVER_COLOR, ни с зарезервированным золотом.
+export const GROUP_COLOR = 0xE2D9BE;
+const GROUP_RGB = '226,217,190';
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
 let _stylesInjected = false; // общий <style> движка — вставляется в <head> один раз на документ
@@ -202,7 +225,7 @@ function buildMatSet(tr, color, seed) {
   const matsMain   = buildChalkMaterials(color, seed, tr);
   const matsBlank  = buildChalkMaterials(color, seed + 1, null);
   const matsReady  = buildChalkMaterials(READY_COLOR, seed + 2, tr);
-  const matsSignal = buildChalkMaterials(SIGNAL_COLOR, seed + 3, tr);
+  const matsSignal = buildChalkMaterials(SILVER_COLOR, seed + 3, tr);
   [matsMain, matsBlank, matsReady, matsSignal].forEach(mats => mats.forEach(m => { m.transparent = true; }));
   return { matsMain, matsBlank, matsReady, matsSignal };
 }
@@ -429,6 +452,40 @@ export function mountSlotExample(container, data) {
     return { ...step, activeSlots: [...new Set(resolveSlotRef(step.activeSlots, wordGroupsList))] };
   });
   const runtimeSteps = buildRuntimeSteps(resolvedAuthoredSteps);
+
+  // РЕШЕНО (заход 8, «бежевый должен начинаться через 1 сек после того как
+  // возвращён цвет ВСЕМ и все взаимодействия закончились»). Раньше старт
+  // settle прописывался в данных примера вручную (число, вручную сверенное
+  // с моментом окончания хвостовой пред-settle-развидки) — именно такая
+  // ручная сверка и была источником ошибки в заходе 7 (при сдвиге таймлайна
+  // под новую скорость transform число settle.start сдвинули МЕХАНИЧЕСКИ на
+  // ту же дельту, не пересчитав заново момент, когда ПОСЛЕДНЯЯ буква
+  // (с учётом стаггера) реально заканчивает проявляться — settle стартовал
+  // раньше, чем на самом деле «все взаимодействия закончились»). Теперь это
+  // СЧИТАЕТСЯ автоматически: конец хвостового шага (= конец последнего
+  // авторского шага) + время последнего по порядку кубика на стаггер+рампу
+  // развидки + пауза (data.settleDelay ?? 1000, её же значение и просила).
+  // Явный settle в data.ops по-прежнему в приоритете (обратная совместимость
+  // / случаи, где нужен нестандартный старт) — автоматика только достраивает
+  // недостающее.
+  const hasExplicitSettle = (data.ops || []).some(op => op.type === 'settle');
+  if (!hasExplicitSettle && runtimeSteps) {
+    const tail = runtimeSteps[runtimeSteps.length - 1];
+    const finalSlots = [...new Set([
+      ...data.initial.map(x => x.slot),
+      ...(data.ops || [])
+        .filter(op => op.type === 'split')
+        .flatMap(op => (op.arrivals || []).map(a => a.newSlot)),
+    ])].sort((a, b) => a - b);
+    const revealStagger = data.revealStagger ?? 130;
+    const revealRamp = data.revealRamp ?? 700;
+    const lastRevealEnd = tail.start + (finalSlots.length - 1) * revealStagger + revealRamp;
+    const settleDelay = data.settleDelay ?? 1000;
+    (data.ops || (data.ops = [])).push({
+      type: 'settle', slots: finalSlots, start: lastRevealEnd + settleDelay,
+    });
+  }
+
   const authoredSteps = resolvedAuthoredSteps;
   authoredSteps.forEach(step => {
     const chip = document.createElement('div');
@@ -564,6 +621,43 @@ export function mountSlotExample(container, data) {
     return mesh.position.clone().add(local);
   }
 
+  /* РАМКА-ПОДЧЁРКИВАНИЕ ПОД ГРУППОЙ (заход 9, «объединить АС»). Тонкая
+     светящаяся линия под всеми кубиками группы разом — тот же приём, что
+     подчёркивание/скобка окончания в морфологическом разборе (привычный
+     язык, не изобретённый). Держится, пока держится сама принадлежность к
+     группе (та же ringHoldDur, что и у сустейн-колец — один параметр, не
+     два рассинхронизированных). Только для настоящих групп (>1 кубика) —
+     подчёркивать одну букву незачем, там и так ясно, что происходит. Общая
+     утилита операции, не частность influence — как только появится другая
+     операция, работающая с группой, эта же функция подойдёт ей без правок. */
+  function updateGroupFrame(op, sources, elapsed) {
+    const holdEnd = op._frameHoldEnd;
+    if (sources.length < 2 || elapsed < op.start || elapsed > holdEnd) {
+      if (op._frameEl) { op._frameEl.remove(); op._frameEl = null; }
+      return;
+    }
+    if (!op._frameEl) {
+      const el = document.createElement('div');
+      el.className = 'slot-group-frame';
+      labelsEl.appendChild(el);
+      op._frameEl = el;
+    }
+    // нижний край видимой грани (yOff отрицательный) — линия идёт под
+    // буквами, не поверх них
+    const pts = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56)));
+    const left = Math.min(...pts.map(p => p.x));
+    const right = Math.max(...pts.map(p => p.x));
+    const y = Math.max(...pts.map(p => p.y));
+    const el = op._frameEl;
+    el.style.left = left + 'px';
+    el.style.top = y + 'px';
+    el.style.width = Math.max(8, right - left) + 'px';
+    // мягкое появление/исчезание по краям окна — то же 400мс, что уже
+    // ощущается «плавно» у остальных рамп в движке, отдельного числа не вводим
+    const fadeT = Math.min(elapsed - op.start, holdEnd - elapsed) / 400;
+    el.style.opacity = clamp01(fadeT);
+  }
+
   function spawnWave(fromVec3, toVec3, dur, rgbStr) {
     const pA = project(fromVec3), pB = project(toVec3);
     const ring = document.createElement('div');
@@ -682,7 +776,14 @@ export function mountSlotExample(container, data) {
 
     // Сустейн-кольца на источниках — независимо от фазы волн, до ringHoldDur.
     const ringHoldDur = op.ringHoldDur ?? dur;
+    op._frameHoldEnd = op.start + ringHoldDur; // общее окно и для рамки, и для колец
+    updateGroupFrame(op, sources, elapsed);
     const ringGap = op.ringGap ?? 900;
+    // Цвет колец — ОДИН на всю группу (GROUP_COLOR), если источников больше
+    // одного (настоящая группа-нимитта, см. GROUP_COLOR выше); для одиночной
+    // буквы-источника прежнее поведение сохранено — тонировка в её
+    // собственный фонетический цвет (там нечего объединять, один кубик).
+    const ringRgb = sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr));
     if (elapsed >= op.start && elapsed <= op.start + ringHoldDur) {
       const ringIdx = Math.floor((elapsed - op.start) / ringGap);
       const key = '_ring' + ringIdx;
@@ -691,7 +792,7 @@ export function mountSlotExample(container, data) {
         sources.forEach(src => spawnPulseRing(
           frontAnchor(src.mesh),
           1300,
-          ringColorFrom(colorFor(src.tr))
+          ringRgb
         ));
       }
     }
@@ -1072,16 +1173,17 @@ function injectStylesOnce() {
     }
     /* Кольцо-пульс на кубике-источнике (нимитта) — эталон: широкое, размытое,
        светлое кольцо оттенка СОБСТВЕННОГО цвета кубика (см. ringColorFrom),
-       не жёсткий однотонный золотой диск. border-color переопределяется
-       инлайном под конкретный кубик — здесь только форма/характер движения.
-       Цвет по умолчанию (золотой) остаётся для мест, где инлайн не задан
-       (пауза-осознание перед split). */
+       не жёсткий однотонный диск. border-color переопределяется инлайном
+       под конкретный кубик — здесь только форма/характер движения. Цвет по
+       умолчанию — серебряный (см. SILVER_COLOR/SILVER_RGB), для мест, где
+       инлайн не задан (пауза-осознание перед split, см. заход 8 — было
+       золотым, читалось как та же ошибка «Е становится оранжевым»). */
     .slot-pulse-ring {
       position: absolute;
       width: 18px; height: 18px;
       margin: -9px 0 0 -9px;
       border-radius: 50%;
-      border: 3px solid rgba(232,200,96,.5);
+      border: 3px solid rgba(205,211,217,.5);
       filter: blur(1.5px);
       animation: slot-pulse-out var(--pulse-dur) ease-out forwards;
       pointer-events: none;
@@ -1090,6 +1192,18 @@ function injectStylesOnce() {
       0%   { transform: scale(0.4); opacity: 0; border-width: 4px; filter: blur(1.5px) brightness(1); }
       18%  { opacity: .6; filter: blur(1.5px) brightness(1.7); }
       100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; filter: blur(1.5px) brightness(1); }
+    }
+    /* Рамка-подчёркивание под группой-нимиттой (заход 9) — нейтральный
+       GROUP_COLOR, не фонетический; opacity управляется из JS покадрово
+       (updateGroupFrame), здесь только форма/свечение. */
+    .slot-group-frame {
+      position: absolute;
+      height: 3px;
+      border-radius: 2px;
+      margin-top: 10px;
+      background: rgba(226,217,190,.75);
+      box-shadow: 0 0 7px 1px rgba(226,217,190,.55);
+      pointer-events: none;
     }
   `;
   document.head.appendChild(style);
