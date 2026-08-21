@@ -896,6 +896,26 @@
     gap: 6px;
     margin-top: 4px;
   }
+  /* Гуна/вриддхи — обоснование, закреплённый блок под алфавитом (не по шагам) */
+  #guna-rationale {
+    flex: 0 0 auto;
+    background: rgba(196,169,130, 0.09);
+    border: 1px solid rgba(196,169,130, 0.28);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  #guna-rationale-text {
+    font-size: 10.5px;
+    line-height: 1.5;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: rgba(225,215,190, 0.78);
+  }
+  #guna-rationale-text .cite { font-style: italic; color: rgba(225,215,190, 0.92); }
+  #guna-rationale-text .skt { color: #C4A982; font-weight: 600; }
   .role-legend-title {
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
@@ -1426,6 +1446,27 @@
       <span><i style="background:#C5B0D8"></i> цер.</span>
       <span><i style="background:#E8A8C0"></i> зуб.</span>
       <span><i style="background:#F0BF88"></i> губ.</span>
+    </div>
+
+    <!-- Гуна/вриддхи — ПОЧЕМУ это происходит (закреплённый блок, не завязан на шаг
+         примера — в отличие от #role-steps-text ниже). Отвечает на вопрос «это
+         действие звука на звук (сандхи) или требование формы слова (грамматика)?» —
+         гуна/вриддхи всегда второе: вызывается ЦЕЛОЙ грамматической единицей
+         (окончанием/суффиксом), не отдельной соседней буквой. -->
+    <div id="guna-rationale">
+      <div class="role-legend-title">Гуна / вриддхи — почему</div>
+      <div id="guna-rationale-text">
+        Гуна и вриддхи — не звук встречает звук (как в сандхи), а форма слова
+        требует определённой ступени корня: усиление вызывает ВСЯ грамматическая
+        единица целиком (окончание, суффикс), а не одна соседняя буква.
+        Определение: Панини, <span class="cite">Aṣṭādhyāyī</span> 1.1.1
+        <span class="skt">वृद्धिरादैच्</span> (<i>vṛddhir ādaic</i> — ā/ai/au
+        называются вриддхи), 1.1.2 <span class="skt">अदेङ्गुणः</span>
+        (<i>adeṅ guṇaḥ</i> — a/e/o называются гуна), 1.1.3
+        <span class="skt">इको गुणवृद्धी</span> (гуна/вриддхи заменяют
+        i/ī/u/ū/ṛ/ṝ/ḷ). Систематическое изложение: Whitney, <span class="cite">Sanskrit
+        Grammar</span>, §235 ff.
+      </div>
     </div>
 
     <div id="role-steps" style="display:none">

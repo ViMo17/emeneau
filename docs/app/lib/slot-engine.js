@@ -12,19 +12,29 @@
 //  · Ряд — 10 слотов, фиксированная камера, без адаптации под длину примера.
 //  · Правила 61, 62, 64, 65 — сознательно не переводятся в 3D, только 2D.
 //  · Операции — конечный список алгоритмов, пример = данные, не код.
+//  · Все правки ниже — ОБЩИЕ свойства движка. Пример agnayas в
+//    test-slot-engine.html — полигон для проверки, не цель сама по себе:
+//    правим алгоритм на все будущие правила, не «причёсываем» один ролик.
 //
-// ЭТА ВЕРСИЯ: перенесены техники из уже проверенного rule3-agnayas.js (полный
-// разбор — см. чат). Взято: настоящий оборот (подскок+вращение вместе, ранняя
-// смена буквы, сброс погрешности), отстойник (split честно распадается на два
-// НОВЫХ прилетающих кубика, исходный уходит в сторону/бледнеет/висит и только
-// потом растворяется — а не «сам становится первой половиной результата», как
-// было в прошлой версии), финальная волна READY_COLOR.
-//
-// ОСОЗНАННО ОТЛОЖЕНО на следующий заход (см. чат, группы B/F/G/I разбора):
-// волна-предупреждение по экрану до превращения, плавающие подписи у кубиков,
-// фазовая (не постоянная) связь с внешней таблицей гуна, притенение фона
-// неучаствующих кубиков. Не потому что не нужны — а чтобы не писать всё разом
-// и суметь проверить каждую часть отдельно.
+// ЗАХОД 2 (этот): три системных фикса + одна новая возможность.
+//  1. БАГ (не частность agnayas): matsSignal/matsReady собирались ОДИН РАЗ при
+//     создании кубика с тем глифом, который был на старте — если кубик потом
+//     проходит transform (i→e и т.п.), «сигнальный» и «финальный» материалы
+//     оставались с исходной, уже неактуальной буквой. Из-за этого на agnayas
+//     после transform (i→e) при approach на пике «сигнального» пульса на долю
+//     секунды снова показывалась исходная И (жёлтым/сигнальным цветом,
+//     воспринимается как «оранжевая») — призрак старого материала, не текущего.
+//     Чинится один раз, здесь, для ЛЮБОГО будущего примера с transform.
+//  2. Скорость/плавность — общие тайминги движка и часть кривых сглажены и
+//     замедлены (падение, подход/отскок, отстойник/прилёт) — не только числа
+//     в данных agnayas, но и дефолты самого движка.
+//  3. ШАГИ — новый, общий раздел данных `data.steps`: явные границы между
+//     «грамматика» и «правило N» с автоматическим притенением фона по текущему
+//     шагу (кто активен — не притенён, кто нет — притенён) вместо того, чтобы
+//     автору примера вручную рассчитывать пересекающиеся окна dim. Заодно
+//     показывается лента шагов под сценой и короткий маркер-вспышка в момент
+//     смены шага — то, что было в second-examples-todo.md отмечено как
+//     «придумать» для перехода грамматика→правило.
 //
 // Материал/геометрия кубика — не здесь, берутся из уже готового chalk-module.js.
 
@@ -34,11 +44,12 @@ import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chal
 export const N_SLOTS = 10;
 export const CUBE_SIZE = 1.1;
 export const SLOT = 1.2;
-export const MS_PER_360 = 3600; // эталонная скорость — ассимиляция (t+dh), см. чат
+export const MS_PER_360 = 4800; // было 3600 — оборот транформации медленнее и спокойнее
 export const READY_COLOR = 0xDECDAF; // тот же тёплый бежевый, что и в rule3-agnayas.js
 export const SIGNAL_COLOR = 0xE8C860; // «под влиянием, вот-вот изменится» — тот же золотой, что gv-active в 2D-системе ролей
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
+let _stylesInjected = false; // общий <style> движка — вставляется в <head> один раз на документ
 
 /* ═══════════════════ ТОКЕНИЗАТОР ═══════════════════
    Один кубик = один звук. Придыхательные и дифтонги — двухбуквенные в IAST,
@@ -82,9 +93,7 @@ export const COL_VEL = 0xA8D878, COL_PAL = 0x7DCFCA, COL_RET = 0xC5B0D8,
 function colorFor(tr) {
   // гласные — по традиционному месту образования (то же самое место, что и у
   // одноимённой группы согласных): a/ā гортанные, i/ī/e/ai нёбные,
-  // ṛ/ṝ церебральные, ḷ зубная, u/ū/o/au губные. Раньше эта часть отсутствовала
-  // вовсе — гласные проваливались в нейтральный цвет по умолчанию (отсюда были
-  // «серая А» при прилёте и небеленая А в столбце — оба чинятся этим же местом).
+  // ṛ/ṝ церебральные, ḷ зубная, u/ū/o/au губные.
   if (tr === 'a' || tr === 'ā') return COL_VEL;
   if (tr === 'i' || tr === 'ī' || tr === 'e' || tr === 'ai') return COL_PAL;
   if (tr === 'ṛ' || tr === 'ṝ') return COL_RET;
@@ -103,6 +112,10 @@ function colorFor(tr) {
 function clamp01(t) { return Math.max(0, Math.min(1, t)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+// добавлено (плавность): мягкий разгон И торможение — там, где раньше
+// движение стартовало сразу на полной скорости (easeOutCubic в t=0 имеет
+// не нулевую производную, отсюда «рывок» в начале хода).
+function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
 function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
@@ -111,12 +124,20 @@ function easeOutBounce(t) {
   if (t < 2.5/d1) return n1*(t-=2.25/d1)*t+0.9375;
   return n1*(t-=2.625/d1)*t+0.984375;
 }
+// падение: раньше чистый easeOutBounce — несколько заметных отскоков подряд,
+// на медленном тайминге читалось как дребезжание, не как мягкая посадка.
+// Смесь с easeOutCubic (глушит бо́льшую часть отскоков, тень характера
+// остаётся) — общий приём для ЛЮБОГО падающего кубика, не частность.
+function easeFall(t) { return lerp(easeOutCubic(t), easeOutBounce(t), 0.35); }
 
 /* ═══════════════════ КУБИК ═══════════════════
    Каждый кубик хранит НЕСКОЛЬКО готовых наборов материалов (не перерисовывает
    текстуру на лету) — тот же приём, что в rule3-agnayas.js: заранее собранный
    «пустой» вариант (без буквы, для момента вращения) и «ready»-вариант
-   (READY_COLOR, для финальной волны). */
+   (READY_COLOR, для финальной волны), плюс «сигнальный» (SIGNAL_COLOR, для
+   влияния/подхода). Все четыре набора ПЕРЕСОБИРАЮТСЯ заново в момент, когда
+   кубик реально меняет букву (см. applyTransform) — иначе они держат глиф,
+   с которым кубик родился, даже после того как он стал другой буквой. */
 function makeShadow() {
   if (!_shadowTex) _shadowTex = makeShadowBlobTexture();
   const shadow = new THREE.Mesh(
@@ -128,23 +149,41 @@ function makeShadow() {
   return shadow;
 }
 
-function makeCube(tr, seed) {
-  const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
-  const color = colorFor(tr);
+function buildMatSet(tr, color, seed) {
   const matsMain   = buildChalkMaterials(color, seed, tr);
   const matsBlank  = buildChalkMaterials(color, seed + 1, null);
   const matsReady  = buildChalkMaterials(READY_COLOR, seed + 2, tr);
   const matsSignal = buildChalkMaterials(SIGNAL_COLOR, seed + 3, tr);
   [matsMain, matsBlank, matsReady, matsSignal].forEach(mats => mats.forEach(m => { m.transparent = true; }));
+  return { matsMain, matsBlank, matsReady, matsSignal };
+}
+
+function makeCube(tr, seed) {
+  const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
+  const color = colorFor(tr);
+  const { matsMain, matsBlank, matsReady, matsSignal } = buildMatSet(tr, color, seed);
   const mesh = new THREE.Mesh(geo, matsMain);
   const shadow = makeShadow();
   return { tr, mesh, shadow, seed, matsMain, matsBlank, matsReady, matsSignal, _settled: false };
 }
 
+/* Пересобрать все наборы материалов кубика под НОВУЮ букву/цвет — вызывать
+   в момент, когда кубик реально становится другой буквой (transform), чтобы
+   matsSignal/matsReady/matsBlank не оставались с исходным, уже неактуальным
+   глифом. Общая утилита, не частность конкретной операции. */
+function regenMats(cube, newTr, newColor) {
+  const color = newColor ?? colorFor(newTr);
+  const { matsMain, matsBlank, matsReady, matsSignal } = buildMatSet(newTr, color, cube.seed + 10);
+  cube.matsMain = matsMain;
+  cube.matsBlank = matsBlank;
+  cube.matsReady = matsReady;
+  cube.matsSignal = matsSignal;
+  cube.tr = newTr;
+}
+
 /* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —
    никогда не исчезает совсем даже высоко в воздухе), плюс учитывает текущую
-   прозрачность самого кубика (бледный кубик — бледная тень). Тот же расчёт,
-   что уже проверен в rule3-agnayas.js, перенесён без изменений. */
+   прозрачность самого кубика (бледный кубик — бледная тень). */
 function updateShadow(cube) {
   cube.shadow.visible = cube.mesh.visible;
   cube.shadow.position.x = cube.mesh.position.x + 0.08;
@@ -162,6 +201,118 @@ function setOpacity(mesh, val) {
   mats.forEach(m => { m.opacity = val; });
 }
 
+/* ═══════════════════ ГРУППЫ СЛОВ (для формулы «вся единица, не одна буква») ═══════════════════
+
+   Раньше «источник влияния» (nimitta) в `influence`/`approach`/`activeSlots` задавался
+   голыми номерами слотов, подобранными вручную под конкретный пример (agnayas: 6 и 7
+   выписаны буквально). Пользователь попросила ОБЩУЮ ФОРМУЛУ вместо этого: берём вторую
+   часть примера (второе «слово» — не обязательно грамматическое слово, а любая
+   непрерывная группа занятых слотов), определяем её длину, определяем, какая ЧАСТЬ этой
+   группы физически влияет (по умолчанию — вся группа целиком, т.к. в подавляющем
+   большинстве случаев именно всё окончание/суффикс — нимитта, не одна его буква),
+   фиксируем длину этой влияющей части — её положение уже вытекает из структуры данных
+   (она стоит через «зазор» = пустой слот после первой части, ничего вычислять отдельно
+   не нужно, зазор УЖЕ есть в data.initial).
+
+   computeWordGroups(initial) — сканирует data.initial, группирует номера слотов в
+   непрерывные последовательности (разрыв в нумерации = граница между «частями» примера).
+   Для agnayas initial = [1,2,3,4,6,7] → группы [[1,2,3,4],[6,7]] (слот 5 пуст — это и
+   есть тот самый зазор «первая часть, пробел», о котором говорила пользователь).
+
+   resolveSlotRef(ref, groups) — превращает ссылку в плоский список номеров слотов:
+     - число (5)              → [5]                              (обратная совместимость)
+     - массив ([6,7])         → как есть, рекурсивно резолвится   (обратная совместимость)
+     - { word: 2 }            → ВСЯ 2-я группа целиком (формула по умолчанию)
+     - { word: 2, length: 1 } → только последние N слотов этой группы (anchor:'end' по
+                                 умолчанию — триггер обычно на конце слова/окончания;
+                                 anchor:'start' — первые N, если влияет начало части)
+   Используется везде, где раньше был список слотов вручную: `influence.from`,
+   `approach.movers`/`mover`, `steps[].activeSlots`. Не меняет уже написанные данные с
+   голыми числами — старые примеры (agnayas и любые будущие) продолжают работать как
+   есть; формула — это ДОПОЛНИТЕЛЬНАЯ возможность, не обязательная замена. */
+function computeWordGroups(initial) {
+  const slots = (initial || []).map(x => x.slot).sort((a, b) => a - b);
+  const groups = [];
+  let cur = [];
+  for (const s of slots) {
+    if (cur.length && s !== cur[cur.length - 1] + 1) { groups.push(cur); cur = []; }
+    cur.push(s);
+  }
+  if (cur.length) groups.push(cur);
+  return groups;
+}
+function resolveSlotRef(ref, groups) {
+  if (ref == null) return [];
+  if (typeof ref === 'number') return [ref];
+  if (Array.isArray(ref)) return ref.flatMap(r => resolveSlotRef(r, groups));
+  if (typeof ref === 'object' && ref.word) {
+    const g = groups[ref.word - 1];
+    if (!g) return [];
+    const len = ref.length ?? g.length;
+    const anchor = ref.anchor ?? 'end';
+    return anchor === 'start' ? g.slice(0, len) : g.slice(Math.max(0, g.length - len));
+  }
+  return [];
+}
+
+/* ═══════════════════ ШАГИ (грамматика / правило N) ═══════════════════
+
+   Новый, общий раздел данных примера — необязательный, но рекомендованный
+   вместо ручных 'dim'-операций для основного случая «что сейчас активно».
+
+   data.steps = [
+     { kind:'grammar', label:'грам.', start, end, activeSlots:[...] },
+     { kind:'rule', ruleNum: 3, start, end, activeSlots:[...] },
+     ...
+   ]
+
+   Требование: шаги идут подряд без разрывов (end одного = start следующего) —
+   движок сам добавляет служебный «хвост» после последнего шага (до конца
+   ролика), в котором ничего не притенено — так дим плавно снимается перед
+   финальной волной READY_COLOR (applySettle), а не остаётся зависшим.
+
+   Для каждого кубика в НУМЕРОВАННОМ слоте (временные ключи отстойника —
+   не трогаем, ими управляет сама операция split): если слот входит в
+   activeSlots текущего шага — полная непрозрачность, если нет — притенён.
+   У границ шагов — плавный переход (RAMP мс), не рывок. */
+function stepTargetOpacity(step, slot, dimOpacity) {
+  if (!step) return 1;
+  if (step.activeSlots === 'ALL') return 1;
+  return (step.activeSlots || []).includes(slot) ? 1 : dimOpacity;
+}
+
+/* Между авторскими шагами МОЖЕТ быть зазор (steps[i].start > steps[i-1].end) —
+   движок сам превращает такой зазор в явную «развидку»: все буквы становятся
+   активны (activeSlots:'ALL') на всё время зазора, с обычными рамп-переходами
+   по краям (тот же RAMP, что и у любой другой границы шага). Задумано по
+   прямой формулировке пользователя: снятие притенения и возврат исходных
+   цветов = сигнал «шаг преобразований закончен», прежде чем начнётся
+   притенение под следующий шаг. Если зазора нет (шаги примыкают впритык,
+   как раньше) — поведение как было, мгновенный кроссфейд без паузы, для
+   обратной совместимости с более старыми данными. Хвост после последнего
+   шага (без зазора нужен) уже и так «развиден» — это и есть сигнал конца
+   ВСЕХ преобразований перед волной settle. */
+function buildRuntimeSteps(steps) {
+  if (!steps || !steps.length) return null;
+  const list = [];
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0 && steps[i].start > steps[i - 1].end) {
+      list.push({ _reveal: true, activeSlots: 'ALL', start: steps[i - 1].end, end: steps[i].start });
+    }
+    list.push(steps[i]);
+  }
+  const last = list[list.length - 1];
+  list.push({ _virtual: true, activeSlots: 'ALL', start: last.end, end: Infinity });
+  return list;
+}
+
+function stepIndexAt(elapsed, runtimeSteps) {
+  for (let i = 0; i < runtimeSteps.length; i++) {
+    if (elapsed < runtimeSteps[i].end) return i;
+  }
+  return runtimeSteps.length - 1;
+}
+
 /* ═══════════════════ ОПЕРАЦИИ ═══════════════════
 
    1. TRANSFORM — превращение на месте (гуна/вриддхи/ассимиляция и т.п.).
@@ -170,11 +321,15 @@ function setOpacity(mesh, val) {
       и не мгновенно) — та же хореография, что в rule3-agnayas.js.
       { type:'transform', at, toGlyph, toColor, start, spinTurns=1, bounceH=0.3 }
       Длительность НЕ вшивается — считается из spinTurns через MS_PER_360.
+      В момент смены буквы ВСЕ наборы материалов кубика пересобираются под
+      новый глиф (см. regenMats) — иначе более поздние операции (approach,
+      influence), которые временно включают «сигнальный» материал, покажут
+      исходную, уже неактуальную букву.
 
    2. SPLIT — распад на два звука через отстойник. Исходный кубик уходит В
       СТОРОНУ (не остаётся на месте!), поднимается, бледнеет и повисает —
       ПОКА он висит, прилетают оба результата как НОВЫЕ кубики (каждый со
-      своими параметрами дуги/длительности/задержки — группа E разбора).
+      своими параметрами дуги/длительности/задержки).
       Только после паузы для сравнения исходный полностью растворяется.
       { type:'split', at, start,
         holdOffset:{x,y,z}, riseDur, holdOpacity, holdDur, fadeDur,
@@ -188,11 +343,97 @@ function setOpacity(mesh, val) {
       { type:'settle', slots:[...], start, stepDelay=150, bounceDur=500 }
 */
 export function mountSlotExample(container, data) {
-  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;position:relative;">
-    <div class="slot-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+  injectStylesOnce();
+
+  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;position:relative;display:flex;flex-direction:column;">
+    <div class="slot-canvas-wrap" style="position:relative;flex:1 1 auto;min-height:0;">
+      <div class="slot-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+    </div>
+    <div class="slot-steps"></div>
   </div>`;
-  const stageEl = container.querySelector('.slot-stage');
+  const stageEl = container.querySelector('.slot-canvas-wrap');
   const labelsEl = container.querySelector('.slot-labels');
+  const stepsEl = container.querySelector('.slot-steps');
+
+  // группы слов (по зазорам в data.initial) — общая формула вместо ручных номеров
+  // слотов, см. computeWordGroups/resolveSlotRef выше. Доступна ниже как замыкание
+  // (applyInfluence/applyApproach) и здесь же — для разрешения activeSlots шагов.
+  const wordGroupsList = computeWordGroups(data.initial);
+
+  // лента шагов — чипы строятся один раз из data.steps (если есть); activeSlots
+  // каждого шага прогоняется через resolveSlotRef — ссылки вида {word:2} становятся
+  // плоским списком номеров слотов ДО того, как в дело вступит buildRuntimeSteps
+  // (та функция как была «глухой» к словам-группам, так и остаётся — проще).
+  const resolvedAuthoredSteps = (data.steps || []).map(step => {
+    if (!step.activeSlots || step.activeSlots === 'ALL') return step;
+    return { ...step, activeSlots: [...new Set(resolveSlotRef(step.activeSlots, wordGroupsList))] };
+  });
+  const runtimeSteps = buildRuntimeSteps(resolvedAuthoredSteps);
+  const authoredSteps = resolvedAuthoredSteps;
+  authoredSteps.forEach(step => {
+    const chip = document.createElement('div');
+    chip.className = 'slot-step-chip' + (step.kind === 'grammar' ? ' is-grammar' : ' is-rule');
+    chip.textContent = step.kind === 'grammar' ? (step.label || 'грам.') : (step.label || ('правило ' + (step.ruleNum ?? '?')));
+    stepsEl.appendChild(chip);
+    step._chipEl = chip;
+  });
+  let _lastStepIdx = -1;
+
+  function updateSteps(elapsed) {
+    if (!runtimeSteps) return;
+    const idx = stepIndexAt(elapsed, runtimeSteps);
+    const curStep = runtimeSteps[idx];
+    authoredSteps.forEach((step, i) => {
+      step._chipEl.classList.toggle('active', step === curStep);
+    });
+    if (!curStep._virtual && !curStep._reveal && idx !== _lastStepIdx) {
+      // маркер-вспышка ровно в момент, когда становится текущим НОВЫЙ
+      // авторский шаг (в т.ч. переход грамматика→правило) — то самое
+      // «нужен отдельный визуальный маркер», отмеченное как нерешённое
+      // в second-examples-todo.md. На _reveal (пауза-развидка между шагами)
+      // и _virtual (финальный хвост) не срабатывает — там нет своего чипа,
+      // сигналом служит сама развидка, отдельная вспышка не нужна.
+      flashStepBoundary(curStep);
+    }
+    if (idx !== _lastStepIdx) _lastStepIdx = idx;
+  }
+
+  function flashStepBoundary(step) {
+    const chip = step._chipEl;
+    if (chip) {
+      chip.classList.remove('flash'); void chip.offsetWidth; // рестарт CSS-анимации
+      chip.classList.add('flash');
+    }
+    const bar = document.createElement('div');
+    bar.className = 'slot-step-flashbar';
+    stageEl.appendChild(bar);
+    setTimeout(() => bar.remove(), 650);
+  }
+
+  function applyStepDim(elapsed) {
+    if (!runtimeSteps) return;
+    const dimOpacity = data.dimOpacity ?? 0.22;
+    const RAMP = data.stepRamp ?? 550;
+    const idx = stepIndexAt(elapsed, runtimeSteps);
+    const cur = runtimeSteps[idx];
+    const prev = runtimeSteps[idx - 1];
+    const next = runtimeSteps[idx + 1];
+    Object.keys(cubes).forEach(key => {
+      if (!/^\d+$/.test(key)) return; // временные ключи отстойника — не трогаем
+      const slot = Number(key);
+      const cube = cubes[key];
+      let target = stepTargetOpacity(cur, slot, dimOpacity);
+      if (prev && elapsed - cur.start < RAMP) {
+        const t = clamp01((elapsed - cur.start) / RAMP);
+        target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
+      }
+      if (next && cur.end - elapsed < RAMP && cur.end !== Infinity) {
+        const t = clamp01((RAMP - (cur.end - elapsed)) / RAMP);
+        target = lerp(target, stepTargetOpacity(next, slot, dimOpacity), t);
+      }
+      setOpacity(cube.mesh, target);
+    });
+  }
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
@@ -219,6 +460,20 @@ export function mountSlotExample(container, data) {
     setTimeout(() => ring.remove(), dur + 80);
   }
 
+  /* Кольцо-пульс НА МЕСТЕ (не бежит от точки к точке, а расходится вокруг
+     одной) — сигнал «вот-вот изменится», используется в паузе-осознании
+     перед split (см. applySplit ниже). Общая утилита, не частность agnayas. */
+  function spawnPulseRing(atVec3, dur) {
+    const p = project(atVec3);
+    const ring = document.createElement('div');
+    ring.className = 'slot-pulse-ring';
+    ring.style.left = p.x + 'px';
+    ring.style.top = p.y + 'px';
+    ring.style.setProperty('--pulse-dur', dur + 'ms');
+    labelsEl.appendChild(ring);
+    setTimeout(() => ring.remove(), dur + 80);
+  }
+
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.outputEncoding = THREE.sRGBEncoding;
   stageEl.appendChild(renderer.domElement);
@@ -233,8 +488,8 @@ export function mountSlotExample(container, data) {
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
     c.mesh.position.set(slotX(slot), 6 + Math.random() * 2, 0); // старт высоко, с разбросом
-    c._fallStart = fallOrder.indexOf(slot) * (data.fallStagger ?? 200);
-    c._fallDur = data.fallDur ?? 900;
+    c._fallStart = fallOrder.indexOf(slot) * (data.fallStagger ?? 260); // было 200 — медленнее, спокойнее
+    c._fallDur = data.fallDur ?? 1300; // было 900
     c._fallDone = false;
     scene.add(c.mesh);
     scene.add(c.shadow);
@@ -245,7 +500,7 @@ export function mountSlotExample(container, data) {
     const t = clamp01((elapsed - cube._fallStart) / cube._fallDur);
     if (elapsed < cube._fallStart) return cube.mesh.position.y;
     const fromY = 6, toY = 0;
-    return fromY + (toY - fromY) * easeOutBounce(t);
+    return fromY + (toY - fromY) * easeFall(t);
   }
 
   function resize() {
@@ -266,70 +521,104 @@ export function mountSlotExample(container, data) {
      пульсов (2D-кольца поверх сцены) бегут от триггера к цели с задержкой
      между собой, цель мелко дрожит, пока волны идут, и переключается на
      сигнальный (золотой) цвет ровно тогда, когда ПЕРВАЯ волна долетает —
-     не раньше и не одновременно со стартом. Перенесено из rule3-agnayas.js.
-     { type:'influence', from, to, start, waveCount=3, waveGap=440, waveTravel=1100 } */
+     не раньше и не одновременно со стартом.
+     { type:'influence', from, to, start, waveCount=3, waveGap=550, waveTravel=1400 }
+
+     ВАЖНО (правка по обратной связи): «нимитта» (то, что физически влияет) — это
+     часто НЕ одна буква, а вся грамматическая единица целиком (например всё
+     окончание -as, а не только его первая буква a). `from` теперь принимает не
+     только одно число, но и массив ([6,7]) или ссылку на группу слов ({word:2},
+     см. resolveSlotRef/computeWordGroups выше) — тогда волна идёт от КАЖДОГО
+     кубика группы одновременно (несколько сходящихся колец, не одно), а сами
+     кубики-источники синхронно чуть подпрыгивают масштабом в момент каждой
+     волны — общий «пульс» на всю группу, чтобы она читалась как одно целое, а
+     не как несколько случайно соседствующих кубиков. */
   function applyInfluence(op, elapsed) {
     const target = cubes[op.to];
-    const trigger = cubes[op.from];
-    if (!target || !trigger) return;
+    const sourceSlots = resolveSlotRef(op.from, wordGroupsList);
+    const sources = sourceSlots.map(s => cubes[s]).filter(Boolean);
+    if (!target || !sources.length) return;
     const waveCount = op.waveCount ?? 3;
-    const waveGap = op.waveGap ?? 440;
-    const waveTravel = op.waveTravel ?? 1100;
+    const waveGap = op.waveGap ?? 550; // было 440
+    const waveTravel = op.waveTravel ?? 1400; // было 1100
+    // ПАУЗА между «импульс долетел» и «буква заметно среагировала» — раньше
+    // цель переключалась на сигнальный цвет МГНОВЕННО в момент прилёта первой
+    // волны, одним кадром: причина и следствие сливались в один момент,
+    // реакция читалась как случайное совпадение по времени, а не как ответ
+    // НА импульс. Теперь между ними — заметный зазор (signalDelay), и сам
+    // момент переключения отмечен коротким «дзинь» — упругий скачок масштаба,
+    // не молчаливая подмена материала.
+    const signalDelay = op.signalDelay ?? 350;
     const dur = (waveCount - 1) * waveGap + waveTravel;
     if (elapsed < op.start || elapsed > op.start + dur) {
-      if (elapsed > op.start + dur) target.mesh.rotation.z = 0;
+      if (elapsed > op.start + dur) {
+        target.mesh.rotation.z = 0; target.mesh.scale.setScalar(1);
+        sources.forEach(src => src.mesh.scale.setScalar(1));
+      }
       return;
     }
     for (let i = 0; i < waveCount; i++) {
       const key = '_wave' + i;
       if (!op[key] && elapsed >= op.start + i * waveGap) {
         op[key] = true;
-        spawnWave(
-          trigger.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+        sources.forEach(src => spawnWave(
+          src.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
           target.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
           waveTravel
-        );
+        ));
       }
     }
+    // общий «пульс группы»: каждый источник синхронно подпрыгивает масштабом
+    // ровно в момент, когда от него уходит волна — источники из одной группы
+    // всегда бьются в одном и том же кадре (одна и та же формула по elapsed,
+    // не по индивидуальному состоянию кубика), поэтому визуально читаются как
+    // единое целое, даже если их несколько.
+    let srcPulse = 0;
+    for (let i = 0; i < waveCount; i++) {
+      const waveAt = op.start + i * waveGap;
+      const pt = (elapsed - waveAt) / 260;
+      if (pt >= 0 && pt <= 1) srcPulse = Math.max(srcPulse, Math.sin(pt * Math.PI) * 0.06);
+    }
+    sources.forEach(src => src.mesh.scale.setScalar(1 + srcPulse));
+
     const t = clamp01((elapsed - op.start) / dur);
     target.mesh.rotation.z = Math.sin(elapsed * 0.0125) * 0.05 * Math.sin(t * Math.PI);
-    if (!op._signalled && elapsed >= op.start + waveTravel) {
+    const signalAt = op.start + waveTravel + signalDelay;
+    if (!op._signalled && elapsed >= signalAt) {
       op._signalled = true;
-      target.mesh.material = target.matsSignal; // первая волна долетела — цель «под наблюдением»
+      target.mesh.material = target.matsSignal; // импульс дошёл, пауза выдержана — теперь заметно реагирует
+      op._signalPopStart = elapsed;
+    }
+    if (op._signalPopStart !== undefined) {
+      const pt = clamp01((elapsed - op._signalPopStart) / 260);
+      target.mesh.scale.setScalar(1 + Math.sin(pt * Math.PI) * 0.08);
     }
   }
 
   /* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
      кубик (mover) трогается с места и проходит часть расстояния до цели
-     (target), не долетая (distance — доля пути, по умолчанию половина),
-     задерживается на пике, затем пружинисто отскакивает назад — не плавно,
-     а с небольшим перелётом за исходную позицию (easeOutBack), как от
-     столкновения с невидимой преградой. Цель всё это время дрожит —
-     амплитуда растёт по мере сближения, пик — в момент максимального
-     подхода, обрыв резкий (не плавный спад) — ровно в момент начала
-     отскока, как задержанный вдох и внезапный выдох. Опционально — на пике
-     цель на мгновение вспыхивает сигнальным цветом (тот же жёлтый, что и в
-     influence — переиспользуется, отдельный материал под это не заводится).
-     { type:'approach', mover, target, start, approachDur=800, holdDur=400,
-       retreatDur=700, distance=0.5, pulse=true, jitterAmp=0.09 } */
+     (target), не долетая (distance — доля ширины ОДНОГО слота), задерживается
+     на пике, затем пружинисто отскакивает назад — не плавно, а с небольшим
+     перелётом за исходную позицию (easeOutBack), как от столкновения с
+     невидимой преградой. Подход к пику — плавный разгон/торможение
+     (easeInOutCubic, было easeOutCubic — убран рывок в самом начале хода).
+     { type:'approach', mover, target, start, approachDur=1150, holdDur=550,
+       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16 } */
   function applyApproach(op, elapsed) {
-    const movers = (op.movers ?? [op.mover]).map(s => cubes[s]).filter(Boolean);
+    // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
+    // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
+    const slots = resolveSlotRef(op.movers ?? op.mover, wordGroupsList);
+    const movers = slots.map(s => cubes[s]).filter(Boolean);
     const target = cubes[op.target];
     if (!movers.length || !target) return;
-    const approachDur = op.approachDur ?? 800;
-    const holdDur = op.holdDur ?? 400;
-    const retreatDur = op.retreatDur ?? 700;
-    // distance — доля ширины ОДНОГО слота (не всего пути до цели!). Было
-    // доля полного расстояния до target — а поскольку между ними всего один
-    // пустой слот, «половина пути» физически совпадала с позицией этого
-    // пустого слота вплотную к цели. Теперь движение — часть SLOT, дальше
-    // отсчёта на ширину одного слота от исходной позиции точно не уйдёт.
+    const approachDur = op.approachDur ?? 1150; // было 800
+    const holdDur = op.holdDur ?? 550; // было 400
+    const retreatDur = op.retreatDur ?? 950; // было 700
     const distance = op.distance ?? 0.5;
-    const jitterAmp = op.jitterAmp ?? 0.16; // усилено (было 0.09)
+    const jitterAmp = op.jitterAmp ?? 0.16;
     const peakStart = op.start + approachDur;
     const peakEnd = peakStart + holdDur;
     const retreatEnd = peakEnd + retreatDur;
-    const slots = op.movers ?? [op.mover];
     const baseXs = slots.map(s => slotX(s));
     const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
     const shift = SLOT * distance * dir;
@@ -344,7 +633,7 @@ export function mountSlotExample(container, data) {
 
     if (elapsed <= peakStart) {
       const t = clamp01((elapsed - op.start) / approachDur);
-      const te = easeOutCubic(t);
+      const te = easeInOutCubic(t); // было easeOutCubic — плавнее старт
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * te; });
     } else if (elapsed <= peakEnd) {
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
@@ -354,12 +643,16 @@ export function mountSlotExample(container, data) {
       }
     } else {
       const t = clamp01((elapsed - peakEnd) / retreatDur);
-      const te = easeOutBack(t); // пружина — усилена ниже, в самой функции easeOutBack
+      const te = easeOutBack(t); // пружина остаётся — это осознанный характер отскока
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * (1 - te); });
       if (op._pulsed && !op._unpulsed) {
         op._unpulsed = true;
-        const restoreColor = op.targetColorAfter ?? colorFor(target.tr);
-        target.mesh.material = buildChalkMaterials(restoreColor, target.seed + 4, target.tr);
+        // ВАЖНО: берём ТЕКУЩИЙ материал цели по её актуальному состоянию
+        // (target.matsMain уже пересобран под актуальную букву, если до этого
+        // был transform — см. regenMats). Раньше здесь заново собирался
+        // материал вручную с тем же tr, но risk остаться со старым tr не
+        // исчезал сам по себе — теперь просто возвращаемся на matsMain.
+        target.mesh.material = target.matsMain;
       }
     }
 
@@ -391,8 +684,13 @@ export function mountSlotExample(container, data) {
     if (!op._swapped && t >= 0.15) {
       op._swapped = true;
       const newColor = op.toColor ?? colorFor(op.toGlyph);
-      cube.mesh.material = buildChalkMaterials(newColor, cube.seed + 3, op.toGlyph);
-      cube.tr = op.toGlyph;
+      // Пересобираем ВСЕ наборы материалов кубика (matsMain/matsBlank/
+      // matsReady/matsSignal), не только текущий — фикс бага, из-за которого
+      // «сигнальный»/«финальный» материал ещё долго хранил исходную,
+      // добуквенную версию (см. комментарий в regenMats). Новая буква
+      // наносится сразу же, тем же моментом ~15% пути, что и раньше.
+      regenMats(cube, op.toGlyph, newColor);
+      cube.mesh.material = cube.matsMain;
     }
     if (t >= 1 && !op._done) {
       op._done = true;
@@ -405,9 +703,8 @@ export function mountSlotExample(container, data) {
   function applySplit(op, elapsed) {
     if (elapsed < op.start) return;
     // Источник держим под ОТДЕЛЬНЫМ временным ключом на время отстойника —
-    // иначе прилетающий результат с тем же номером слота (a садится туда же,
-    // где было i/e) перезаписывает cubes[op.at] ПОКА источник ещё висит и
-    // тает, и оба технически претендуют на один и тот же ключ словаря.
+    // иначе прилетающий результат с тем же номером слота перезаписывает
+    // cubes[op.at] ПОКА источник ещё висит и тает.
     if (!op._srcKey) {
       op._srcKey = '_hold_' + op.at + '_' + Math.random().toString(36).slice(2, 7);
       cubes[op._srcKey] = cubes[op.at];
@@ -415,19 +712,55 @@ export function mountSlotExample(container, data) {
     }
     const src = cubes[op._srcKey];
     if (!src) return;
-    const riseDur = op.riseDur ?? 1000;
+    const riseDur = op.riseDur ?? 1300; // было 1000
     const holdOpacity = op.holdOpacity ?? 0.55;
-    const holdDur = op.holdDur ?? 2000;
-    const fadeDur = op.fadeDur ?? 900;
+    const holdDur = op.holdDur ?? 2400; // было 2000
+    const fadeDur = op.fadeDur ?? 1100; // было 900
     const holdOffset = op.holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
 
-    // фаза 1: исходный поднимается в сторону и бледнеет
-    const riseEnd = op.start + riseDur;
+    // фаза 0: ПАУЗА-ОСОЗНАНИЕ. Раньше распад начинался фактически сразу же
+    // после approach (кубик тут же трогался с места) — по живой обратной
+    // связи это читалось «слишком быстро», зритель не успевал понять, ЧТО
+    // сейчас произойдёт (Е уходит, А+Й приходят), прежде чем это уже
+    // произошло. Явная пауза перед подъёмом: кубик НЕ двигается, но заметно
+    // сигналит «вот-вот» — переключается на сигнальный (золотой) цвет и
+    // мягко пульсирует масштабом (2 удара, как вдох-вдох), плюс два кольца-
+    // пульса расходятся вокруг него на сцене. Только после этого — подъём.
+    // Общий приём для ЛЮБОГО split, не частность agnayas.
+    const anticipateDur = op.anticipateDur ?? 900;
+    const activeStart = op.start + anticipateDur; // отсюда начинается реальное движение
+    if (elapsed < activeStart) {
+      const t = clamp01((elapsed - op.start) / anticipateDur);
+      if (!op._anticipateBegan) {
+        op._anticipateBegan = true;
+        src.mesh.material = src.matsSignal;
+      }
+      // два «удара»: |sin| за один период даёт два симметричных горба
+      // (пик на четверти и на трёх четвертях, ноль на старте/середине/конце)
+      const beat = Math.abs(Math.sin(t * Math.PI * 2)) * 0.06;
+      const scale = 1 + beat;
+      src.mesh.scale.setScalar(scale);
+      src.mesh.position.copy(basePos);
+      // два кольца-пульса, разнесённые по паузе — не одновременно со стартом
+      // и не в самом конце, а примерно на четверти и на трёх четвертях
+      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(src.mesh.position.clone().add(new THREE.Vector3(0,0.1,0)), anticipateDur * 0.6); }
+      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(src.mesh.position.clone().add(new THREE.Vector3(0,0.1,0)), anticipateDur * 0.6); }
+      return; // пока идёт пауза — больше в этом кадре по этой операции ничего не делаем
+    }
+    if (!op._anticipateDone) {
+      op._anticipateDone = true;
+      src.mesh.scale.setScalar(1);
+      src.mesh.material = src.matsMain; // возвращаемся к обычному виду e перед самим подъёмом
+    }
+
+    // фаза 1: исходный поднимается в сторону и бледнеет — плавный разгон/
+    // торможение (easeInOutCubic, было easeOutCubic — убран рывок в начале).
+    const riseEnd = activeStart + riseDur;
     if (elapsed <= riseEnd) {
-      const t = clamp01((elapsed - op.start) / riseDur);
-      const te = easeOutCubic(t);
+      const t = clamp01((elapsed - activeStart) / riseDur);
+      const te = easeInOutCubic(t);
       src.mesh.position.lerpVectors(basePos, holdPos, te);
       setOpacity(src.mesh, lerp(1, holdOpacity, te));
     } else {
@@ -437,11 +770,11 @@ export function mountSlotExample(container, data) {
       src.mesh.position.y += Math.sin(idle) * 0.06;
     }
 
-    // прилёт результатов — каждый по своим параметрам (группа E). Может
-    // спокойно занять op.at (тот же номер слота, где висел источник) — слот
-    // уже свободен, см. фикс выше.
+    // прилёт результатов — каждый по своим параметрам, отсчёт от activeStart
+    // (не от op.start — пока идёт пауза-осознание, ничего ещё не прилетает).
+    // Разгон/торможение — easeInOutCubic, тот же мотив «без рывка».
     (op.arrivals || []).forEach(arr => {
-      if (elapsed < op.start + arr.delay) return;
+      if (elapsed < activeStart + arr.delay) return;
       let nc = op._arrived?.[arr.newSlot];
       if (!nc) {
         nc = makeCube(arr.into, arr.newSlot * 97 + 31);
@@ -454,8 +787,8 @@ export function mountSlotExample(container, data) {
         op._arrived[arr.newSlot] = nc;
       }
       nc.mesh.visible = true;
-      const t = clamp01((elapsed - (op.start + arr.delay)) / arr.dur);
-      const te = easeOutCubic(t);
+      const t = clamp01((elapsed - (activeStart + arr.delay)) / arr.dur);
+      const te = easeInOutCubic(t);
       const arc = Math.sin(t * Math.PI) * (arr.arcHeight ?? 1.0);
       nc.mesh.position.set(
         lerp(arr.from.x, slotX(arr.newSlot), te),
@@ -466,16 +799,12 @@ export function mountSlotExample(container, data) {
 
     // фаза 3: после паузы для сравнения — исходный растворяется совсем.
     // Момент старта угасания зависит от того, что случится ПОЗЖЕ — источник
-    // поднялся в отстойник, ИЛИ все результаты долетели и сели (какой из
-    // прилётов дольше — с учётом собственной задержки старта). Раньше здесь
-    // был фиксированный отсчёт от подъёма источника, не связанный с прилётом —
-    // если бы прилёт занял дольше, источник начал бы таять ДО того, как AY
-    // реально появится в кадре целиком. Теперь так не получится.
+    // поднялся в отстойник, ИЛИ все результаты долетели и сели.
     const arrivals = op.arrivals || [];
     const lastArrivalEnd = arrivals.length
       ? Math.max(...arrivals.map(a => a.delay + a.dur))
       : 0;
-    const compareReadyAt = Math.max(riseEnd, op.start + lastArrivalEnd);
+    const compareReadyAt = Math.max(riseEnd, activeStart + lastArrivalEnd);
     const fadeStart = compareReadyAt + holdDur; // holdDur = пауза ПОСЛЕ того, как всё уже видно вместе
     if (elapsed >= fadeStart) {
       const t = clamp01((elapsed - fadeStart) / fadeDur);
@@ -504,26 +833,13 @@ export function mountSlotExample(container, data) {
     });
   }
 
-  /* 4. DIM — притенение неактивных букв. Буквы, НЕ участвующие в текущей
-     операции, гаснут почти до прозрачности, пока идёт действие — фокус
-     внимания читается яснее на фоне того, что реально меняется. Гаснет и
-     возвращается плавно (рампа в начале и в конце), не рывком. Полная
-     видимость возвращается САМА к моменту `end` — это отдельный, более
-     ранний момент «все буквы снова видны в своих цветах», ДО того как по
-     слову пройдёт финальная волна READY_COLOR (см. applySettle выше) —
-     не одновременно с ней, а раньше.
-     { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 }
-     Планирование конфликтов (например, если dim и split управляют
-     прозрачностью одного и того же кубика одновременно) — забота автора
-     данных примера, не движка: не проверяется намеренно, минимум кода. */
+  /* DIM (форма ручного управления, оставлена для обратной совместимости и
+     точечных случаев) — притенение неактивных букв по явному списку слотов
+     и окну времени. Для нового материала предпочтительно data.steps выше —
+     он сам считает пересечения и снимает притенение к концу; ручной 'dim'
+     по-прежнему полезен для локальных, не связанных с шагами эффектов.
+     { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 } */
   function applyDim(op, elapsed) {
-    // Вне своего окна — НЕ трогаем прозрачность вообще (не сбрасываем в 1
-    // принудительно). Раньше сбрасывали — и если два dim-окна подряд делят
-    // общие слоты (как здесь: 1,2,3 участвуют в обеих фазах), та, что идёт
-    // позже в data.ops, каждый кадр перезатирала то, что выставила первая,
-    // пока не наступило её же собственное начало. Теперь конфликта нет —
-    // клетка остаётся в состоянии, которое ей оставила последняя АКТИВНАЯ
-    // операция, а не любая операция, которой она вообще упомянута.
     if (elapsed < op.start || elapsed > op.end) return;
     const dimOpacity = op.dimOpacity ?? 0.22;
     const ramp = op.ramp ?? 700;
@@ -545,7 +861,6 @@ export function mountSlotExample(container, data) {
         cube.mesh.position.y = fallY(elapsed, cube);
         if (elapsed >= cube._fallStart + cube._fallDur) cube._fallDone = true;
       }
-      updateShadow(cube);
     });
     (data.ops || []).forEach(op => {
       if (op.type === 'influence') applyInfluence(op, elapsed);
@@ -555,6 +870,9 @@ export function mountSlotExample(container, data) {
       else if (op.type === 'settle') applySettle(op, elapsed);
       else if (op.type === 'dim') applyDim(op, elapsed);
     });
+    applyStepDim(elapsed);
+    updateSteps(elapsed);
+    Object.values(cubes).forEach(updateShadow);
     camera.position.copy(camBase);
     renderer.render(scene, camera);
     rafId = requestAnimationFrame(frame);
@@ -575,4 +893,55 @@ export function mountSlotExample(container, data) {
   }
 
   return { unmount, replay: () => mountSlotExample(container, data) };
+}
+
+/* Стили ленты шагов — общие на все примеры движка, вставляются в <head>
+   один раз на документ (не в shadow/scoped-стиль, чтобы не тащить сборку). */
+function injectStylesOnce() {
+  if (_stylesInjected || document.getElementById('slot-engine-style')) { _stylesInjected = true; return; }
+  _stylesInjected = true;
+  const style = document.createElement('style');
+  style.id = 'slot-engine-style';
+  style.textContent = `
+    .slot-steps { display:flex; gap:8px; justify-content:center; align-items:center;
+      padding:8px 4px 2px; flex:0 0 auto; }
+    .slot-step-chip { font-family:'Helvetica Neue',Arial,sans-serif; font-size:11px;
+      letter-spacing:.02em; padding:4px 10px; border-radius:999px;
+      background:rgba(255,255,255,.06); color:rgba(230,225,210,.45);
+      border:1px solid rgba(255,255,255,.08); transition:all .35s ease; }
+    .slot-step-chip.is-grammar { text-transform:lowercase; }
+    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; }
+    .slot-step-chip.active { color:#2A2D35; border-color:transparent; }
+    .slot-step-chip.is-grammar.active { background:#DECDAF; }
+    .slot-step-chip.is-rule.active { background:#E8C860; }
+    .slot-step-chip.flash { animation: slot-step-pop .55s ease; }
+    @keyframes slot-step-pop {
+      0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,.55); }
+      35%  { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(232,200,96,0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,0); }
+    }
+    .slot-step-flashbar { position:absolute; left:0; right:0; top:0; height:2px;
+      background:linear-gradient(90deg, transparent, #E8C860, transparent);
+      animation: slot-step-sweep .6s ease-out forwards; pointer-events:none; }
+    @keyframes slot-step-sweep {
+      0%   { opacity:0; transform: scaleX(0.3); }
+      30%  { opacity:1; }
+      100% { opacity:0; transform: scaleX(1); }
+    }
+    .slot-pulse-ring {
+      position: absolute;
+      width: 18px; height: 18px;
+      margin: -9px 0 0 -9px;
+      border-radius: 50%;
+      border: 2px solid rgba(232,200,96,.8);
+      animation: slot-pulse-out var(--pulse-dur) ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes slot-pulse-out {
+      0%   { transform: scale(0.5); opacity: 0; }
+      20%  { opacity: .9; }
+      100% { transform: scale(2.6); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
 }
