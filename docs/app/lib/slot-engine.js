@@ -44,9 +44,24 @@ import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chal
 export const N_SLOTS = 10;
 export const CUBE_SIZE = 1.1;
 export const SLOT = 1.2;
-export const MS_PER_360 = 4800; // было 3600 — оборот транформации медленнее и спокойнее
+// ЗАФИКСИРОВАНО (заход 7): скорость оборота трансформации взята буквально из
+// T.gunaDur рабочего rule3-agnayas.js (1400мс на один оборот) — не придумана
+// заново движком. Прошлые значения (3600, затем 4800 «для спокойствия») были
+// собственными числами движка, не сверенными с эталоном — отсюда жалоба
+// «крутится очень медленно». Это ЛОКАЛЬНАЯ константа-стандарт: не менять без
+// новой явной сверки с рабочим файлом. Для вриддхи — spinTurns:2 (те же
+// 1400мс на оборот, ×2 через уже существующий множитель, доп. кода не надо).
+export const MS_PER_360 = 1400;
 export const READY_COLOR = 0xDECDAF; // тот же тёплый бежевый, что и в rule3-agnayas.js
-export const SIGNAL_COLOR = 0xE8C860; // «под влиянием, вот-вот изменится» — тот же золотой, что gv-active в 2D-системе ролей
+// РЕШЕНО (заход 7, прямая просьба): золотой (SIGNAL_COLOR) больше НЕ используется
+// для гуны — резервируется под вриддхи (когда появится: transform с spinTurns:2,
+// её сигнал/кольца — золотые, отличие от «рядовой» гуны должно быть цветовым).
+// Для обычной гуны (и вообще для «вот-вот изменится» по умолчанию) — новый
+// SILVER_COLOR, металлический холодный оттенок, не пересекается ни с одной
+// категорией алфавитной палитры (vel/pal/ret/den/lab) и с READY_COLOR.
+export const SIGNAL_COLOR = 0xE8C860; // зарезервировано под вриддхи — не трогать без явного решения
+export const SILVER_COLOR = 0xCDD3D9; // «под влиянием» по умолчанию (гуна и т.п.) — металлический блеск
+const SILVER_RGB = '205,211,217'; // тот же тон в rgb-строке — для DOM-колец (spawnWave/spawnPulseRing)
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
 let _stylesInjected = false; // общий <style> движка — вставляется в <head> один раз на документ
@@ -155,12 +170,14 @@ function easeOutBounce(t) {
   if (t < 2.5/d1) return n1*(t-=2.25/d1)*t+0.9375;
   return n1*(t-=2.625/d1)*t+0.984375;
 }
-// падение: было чистый easeOutBounce, потом смесь 65/35 с easeOutCubic — по
-// прямой обратной связи даже эта смесь ещё читалась как «дёргается», не как
-// плавный ход (остаточные мелкие отскоки от easeOutBounce всё ещё заметны на
-// медленном тайминге падения). Убрана вся примесь bounce — чистое плавное
-// торможение без единого отскока. Общий приём для ЛЮБОГО падающего кубика.
-function easeFall(t) { return easeOutCubic(t); }
+// ЗАФИКСИРОВАНО (заход 7): easeOutBounce в этом файле УЖЕ был дословной копией
+// функции из rule3-agnayas.js (см. её же формулу выше) — но заход 2 подменил
+// её вызов на смесь с easeOutCubic, а заход 6 заменил смесь на чистый
+// easeOutCubic, полностью убрав отскок. Обе правки были СВОИМИ решениями
+// движка, не сверкой с рабочим файлом — отсюда жалоба «кубики перестали
+// подпрыгивать». Возвращён прямой вызов уже готовой, ничем не изменённой
+// easeOutBounce — то есть буквально то падение, что в agnayas.
+function easeFall(t) { return easeOutBounce(t); }
 
 /* ═══════════════════ КУБИК ═══════════════════
    Каждый кубик хранит НЕСКОЛЬКО готовых наборов материалов (не перерисовывает
@@ -327,6 +344,17 @@ function stepTargetOpacity(step, slot, dimOpacity) {
 function buildRuntimeSteps(steps) {
   if (!steps || !steps.length) return null;
   const list = [];
+  // РЕШЕНО (заход 7, «падают уже прозрачные буквы»). Раньше до старта первого
+  // авторского шага (data.steps[0].start) движок всё равно считал ТЕКУЩИМ
+  // именно этот шаг (stepIndexAt смотрит только на .end, не на .start) — и
+  // применял его притенение МГНОВЕННО, без рампы (у первого шага нет prev).
+  // Из-за этого буквы, не входящие в activeSlots первого шага, гасли ещё в
+  // воздухе, до приземления. Симметрично хвостовому виртуальному шагу — если
+  // до первого шага есть зазор (обычно есть, т.к. шаг стартует уже после
+  // падения), добавляем такой же «пока всё видно» участок в начале.
+  if (steps[0].start > 0) {
+    list.push({ _virtual: true, activeSlots: 'ALL', start: 0, end: steps[0].start });
+  }
   for (let i = 0; i < steps.length; i++) {
     if (i > 0 && steps[i].start > steps[i - 1].end) {
       list.push({ _reveal: true, activeSlots: 'ALL', start: steps[i - 1].end, end: steps[i].start });
@@ -406,6 +434,15 @@ export function mountSlotExample(container, data) {
     const chip = document.createElement('div');
     chip.className = 'slot-step-chip' + (step.kind === 'grammar' ? ' is-grammar' : ' is-rule');
     chip.textContent = step.kind === 'grammar' ? (step.label || 'грам.') : (step.label || ('правило ' + (step.ruleNum ?? '?')));
+    // Цвет кнопки «Правило N» — из данных примера (step.color, hex-число),
+    // ожидается тот же цвет, что и у карточки этого правила на панели слева
+    // в sanskrit-sandhi-app.html (классы .c1–.c4) — так кнопка в анимации
+    // визуально указывает на «своё» правило в основном интерфейсе, не на
+    // произвольный золотой, который ничего не означал и совпадал по цвету
+    // с сигналом «вот-вот произойдёт» у самих кубиков (перегрузка смысла).
+    if (step.kind === 'rule' && step.color != null) {
+      chip.style.setProperty('--rule-chip-color', '#' + step.color.toString(16).padStart(6, '0'));
+    }
     stepsEl.appendChild(chip);
     step._chipEl = chip;
   });
@@ -463,12 +500,24 @@ export function mountSlotExample(container, data) {
     const idx = stepIndexAt(elapsed, runtimeSteps);
     const cur = runtimeSteps[idx];
     const prev = runtimeSteps[idx - 1];
-    const next = runtimeSteps[idx + 1];
     const orderedSlots = Object.keys(cubes)
       .filter(key => /^\d+$/.test(key))
       .map(Number)
       .sort((a, b) => a - b); // порядок слева направо — тот самый, что просила пользователь
     const enteringReveal = prev && cur.activeSlots === 'ALL';
+    // РЕШЕНО (заход 7, «двойное мерцание»/«перекрашивание неудовлетворительно»).
+    // Раньше здесь был ЕЩЁ один блок — «ramp-out к next» — считавший тот же
+    // самый переход ВТОРОЙ раз, с другого конца: пока текущий шаг доживал
+    // последние RAMP мс, он сам плавно вёл яркость к цели следующего шага, а
+    // когда elapsed переходил границу — код следующего шага СНОВА запускал
+    // переход «от prev к себе» с нуля, читая из prev не реальную (уже
+    // подведённую к цели) яркость, а декларативный target шага (1, если
+    // шаг ALL) — кубик дёргался обратно вверх и ещё раз плавно гас. Раз шаги
+    // идут подряд без разрывов (buildRuntimeSteps это гарантирует), переход
+    // на КАЖДОЙ границе обязан считаться РОВНО ОДИН РАЗ — и это уже полностью
+    // берёт на себя ramp-in ниже, в шаге, который наступает ПОСЛЕ границы.
+    // Отдельный ramp-out поэтому не просто лишний, а прямо конфликтующий —
+    // убран целиком.
     orderedSlots.forEach((slot, order) => {
       const cube = cubes[slot];
       let target = stepTargetOpacity(cur, slot, dimOpacity);
@@ -478,10 +527,6 @@ export function mountSlotExample(container, data) {
       } else if (prev && elapsed - cur.start < RAMP) {
         const t = clamp01((elapsed - cur.start) / RAMP);
         target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
-      }
-      if (next && cur.end - elapsed < RAMP && cur.end !== Infinity) {
-        const t = clamp01((RAMP - (cur.end - elapsed)) / RAMP);
-        target = lerp(target, stepTargetOpacity(next, slot, dimOpacity), t);
       }
       setOpacity(cube.mesh, target);
     });
@@ -499,7 +544,27 @@ export function mountSlotExample(container, data) {
     return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
   }
 
-  function spawnWave(fromVec3, toVec3, dur) {
+  // rgbStr необязателен: по умолчанию серебряный (см. SILVER_COLOR/SILVER_RGB
+  // выше) — раньше цвет волны был жёстко зашит золотым прямо в CSS вызывающей
+  // страницы (test-slot-engine.html), это и был тот «оранжевый для гуны»,
+  // на который прямо указали. Золотой остаётся доступен через явный override,
+  // когда понадобится (вриддхи).
+  /* РЕШЕНО (заход 7, «кольца не центрированы, смещены влево-вверх грани»).
+     Раньше кольца анкорились на mesh.position — это ГЕОМЕТРИЧЕСКИЙ ЦЕНТР
+     кубика, не видимая грань с буквой (+Z, глиф). При низкой, почти анфас
+     камере rule3-agnayas.js (camBase y=1.5) разница была незаметна — но
+     камера движка стоит заметно выше (camBase y=3.2, см. ниже), и та же
+     логика колец, скопированная без пересчёта под новый ракурс, проецируется
+     заметно выше и в сторону от видимой грани. Общий фикс — не под конкретную
+     камеру: берём точку не в центре, а со сдвигом по ЛОКАЛЬНОЙ +Z (к камере,
+     туда же, где рисуется буква), провёрнутым через текущий поворот кубика
+     (mesh.quaternion) — верно даже пока кубик дрожит/крутится. */
+  function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
+    const local = new THREE.Vector3(0, yOff, zOff).applyQuaternion(mesh.quaternion);
+    return mesh.position.clone().add(local);
+  }
+
+  function spawnWave(fromVec3, toVec3, dur, rgbStr) {
     const pA = project(fromVec3), pB = project(toVec3);
     const ring = document.createElement('div');
     ring.className = 'slot-wave-ring';
@@ -508,6 +573,7 @@ export function mountSlotExample(container, data) {
     ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
     ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
     ring.style.setProperty('--wave-dur', dur + 'ms');
+    ring.style.borderColor = `rgba(${rgbStr || SILVER_RGB},.85)`;
     labelsEl.appendChild(ring);
     setTimeout(() => ring.remove(), dur + 80);
   }
@@ -623,7 +689,7 @@ export function mountSlotExample(container, data) {
       if (!op[key]) {
         op[key] = true;
         sources.forEach(src => spawnPulseRing(
-          src.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          frontAnchor(src.mesh),
           1300,
           ringColorFrom(colorFor(src.tr))
         ));
@@ -642,8 +708,8 @@ export function mountSlotExample(container, data) {
       if (!op[key] && elapsed >= op.start + i * waveGap) {
         op[key] = true;
         sources.forEach(src => spawnWave(
-          src.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
-          target.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          frontAnchor(src.mesh),
+          frontAnchor(target.mesh),
           waveTravel
         ));
       }
@@ -717,7 +783,7 @@ export function mountSlotExample(container, data) {
       if (op.pulse !== false && !op._pulsed) {
         op._pulsed = true;
         spawnPulseRing(
-          target.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          frontAnchor(target.mesh),
           900,
           ringColorFrom(colorFor(movers[0].tr))
         );
@@ -817,8 +883,8 @@ export function mountSlotExample(container, data) {
       src.mesh.position.copy(basePos);
       // два кольца-пульса, разнесённые по паузе — не одновременно со стартом
       // и не в самом конце, а примерно на четверти и на трёх четвертях
-      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(src.mesh.position.clone().add(new THREE.Vector3(0,0.1,0)), anticipateDur * 0.6); }
-      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(src.mesh.position.clone().add(new THREE.Vector3(0,0.1,0)), anticipateDur * 0.6); }
+      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6); }
+      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6); }
       return; // пока идёт пауза — больше в этом кадре по этой операции ничего не делаем
     }
     if (!op._anticipateDone) {
@@ -986,10 +1052,18 @@ function injectStylesOnce() {
       background:rgba(255,255,255,.06); color:rgba(230,225,210,.45);
       border:1px solid rgba(255,255,255,.08); transition:all .35s ease; }
     .slot-step-chip.is-grammar { text-transform:lowercase; }
-    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; }
+    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase;
+      /* крупнее и весомее — по прямой просьбе («кнопку Правило — сделаем
+         крупнее»): это единственная кнопка ленты, ведущая к конкретной
+         карточке правила в основном интерфейсе, ей уместен больший вес. */
+      font-size:13px; font-weight:600; padding:6px 16px; letter-spacing:.03em; }
     .slot-step-chip.active { color:#2A2D35; border-color:transparent; }
     .slot-step-chip.is-grammar.active { background:#DECDAF; }
-    .slot-step-chip.is-rule.active { background:#E8C860; }
+    /* Цвет по умолчанию — тот же синий, что у .c3 карточек внутренних сандхи
+       в sanskrit-sandhi-app.html (нейтральный вариант, если step.color не
+       задан); --rule-chip-color переопределяется инлайном под цвет ИМЕННО
+       той карточки, к которой относится конкретное правило (см. вызов выше). */
+    .slot-step-chip.is-rule.active { background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
     .slot-step-chip.flash { animation: slot-step-pop .55s ease; }
     @keyframes slot-step-pop {
       0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,.55); }
@@ -1013,9 +1087,9 @@ function injectStylesOnce() {
       pointer-events: none;
     }
     @keyframes slot-pulse-out {
-      0%   { transform: scale(0.4); opacity: 0; border-width: 4px; }
-      18%  { opacity: .6; }
-      100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; }
+      0%   { transform: scale(0.4); opacity: 0; border-width: 4px; filter: blur(1.5px) brightness(1); }
+      18%  { opacity: .6; filter: blur(1.5px) brightness(1.7); }
+      100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; filter: blur(1.5px) brightness(1); }
     }
   `;
   document.head.appendChild(style);
