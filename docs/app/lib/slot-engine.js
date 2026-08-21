@@ -103,7 +103,7 @@ function colorFor(tr) {
 function clamp01(t) { return Math.max(0, Math.min(1, t)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-function easeOutBack(t) { const s = 1.7; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
+function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
 function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
   if (t < 1/d1) return n1*t*t;
@@ -313,38 +313,49 @@ export function mountSlotExample(container, data) {
      { type:'approach', mover, target, start, approachDur=800, holdDur=400,
        retreatDur=700, distance=0.5, pulse=true, jitterAmp=0.09 } */
   function applyApproach(op, elapsed) {
-    const mover = cubes[op.mover];
+    const movers = (op.movers ?? [op.mover]).map(s => cubes[s]).filter(Boolean);
     const target = cubes[op.target];
-    if (!mover || !target) return;
+    if (!movers.length || !target) return;
     const approachDur = op.approachDur ?? 800;
     const holdDur = op.holdDur ?? 400;
     const retreatDur = op.retreatDur ?? 700;
+    // distance — доля ширины ОДНОГО слота (не всего пути до цели!). Было
+    // доля полного расстояния до target — а поскольку между ними всего один
+    // пустой слот, «половина пути» физически совпадала с позицией этого
+    // пустого слота вплотную к цели. Теперь движение — часть SLOT, дальше
+    // отсчёта на ширину одного слота от исходной позиции точно не уйдёт.
     const distance = op.distance ?? 0.5;
-    const jitterAmp = op.jitterAmp ?? 0.09;
+    const jitterAmp = op.jitterAmp ?? 0.16; // усилено (было 0.09)
     const peakStart = op.start + approachDur;
     const peakEnd = peakStart + holdDur;
     const retreatEnd = peakEnd + retreatDur;
+    const slots = op.movers ?? [op.mover];
+    const baseXs = slots.map(s => slotX(s));
+    const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
+    const shift = SLOT * distance * dir;
+
     if (elapsed < op.start || elapsed > retreatEnd) {
-      if (elapsed > retreatEnd) { mover.mesh.position.x = slotX(op.mover); target.mesh.rotation.z = 0; }
+      if (elapsed > retreatEnd) {
+        movers.forEach((m, i) => { m.mesh.position.x = baseXs[i]; });
+        target.mesh.rotation.z = 0;
+      }
       return;
     }
 
-    const baseX = slotX(op.mover);
-    const gap = slotX(op.target) - baseX;
-    const nearX = baseX + gap * distance;
-
     if (elapsed <= peakStart) {
       const t = clamp01((elapsed - op.start) / approachDur);
-      mover.mesh.position.x = lerp(baseX, nearX, easeOutCubic(t));
+      const te = easeOutCubic(t);
+      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * te; });
     } else if (elapsed <= peakEnd) {
-      mover.mesh.position.x = nearX;
+      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
       if (op.pulse !== false && !op._pulsed) {
         op._pulsed = true;
         target.mesh.material = target.matsSignal;
       }
     } else {
       const t = clamp01((elapsed - peakEnd) / retreatDur);
-      mover.mesh.position.x = lerp(nearX, baseX, easeOutBack(t));
+      const te = easeOutBack(t); // пружина — усилена ниже, в самой функции easeOutBack
+      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * (1 - te); });
       if (op._pulsed && !op._unpulsed) {
         op._unpulsed = true;
         const restoreColor = op.targetColorAfter ?? colorFor(target.tr);
@@ -355,7 +366,7 @@ export function mountSlotExample(container, data) {
     // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
     if (elapsed <= peakEnd) {
       const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
-      target.mesh.rotation.z = Math.sin(elapsed * 0.02) * jitterAmp * growT;
+      target.mesh.rotation.z = Math.sin(elapsed * 0.024) * jitterAmp * growT;
     } else {
       target.mesh.rotation.z = 0; // обрыв резкий, не спад
     }
