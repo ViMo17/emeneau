@@ -36,6 +36,7 @@ export const CUBE_SIZE = 1.1;
 export const SLOT = 1.2;
 export const MS_PER_360 = 3600; // эталонная скорость — ассимиляция (t+dh), см. чат
 export const READY_COLOR = 0xDECDAF; // тот же тёплый бежевый, что и в rule3-agnayas.js
+export const SIGNAL_COLOR = 0xE8C860; // «под влиянием, вот-вот изменится» — тот же золотой, что gv-active в 2D-системе ролей
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
 
@@ -129,13 +130,14 @@ function makeShadow() {
 function makeCube(tr, seed) {
   const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const color = colorFor(tr);
-  const matsMain  = buildChalkMaterials(color, seed, tr);
-  const matsBlank = buildChalkMaterials(color, seed + 1, null);
-  const matsReady = buildChalkMaterials(READY_COLOR, seed + 2, tr);
-  [matsMain, matsBlank, matsReady].forEach(mats => mats.forEach(m => { m.transparent = true; }));
+  const matsMain   = buildChalkMaterials(color, seed, tr);
+  const matsBlank  = buildChalkMaterials(color, seed + 1, null);
+  const matsReady  = buildChalkMaterials(READY_COLOR, seed + 2, tr);
+  const matsSignal = buildChalkMaterials(SIGNAL_COLOR, seed + 3, tr);
+  [matsMain, matsBlank, matsReady, matsSignal].forEach(mats => mats.forEach(m => { m.transparent = true; }));
   const mesh = new THREE.Mesh(geo, matsMain);
   const shadow = makeShadow();
-  return { tr, mesh, shadow, seed, matsMain, matsBlank, matsReady, _settled: false };
+  return { tr, mesh, shadow, seed, matsMain, matsBlank, matsReady, matsSignal, _settled: false };
 }
 
 /* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —
@@ -185,14 +187,36 @@ function setOpacity(mesh, val) {
       { type:'settle', slots:[...], start, stepDelay=150, bounceDur=500 }
 */
 export function mountSlotExample(container, data) {
-  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;position:relative;"></div>`;
+  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;position:relative;">
+    <div class="slot-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+  </div>`;
   const stageEl = container.querySelector('.slot-stage');
+  const labelsEl = container.querySelector('.slot-labels');
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
   const camBase = new THREE.Vector3(0, 3.2, 9.5);
   camera.position.copy(camBase);
   camera.lookAt(0, 0, 0);
+
+  function project(vec3) {
+    const w = stageEl.clientWidth, h = stageEl.clientHeight;
+    const v = vec3.clone().project(camera);
+    return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
+  }
+
+  function spawnWave(fromVec3, toVec3, dur) {
+    const pA = project(fromVec3), pB = project(toVec3);
+    const ring = document.createElement('div');
+    ring.className = 'slot-wave-ring';
+    ring.style.left = pA.x + 'px';
+    ring.style.top = pA.y + 'px';
+    ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
+    ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
+    ring.style.setProperty('--wave-dur', dur + 'ms');
+    labelsEl.appendChild(ring);
+    setTimeout(() => ring.remove(), dur + 80);
+  }
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -237,12 +261,50 @@ export function mountSlotExample(container, data) {
   const t0 = performance.now();
   let rafId = null;
 
+  /* 0. INFLUENCE — дальнодействие до самого превращения: несколько волн-
+     пульсов (2D-кольца поверх сцены) бегут от триггера к цели с задержкой
+     между собой, цель мелко дрожит, пока волны идут, и переключается на
+     сигнальный (золотой) цвет ровно тогда, когда ПЕРВАЯ волна долетает —
+     не раньше и не одновременно со стартом. Перенесено из rule3-agnayas.js.
+     { type:'influence', from, to, start, waveCount=3, waveGap=440, waveTravel=1100 } */
+  function applyInfluence(op, elapsed) {
+    const target = cubes[op.to];
+    const trigger = cubes[op.from];
+    if (!target || !trigger) return;
+    const waveCount = op.waveCount ?? 3;
+    const waveGap = op.waveGap ?? 440;
+    const waveTravel = op.waveTravel ?? 1100;
+    const dur = (waveCount - 1) * waveGap + waveTravel;
+    if (elapsed < op.start || elapsed > op.start + dur) {
+      if (elapsed > op.start + dur) target.mesh.rotation.z = 0;
+      return;
+    }
+    for (let i = 0; i < waveCount; i++) {
+      const key = '_wave' + i;
+      if (!op[key] && elapsed >= op.start + i * waveGap) {
+        op[key] = true;
+        spawnWave(
+          trigger.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          target.mesh.position.clone().add(new THREE.Vector3(0, 0.1, 0)),
+          waveTravel
+        );
+      }
+    }
+    const t = clamp01((elapsed - op.start) / dur);
+    target.mesh.rotation.z = Math.sin(elapsed * 0.0125) * 0.05 * Math.sin(t * Math.PI);
+    if (!op._signalled && elapsed >= op.start + waveTravel) {
+      op._signalled = true;
+      target.mesh.material = target.matsSignal; // первая волна долетела — цель «под наблюдением»
+    }
+  }
+
   function applyTransform(op, elapsed) {
     const cube = cubes[op.at];
     if (!cube) return;
     const spinTurns = op.spinTurns ?? 1;
     const dur = Math.abs(spinTurns) * MS_PER_360;
     const bounceH = op.bounceH ?? 0.3;
+    const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
     if (elapsed < op.start || elapsed > op.start + dur) return;
     if (!op._began) {
       op._began = true;
@@ -250,6 +312,7 @@ export function mountSlotExample(container, data) {
     }
     const t = clamp01((elapsed - op.start) / dur);
     cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
+    cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
     cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
     if (!op._swapped && t >= 0.15) {
       op._swapped = true;
@@ -261,18 +324,28 @@ export function mountSlotExample(container, data) {
       op._done = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
+      cube.mesh.position.x = slotX(op.at);
     }
   }
 
   function applySplit(op, elapsed) {
     if (elapsed < op.start) return;
-    const src = cubes[op.at];
+    // Источник держим под ОТДЕЛЬНЫМ временным ключом на время отстойника —
+    // иначе прилетающий результат с тем же номером слота (a садится туда же,
+    // где было i/e) перезаписывает cubes[op.at] ПОКА источник ещё висит и
+    // тает, и оба технически претендуют на один и тот же ключ словаря.
+    if (!op._srcKey) {
+      op._srcKey = '_hold_' + op.at + '_' + Math.random().toString(36).slice(2, 7);
+      cubes[op._srcKey] = cubes[op.at];
+      delete cubes[op.at];
+    }
+    const src = cubes[op._srcKey];
     if (!src) return;
     const riseDur = op.riseDur ?? 1000;
     const holdOpacity = op.holdOpacity ?? 0.55;
     const holdDur = op.holdDur ?? 2000;
     const fadeDur = op.fadeDur ?? 900;
-    const holdOffset = op.holdOffset ?? { x: -1.6, y: 1.6, z: 0.4 };
+    const holdOffset = op.holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
 
@@ -290,7 +363,9 @@ export function mountSlotExample(container, data) {
       src.mesh.position.y += Math.sin(idle) * 0.06;
     }
 
-    // прилёт результатов — каждый по своим параметрам (группа E)
+    // прилёт результатов — каждый по своим параметрам (группа E). Может
+    // спокойно занять op.at (тот же номер слота, где висел источник) — слот
+    // уже свободен, см. фикс выше.
     (op.arrivals || []).forEach(arr => {
       if (elapsed < op.start + arr.delay) return;
       let nc = op._arrived?.[arr.newSlot];
@@ -331,7 +406,10 @@ export function mountSlotExample(container, data) {
     if (elapsed >= fadeStart) {
       const t = clamp01((elapsed - fadeStart) / fadeDur);
       setOpacity(src.mesh, lerp(holdOpacity, 0, t));
-      if (t >= 1) src.mesh.visible = false;
+      if (t >= 1) {
+        src.mesh.visible = false;
+        delete cubes[op._srcKey]; // источник совсем ушёл — временный ключ больше не нужен
+      }
     }
   }
 
@@ -390,7 +468,8 @@ export function mountSlotExample(container, data) {
       updateShadow(cube);
     });
     (data.ops || []).forEach(op => {
-      if (op.type === 'transform') applyTransform(op, elapsed);
+      if (op.type === 'influence') applyInfluence(op, elapsed);
+      else if (op.type === 'transform') applyTransform(op, elapsed);
       else if (op.type === 'split') applySplit(op, elapsed);
       else if (op.type === 'settle') applySettle(op, elapsed);
       else if (op.type === 'dim') applyDim(op, elapsed);

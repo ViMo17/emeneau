@@ -11,18 +11,33 @@
   #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
     padding:6px 10px; border-radius:6px; z-index:10; max-width:640px; }
+
+  /* волна-пульс — бежит от триггера к цели, растёт и гаснет по пути */
+  .slot-wave-ring {
+    position: absolute;
+    width: 14px; height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    border: 2px solid rgba(232,200,96,.85);
+    animation: slot-wave-travel var(--wave-dur) ease-out forwards;
+  }
+  @keyframes slot-wave-travel {
+    0%   { transform: translate(0,0) scale(0.6); opacity: 0; }
+    12%  { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; }
+  }
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
 </script>
 </head>
 <body>
-<div id="note">Слот-движок v2: настоящий оборот (подскок+вращение), отстойник (e уходит в сторону, бледнеет, висит — пока прилетают a и y), финальная волна READY_COLOR. Слоты 1-7 (центрировано в ряду 0-9). Открывать через живой сайт (https://).</div>
+<div id="note">Слот-движок v3: волна влияния (А из -as → И корня), фазовое притенение (шаг1: активны И+А; шаг2: активен Е), боковой сдвиг при вращении, выше отстойник, без коллизии слота. Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <script type="module">
 import { mountSlotExample, slotX } from './lib/slot-engine.js';
 
-// agnayas: a-g-n-i-[пусто]-a-s, слоты 1-7 (не 0-6 — центрировано по floor((10-7)/2)=1)
+// agnayas: a-g-n-i-[пусто]-a-s, слоты 1-7 (центрировано)
 const data = {
   initial: [
     { slot: 1, tr: 'a' },
@@ -33,21 +48,23 @@ const data = {
     { slot: 7, tr: 's' },
   ],
   ops: [
-    // притенение всего, что не участвует прямо сейчас — a,g,n (кроме i/e) и a,s.
-    // Начинается сразу после падения, заканчивается до начала финальной волны
-    // (волна сама покажет всё в полной яркости момент за моментом).
-    { type: 'dim', slots: [1,2,3,6,7], start: 2000, end: 10700, dimOpacity: 0.22, ramp: 700 },
+    // притенение, шаг 1: активны И(4) и А-триггер(6) — все прочие гаснут
+    { type: 'dim', slots: [1,2,3,7], start: 2000, end: 8100, dimOpacity: 0.22, ramp: 700 },
 
-    // гунирование: i → e, на месте (слот 4) — стартует после того, как ВСЕ кубики
-    // успели упасть и приземлиться (последний, с учётом stagger, к ~1900мс)
-    { type: 'transform', at: 4, toGlyph: 'e', toColor: 0x7DCFCA, start: 2200, spinTurns: 1 },
+    // волна влияния: А (окончание -as, слот 6) — причина гунирования И (слот 4)
+    { type: 'influence', from: 6, to: 4, start: 2200, waveCount: 3, waveGap: 440, waveTravel: 1100 },
 
-    // распад: e уходит в отстойник, a и y прилетают как новые кубики
-    // (transform заканчивается в 2200+3600=5800, даю запас)
+    // гунирование: i → e, на месте (слот 4). Боковой отъезд при вращении — по умолчанию (0.35)
+    { type: 'transform', at: 4, toGlyph: 'e', toColor: 0x7DCFCA, start: 4500, spinTurns: 1 },
+
+    // притенение, шаг 2: активен только Е/распад (4) — А-триггер(6) уже сделал своё дело
+    { type: 'dim', slots: [1,2,3,6], start: 8100, end: 13200, dimOpacity: 0.22, ramp: 700 },
+
+    // распад: e уходит в отстойник (выше — holdOffset.y увеличен), a и y прилетают
     {
-      type: 'split', at: 4, start: 6000,
+      type: 'split', at: 4, start: 8300,
       riseDur: 1000, holdOpacity: 0.55, holdDur: 2000, fadeDur: 900,
-      holdOffset: { x: -1.6, y: 1.6, z: 0.4 },
+      holdOffset: { x: -1.6, y: 2.4, z: 0.4 },
       arrivals: [
         { into: 'a', newSlot: 4, from: { x: slotX(4) + 1.0, y: 2.5, z: -1.5 }, delay: 400, dur: 1300, arcHeight: 0.9 },
         { into: 'y', newSlot: 5, from: { x: slotX(5) + 1.3, y: 3.0, z: -1.8 }, delay: 0,   dur: 1500, arcHeight: 1.3 },
@@ -55,8 +72,7 @@ const data = {
     },
 
     // финал: волна READY_COLOR слева направо по всему слову
-    // (split: fadeStart считается из реального прилёта, оканчивается к ~10600 — даю запас)
-    { type: 'settle', slots: [1,2,3,4,5,6,7], start: 10900, stepDelay: 150 },
+    { type: 'settle', slots: [1,2,3,4,5,6,7], start: 13500, stepDelay: 150 },
   ]
 };
 
