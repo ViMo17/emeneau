@@ -934,21 +934,39 @@
   /* РЕШЕНО (заход 17, «дать фон, бежевый, увеличь шрифт»): один блок вместо
      двух — тот же бежевый (#E0D2BE), что у карточек правил 41–49 (.rd-bg-c4),
      текст тёмный (та же логика, что у #rd-text на светлом фоне). */
+  /* РЕШЕНО (заход 21, «блок висит даже когда правило не выбрано — непонятно,
+     к чему он относится»). Раньше #grammar-explain был виден ВСЕГДА (общий
+     текст про гуну/вриддхи не был завязан ни на что) — стало ещё заметнее
+     после того, как у блока появился бежевый фон (заход 17): раньше это
+     была тихая тёмная плашка, терялась на общем фоне, теперь — яркое пятно
+     без всякой видимой причины. display:none по умолчанию (базовое
+     правило, ниже переопределяется JS-инлайном на 'flex' ровно тогда,
+     когда есть активный пример/шаг — см. clearRoleDemo/renderRoleDemo/
+     renderRoleDemoSynced). */
   #grammar-explain {
+    display: none;
     flex: 0 0 auto;
     background: #E0D2BE;
     border-radius: 12px;
     padding: 12px 14px;
-    display: flex;
     flex-direction: column;
     gap: 8px;
     margin-top: 4px;
     box-shadow: 0 1px 2px rgba(200,175,140,.28), 0 6px 14px rgba(0,0,0,.18),
                 inset 0 -1px 0.5px rgba(140,110,65,.22);
+    /* РЕШЕНО (заход 22, «блок не должен прыгать»): раньше высота была
+       свободной (auto) — при переходе между шагами с текстом разной длины
+       блок менял высоту, и всё, что ниже в панели, тряслось/скакало вместе
+       с ним. Теперь высота ФИКСИРОВАННАЯ, не зависит от содержимого; если
+       текст не помещается — прокрутка ВНУТРИ блока (title тоже скроллится
+       вместе с текстом, для простоты — не выносился в отдельную «прилипшую»
+       шапку), а не рост блока наружу. */
+    height: 280px;
+    overflow-y: auto;
   }
   #grammar-explain .role-legend-title { color: rgba(30,28,24,.75); }
   #guna-rationale-text {
-    font-size: 13px;
+    font-size: 15px; /* было 13px — «увеличь на 2пт», заход 22 */
     line-height: 1.55;
     font-family: 'Helvetica Neue', sans-serif;
     color: #2A241C;
@@ -1020,7 +1038,7 @@
   }
   #role-steps-text {
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 13px;
+    font-size: 15px; /* было 13px — заход 22, тот же прирост, что у guna-rationale-text рядом */
     line-height: 1.55;
     color: #2A241C;
   }
@@ -1823,9 +1841,28 @@ EXAMPLES[6] = [{
 }];
 EXAMPLES[7] = [{
   desc: 'a (аугмент) + as- «быть» + īt → āsīt «был»',
+  // ДОБАВЛЕНО (заход 23): подключение к слот-движку, тем же способом, что
+  // agnayas (заход 13) — module + roleDemo, синхронизированные через
+  // событие slotstep (см. renderRoleDemoSynced), а не отдельной кнопочной
+  // лентой. roleDemo расширен с одного шага до двух — раньше здесь был
+  // только сам факт слияния (шаг «7»), без объяснения, откуда вообще взялся
+  // второй a (окончание -īt архаичной парадигмы as-, см. algoritm-pravilo7-
+  // asit.md) — теперь оба шага 3D-анимации имеют пару в 2D-подсветке,
+  // ровно то, о чём напомнили.
+  module: './examples/rule7-asit.js',
   roleDemo: { steps: [
+    // Шаг 1 [Грам.] — чисто структурное присоединение окончания, звук не
+    // меняется: не задан type/source/result/trigger — на алфавите ничего
+    // не подсвечивается (общий приём renderRoleStep для «нет отношения
+    // источник→результат»), текст объясняет причину архаичного -īt.
+    { tag: 'грам.',
+      text: 'Личное окончание 3 л. ед.ч. имперфекта у большинства корневых глаголов — просто -t. У as- «быть» — архаичная особенность именно этой парадигмы: -īt (ср. 1 л. āsam, 2 л. āsīs, 3 л. āsīt, 3 мн. āsan; Кочергина, Занятие XVII).' },
+    // Шаг 2 [Сандхи 7] — само правило: два одинаковых кратких a сливаются
+    // в один долгий. type:'lexical' — триггера нет вообще («самоподобие»),
+    // та же формула, что уже используется для грамматических шагов без
+    // катализатора (см. agnayas).
     { tag: '7', type: 'lexical', source: 'a', result: 'ā',
-      text: 'Два одинаковых кратких a встречаются на стыке (аугмент a- + начальный a корня as-) — оба сливаются в один долгий ā. Не гуна и не вриддхи — здесь нет разных гласных, просто слияние одинаковых.' }
+      text: 'А вот это само правило 7: два одинаковых кратких a встречаются на стыке (аугмент a- + начальный a корня as-) — оба сливаются в один долгий ā. Триггер не нужен — случай самоподобия, не гуна и не вриддхи.' },
   ] }
 }];
 EXAMPLES[13] = [{
@@ -2903,6 +2940,7 @@ wrap.appendChild(roleSvg);
 })();
 
 const roleStepsWrap   = document.getElementById('role-steps');
+const grammarExplain  = document.getElementById('grammar-explain');
 const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
 let currentSlotStepListener = null; // слушатель события slotstep текущего 3D-примера (см. clearRoleDemo)
@@ -2987,6 +3025,7 @@ function clearRoleDemo() {
   roleStepsWrap.style.display = 'none';
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
+  grammarExplain.style.display = 'none'; // заход 21 — блок гуны/вриддхи виден только при активном примере
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
   // РЕШЕНО (заход 17): снимаем слушатель slotstep предыдущего примера —
   // иначе при каждой смене 3D-примера слушатели копятся на animTiles
@@ -3092,6 +3131,7 @@ function renderRoleStep(step) {
 function renderRoleDemoSynced(demo) {
   clearRoleDemo();
   if (!demo || !demo.steps || !demo.steps.length) return;
+  grammarExplain.style.display = 'flex'; // заход 21 — виден только когда есть реальный активный пример
   roleStepsWrap.style.display = 'none'; // кнопки не нужны — синхронизация делает их лишними
   renderRoleStep(demo.steps[0]);
   currentSlotStepListener = e => {
@@ -3106,6 +3146,7 @@ function renderRoleDemoSynced(demo) {
 function renderRoleDemo(demo) {
   clearRoleDemo();
   if (!demo || !demo.steps || !demo.steps.length) return;
+  grammarExplain.style.display = 'flex'; // заход 21 — виден только когда есть реальный активный пример
 
   if (demo.steps.length === 1) {
     // один шаг — переключать нечего, лента не нужна, сразу показываем объяснение
