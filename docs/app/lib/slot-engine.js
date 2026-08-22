@@ -185,6 +185,9 @@ function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 // движение стартовало сразу на полной скорости (easeOutCubic в t=0 имеет
 // не нулевую производную, отсюда «рывок» в начале хода).
 function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+// добавлено (заход 27, elide — правило 15): медленный старт, ускоряющееся
+// исчезновение — читается как растворение, не механическое схлопывание.
+function easeInCubic(t) { return t * t * t; }
 function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
 function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
@@ -425,7 +428,7 @@ function stepIndexAt(elapsed, runtimeSteps) {
       слотам, с подскоком на каждом — сигнал «весь процесс завершён».
       { type:'settle', slots:[...], start, stepDelay=150, bounceDur=500 }
 */
-export function mountSlotExample(container, data) {
+export function mountSlotExample(container, data, opts = {}) {
   injectStylesOnce();
 
   // РЕШЕНО (заход 13, интеграция в основное приложение): раньше .slot-stage
@@ -452,6 +455,29 @@ export function mountSlotExample(container, data) {
   // (applyInfluence/applyApproach) и здесь же — для разрешения activeSlots шагов.
   const wordGroupsList = computeWordGroups(data.initial);
 
+  // ИСПРАВЛЕНО (заход 25, реальный баг «И не заменилось на Е, до самого
+  // конца» — не на каждом прогоне, а когда монтирование пересекалось с
+  // другим). Причина: data — это ЕДИНЫЙ объект МОДУЛЯ (export const data в
+  // examples/*.js), не одноразовое состояние конкретного показа — он
+  // переиспользуется на каждый повторный mount() (replay, повторный клик,
+  // и в частности — два пересёкшихся по времени монтирования, если click
+  // случился раньше, чем предыдущий async-импорт долетел). А applyTransform
+  // /applySplit/applyMerge и т.д. пишут флаги (`op._began`, `op._swapped`,
+  // `op._done`, `op._pulsedAt`...) ПРЯМО на объекты data.ops — то есть на
+  // объекты, разделяемые МЕЖДУ прогонами. Если два прогона пересекаются
+  // (два набора кубиков, но ОДИН и тот же набор op-флагов), тот, что успел
+  // раньше, «съедает» флаг — и второй прогон, реально видимый на экране,
+  // пропускает своё же превращение целиком, потому что guard (`if
+  // (!op._swapped && ...)`) видит флаг уже true от чужого прогона.
+  // Общий фикс — не патч под конкретный флаг: ops клонируются заново на
+  // каждый mount(), без унаследованных «_»-полей ни от какого предыдущего
+  // прогона. data.ops остаётся нетронутым модульным экспортом.
+  const ops = (data.ops || []).map(op => {
+    const clean = {};
+    for (const k in op) if (!k.startsWith('_')) clean[k] = op[k];
+    return clean;
+  });
+
   // лента шагов — чипы строятся один раз из data.steps (если есть); activeSlots
   // каждого шага прогоняется через resolveSlotRef — ссылки вида {word:2} становятся
   // плоским списком номеров слотов ДО того, как в дело вступит buildRuntimeSteps
@@ -474,33 +500,37 @@ export function mountSlotExample(container, data) {
   // СЧИТАЕТСЯ автоматически: конец хвостового шага (= конец последнего
   // авторского шага) + время последнего по порядку кубика на стаггер+рампу
   // проявления + пауза (data.settleDelay ?? 1000, её же значение и просила).
-  // Явный settle в data.ops по-прежнему в приоритете (обратная совместимость
-  // / случаи, где нужен нестандартный старт) — автоматика только достраивает
-  // недостающее.
-  const hasExplicitSettle = (data.ops || []).some(op => op.type === 'settle');
+  // Явный settle в ops по-прежнему в приоритете (обратная совместимость /
+  // случаи, где нужен нестандартный старт) — автоматика только достраивает
+  // недостающее. Пишет в ЛОКАЛЬНЫЙ ops (заход 25), не в data.ops — иначе
+  // при повторном mount() settle накапливался бы по одному на каждый показ.
+  const hasExplicitSettle = ops.some(op => op.type === 'settle');
   if (!hasExplicitSettle && runtimeSteps) {
     const tail = runtimeSteps[runtimeSteps.length - 1];
-    // РЕШЕНО (заход 15): merge поглощает кубик-источник целиком (см.
-    // applyMerge, delete cubes[op.from]) — его номер слота должен ВЫЙТИ из
-    // финального набора, иначе settle попытается подсветить кубик, который
-    // к моменту своего старта уже не существует.
-    const mergedAway = new Set(
-      (data.ops || []).filter(op => op.type === 'merge').map(op => op.from)
-    );
+    // РЕШЕНО (заход 15, расширено в заходе 27 на elide): merge поглощает
+    // кубик-источник целиком, elide заставляет кубик исчезнуть целиком
+    // (см. applyMerge/applyElide, оба делают delete cubes[...]) — их
+    // номера слотов должны ВЫЙТИ из финального набора, иначе settle
+    // попытается подсветить кубик, который к моменту своего старта уже
+    // не существует.
+    const goneSlots = new Set([
+      ...ops.filter(op => op.type === 'merge').map(op => op.from),
+      ...ops.filter(op => op.type === 'elide').map(op => op.at),
+    ]);
     const finalSlots = [...new Set([
       ...data.initial.map(x => x.slot),
-      ...(data.ops || [])
+      ...ops
         .filter(op => op.type === 'split')
         .flatMap(op => (op.arrivals || []).map(a => a.newSlot)),
-      ...(data.ops || [])
+      ...ops
         .filter(op => op.type === 'arrive')
         .flatMap(op => (op.items || []).map(a => a.newSlot)),
-    ])].filter(s => !mergedAway.has(s)).sort((a, b) => a - b);
+    ])].filter(s => !goneSlots.has(s)).sort((a, b) => a - b);
     const revealStagger = data.revealStagger ?? 130;
     const revealRamp = data.revealRamp ?? 700;
     const lastRevealEnd = tail.start + (finalSlots.length - 1) * revealStagger + revealRamp;
     const settleDelay = data.settleDelay ?? 1000;
-    (data.ops || (data.ops = [])).push({
+    ops.push({
       type: 'settle', slots: finalSlots, start: lastRevealEnd + settleDelay,
     });
   }
@@ -518,14 +548,24 @@ export function mountSlotExample(container, data) {
     const cls = ['slot-step-chip', step.kind === 'grammar' ? 'is-grammar' : 'is-rule'];
     if (step.kind === 'rule' && step.primary) cls.push('is-primary');
     chip.className = cls.join(' ');
-    // РЕШЕНО (заход 17, «вводим подпись ШАГ...»): префикс «Шаг N ·» —
-    // формат согласован со старой лентой в правой панели приложения
-    // (roleStepsRibbon в sanskrit-sandhi-app.html), которая теперь не
-    // дублирует эти чипы, а синхронизируется с ними через событие
-    // slotstep (см. updateSteps выше) — подписи должны читаться как ОДНА
-    // и та же лента, просто в двух местах экрана, не как два разных.
-    const tag = step.kind === 'grammar' ? (step.label || 'грам.') : (step.label || ('правило ' + (step.ruleNum ?? '?')));
-    chip.textContent = 'Шаг ' + (i + 1) + ' · ' + tag;
+    // ИСПРАВЛЕНО (заход 26, формат подписи по прямой просьбе): «Шаг N ·
+    // грам.» → «Шаг N. Грамматика» / «Шаг N. Правило M» — точка вместо
+    // середин­ной точки-разделителя, полные капитализированные слова, не
+    // сокращения.
+    const tag = step.kind === 'grammar' ? (step.label || 'Грамматика') : (step.label || ('Правило ' + (step.ruleNum ?? '?')));
+    chip.textContent = 'Шаг ' + (i + 1) + '. ' + tag;
+    // РЕШЕНО (заход 26, «клик по шагу — начать сначала, сразу приступить
+    // к шагу N», её решение — записанный план «принудительный клик на
+    // каждый шаг» см. second-examples-todo.md, конкретный технический
+    // приём — сдвиг t0, не перемотка — дан только сейчас). Полная чистая
+    // пересборка сцены (unmount убирает старую целиком — тот же путь,
+    // что и при обычной смене примера) с новой точкой отсчёта времени —
+    // см. opts.startAt в сигнатуре mountSlotExample выше.
+    chip.style.cursor = 'pointer';
+    chip.addEventListener('click', () => {
+      unmount();
+      mountSlotExample(container, data, { startAt: step.start });
+    });
     // Цвет кнопки «Правило N» — из данных примера (step.color, hex-число),
     // ожидается тот же цвет, что и у карточки этого правила на панели слева
     // в sanskrit-sandhi-app.html (классы .c1–.c4) — применяется к любому
@@ -640,7 +680,19 @@ export function mountSlotExample(container, data) {
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
   const camBase = new THREE.Vector3(0, 3.2, 9.5);
   camera.position.copy(camBase);
-  camera.lookAt(0, 0, 0);
+  // ИСПРАВЛЕНО (заход 25, «в правиле 3 обрезается висящая в отстойнике Е —
+  // увеличить верхнюю границу сцены, места много»). Проверила не на глаз, а
+  // прогнав реальную проекционную математику камеры (THREE.Vector3.project)
+  // на верхний край кубика в отстойнике (holdOffset.y=2.4 + CUBE_SIZE/2) —
+  // при lookAt(0,0,0) он проецируется в NDC y=1.069, за пределами кадра
+  // (край кадра — ровно 1.0). Ряд кубиков при этом использует только
+  // нижнюю половину кадра (низ ряда — NDC y≈−0.18, до края −1 ещё много
+  // запаса) — «места много» подтвердилось расчётом, не только на вид.
+  // lookAt(0, 0.4, 0) вместо (0,0,0) — камера чуть наклоняется вверх,
+  // верхний край отстойника уходит на NDC y≈0.93 (с запасом), ряд остаётся
+  // хорошо видимым (низ ряда NDC y≈−0.31, ещё не у края). Общий фикс, не
+  // частность agnayas — тот же отстойник у любого будущего split.
+  camera.lookAt(0, 0.4, 0);
 
   function project(vec3) {
     const w = stageEl.clientWidth, h = stageEl.clientHeight;
@@ -812,7 +864,19 @@ export function mountSlotExample(container, data) {
   resizeObserver.observe(stageEl);
   resize();
 
-  const t0 = performance.now();
+  // РЕШЕНО (заход 26, «клик по шагу — не двигаться назад, а мгновенно
+  // начать сначала и сразу приступить к шагу N», её прямое решение). Не
+  // перемотка уже идущего прогона (для этого пришлось бы уметь считать
+  // состояние в обратном времени — сложно для направленного движения типа
+  // approach/split) — а сдвиг ТОЧКИ ОТСЧЁТА нового, полностью свежего
+  // прогона: t0 смещается назад на opts.startAt, поэтому первый же кадр
+  // уже вычисляет elapsed ≈ opts.startAt, и все ops (transform/split/merge
+  // и т.д.), проверяющие пороги по elapsed с одноразовыми флагами,
+  // корректно каскадом проходят все более ранние фазы за один кадр —
+  // ровно то же поведение, что уже проверено симуляцией для бага
+  // «переиспользуемые data.ops» (заход 25): свежие флаги на каждый вызов,
+  // просто здесь elapsed сразу большой, а не растёт с нуля.
+  const t0 = performance.now() - (opts.startAt ?? 0);
   let rafId = null;
 
   /* 0. INFLUENCE — дальнодействие до самого превращения: несколько волн-
@@ -1325,6 +1389,41 @@ export function mountSlotExample(container, data) {
     }
   }
 
+  /* ELIDE (заход 27, правило 15, śādhi: s между ā и dh пропадает, ничего
+     не появляется взамен) — первое применение к пункту «элизия» из списка
+     недостающего в шаблон-документе. НЕ split (никто не прилетает взамен)
+     и НЕ merge (не с кем сливаться) — честное самостоятельное исчезновение.
+     Кубик одновременно сжимается и тает (масштаб→0, opacity→0, разгон к
+     концу — easeInCubic, читается как растворение, не как механическое
+     схлопывание), с мягким расходящимся кольцом-«всплеском» ровно в
+     момент, когда он окончательно пропадает (тот же spawnPulseRing, что
+     везде, тон — нейтральный GROUP_COLOR: структурное событие, не смена
+     категории звука). Сдвиг соседних букв, чтобы закрыть образовавшийся
+     промежуток, — НЕ часть этой операции: для этого используется уже
+     готовый `approach` (retreat:false) с любым СУЩЕСТВУЮЩИМ соседним
+     кубиком в роли `target` (только для направления сдвига — сама
+     остановка определяется `distance`, не точными координатами цели) —
+     тот же приём, что уже проверен на āsīt (шаг 1). Не изобретаем вторую
+     версию того же самого только потому, что здесь причина другая.
+     { type:'elide', at, start, dur=700 } */
+  function applyElide(op, elapsed) {
+    if (elapsed < op.start) return;
+    const cube = cubes[op.at];
+    if (!cube || op._done) return;
+    const dur = op.dur ?? 700;
+    const t = clamp01((elapsed - op.start) / dur);
+    const te = easeInCubic(t);
+    cube.mesh.scale.setScalar(1 - te);
+    setOpacity(cube.mesh, 1 - te);
+    if (t >= 1) {
+      op._done = true;
+      cube.mesh.visible = false;
+      cube.shadow.visible = false;
+      spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB);
+      delete cubes[op.at];
+    }
+  }
+
   // stepDelay слегка увеличен (было 150) — по обратной связи финал должен
   // идти ПЛАВНО, не спеша; цвет меняется РОВНО на вершине волны (t=0.5).
   //
@@ -1388,13 +1487,14 @@ export function mountSlotExample(container, data) {
         if (elapsed >= cube._fallStart + cube._fallDur) cube._fallDone = true;
       }
     });
-    (data.ops || []).forEach(op => {
+    ops.forEach(op => {
       if (op.type === 'influence') applyInfluence(op, elapsed);
       else if (op.type === 'approach') applyApproach(op, elapsed);
       else if (op.type === 'transform') applyTransform(op, elapsed);
       else if (op.type === 'split') applySplit(op, elapsed);
       else if (op.type === 'arrive') applyArrive(op, elapsed);
       else if (op.type === 'merge') applyMerge(op, elapsed);
+      else if (op.type === 'elide') applyElide(op, elapsed);
       else if (op.type === 'settle') applySettle(op, elapsed);
       else if (op.type === 'dim') applyDim(op, elapsed);
     });
@@ -1440,6 +1540,9 @@ function injectStylesOnce() {
       letter-spacing:.02em; padding:5px 12px; border-radius:999px;
       background:#3A3E48; color:rgba(230,225,210,.55);
       border:1px solid rgba(255,255,255,.12); transition:all .35s ease; }
+    /* ЗАХОД 26 — чипы теперь кликабельны (перезапуск ролика сразу с этого
+       шага), лёгкая hover-подсказка, чтобы это читалось. */
+    .slot-step-chip:hover { filter: brightness(1.18); transform: translateY(-1px); }
     /* ИСПРАВЛЕНО (заход 15, «ждала наличие цвета у фона плашек — сейчас нет
        фона, цветная рамка»). Раньше цвет фона был ТОЛЬКО у .active — как
        только шаг заканчивался, чип возвращался к нейтральному тёмному фону
