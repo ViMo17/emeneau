@@ -480,6 +480,13 @@ export function mountSlotExample(container, data) {
   const hasExplicitSettle = (data.ops || []).some(op => op.type === 'settle');
   if (!hasExplicitSettle && runtimeSteps) {
     const tail = runtimeSteps[runtimeSteps.length - 1];
+    // РЕШЕНО (заход 15): merge поглощает кубик-источник целиком (см.
+    // applyMerge, delete cubes[op.from]) — его номер слота должен ВЫЙТИ из
+    // финального набора, иначе settle попытается подсветить кубик, который
+    // к моменту своего старта уже не существует.
+    const mergedAway = new Set(
+      (data.ops || []).filter(op => op.type === 'merge').map(op => op.from)
+    );
     const finalSlots = [...new Set([
       ...data.initial.map(x => x.slot),
       ...(data.ops || [])
@@ -488,7 +495,7 @@ export function mountSlotExample(container, data) {
       ...(data.ops || [])
         .filter(op => op.type === 'arrive')
         .flatMap(op => (op.items || []).map(a => a.newSlot)),
-    ])].sort((a, b) => a - b);
+    ])].filter(s => !mergedAway.has(s)).sort((a, b) => a - b);
     const revealStagger = data.revealStagger ?? 130;
     const revealRamp = data.revealRamp ?? 700;
     const lastRevealEnd = tail.start + (finalSlots.length - 1) * revealStagger + revealRamp;
@@ -914,14 +921,24 @@ export function mountSlotExample(container, data) {
      невидимой преградой. Подход к пику — плавный разгон/торможение
      (easeInOutCubic, было easeOutCubic — убран рывок в самом начале хода).
      { type:'approach', mover, target, start, approachDur=1150, holdDur=550,
-       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16 }
+       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16, retreat=true }
 
      ПРАВКА (по обратной связи): цель БОЛЬШЕ НЕ перекрашивается в сигнальный
      (оранжевый) цвет на пике — прямо названо ошибкой («Е становится
      оранжевой на время»). Вместо смены цвета цели — один тёплый кольцевой
      пульс оттенка ПОДХОДЯЩЕГО кубика (не цели) ровно на пике, той же техникой
      ringColorFrom, что и у сустейн-колец influence — сигнал «момент
-     напряжения» остаётся, но летящий кубик не перекрашивает саму цель. */
+     напряжения» остаётся, но летящий кубик не перекрашивает саму цель.
+
+     РЕШЕНО (заход 15, `retreat:false`) — та же самая механика подхода
+     годится и для ПРОТИВОПОЛОЖНОГО смысла: не несовместимость, а
+     совместимость («примагничивание», āsīt, ĪТ подъезжает к АС и остаётся,
+     а не отскакивает). distance:1.0 при зазоре ровно в один слот приводит
+     мувер точно встык с целью; retreat:false отключает фазу отскока
+     целиком (retreatDur обнуляется) — кубик остаётся у цели навсегда,
+     jitterAmp у вызывающего кода обычно ставится в 0 отдельно (дрожь —
+     язык именно несовместимости, не нужна тут по смыслу, но остаётся
+     доступной, если понадобится где-то ещё). */
   function applyApproach(op, elapsed) {
     // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
     // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
@@ -931,7 +948,8 @@ export function mountSlotExample(container, data) {
     if (!movers.length || !target) return;
     const approachDur = op.approachDur ?? 1150; // было 800
     const holdDur = op.holdDur ?? 550; // было 400
-    const retreatDur = op.retreatDur ?? 950; // было 700
+    const retreat = op.retreat !== false;
+    const retreatDur = retreat ? (op.retreatDur ?? 950) : 0; // было 700
     const distance = op.distance ?? 0.5;
     const jitterAmp = op.jitterAmp ?? 0.16;
     const peakStart = op.start + approachDur;
@@ -943,7 +961,8 @@ export function mountSlotExample(container, data) {
 
     if (elapsed < op.start || elapsed > retreatEnd) {
       if (elapsed > retreatEnd) {
-        movers.forEach((m, i) => { m.mesh.position.x = baseXs[i]; });
+        // retreat:false — остаёмся у цели (shift), а не возвращаемся домой (0)
+        movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + (retreat ? 0 : shift); });
         target.mesh.rotation.z = 0;
       }
       return;
@@ -1218,40 +1237,56 @@ export function mountSlotExample(container, data) {
      идёт через отдельный op._done guard.
      { type:'merge', arriving:{tr,from,dur,arcHeight}, at, toGlyph, toColor,
        start, pulseHoldMs } */
+  /* MERGE — слияние (заход 15, полностью переработано под «все буквы падают
+     вместе, с зазором, потом происходит притяжение»). Раньше кубик, который
+     сливается, материализовался ЗА кадром и прилетал по дуге — то есть
+     физически не существовал до собственного шага, хотя по её описанию все
+     буквы должны быть видны с самого начала, просто с паузой между
+     смысловыми частями слова. Теперь merge работает с УЖЕ существующим,
+     упавшим кубиком (от — номер его исходного слота, ровно как movers у
+     approach), просто едет вдоль ряда в позицию цели по прямой (без дуги —
+     это скольжение по своей полосе, не прилёт со стороны, дуга здесь была
+     бы визуально противоречащей самой идее). Слот-ключ источника (from)
+     специально НЕ переименовывается у соседей справа — они просто держат
+     СВОИ исходные номера слотов, даже когда их РЕАЛЬНАЯ позиция на экране
+     смещена соседней approach-операцией (см. applyApproach retreat:false) —
+     для порядка/подсчёта это неважно, важна только сортировка номеров, а
+     не их непрерывность.
+     { type:'merge', from, at, toGlyph, toColor, start, dur=1400, pulseHoldMs } */
   function applyMerge(op, elapsed) {
     if (elapsed < op.start) return;
-    if (op._done) return;
     const target = cubes[op.at];
-    if (!target) return;
-    const dur = op.arriving.dur ?? 1400;
-    if (!op._made) {
-      const seed = op.at * 151 + 7;
-      const mv = makeCube(op.arriving.tr, seed);
-      mv._fallDone = true;
-      scene.add(mv.mesh);
-      scene.add(mv.shadow);
-      op._mover = mv;
-      op._made = true;
+    const mover = cubes[op.from];
+    if (!target || !mover) return;
+    if (!op._done) {
+      const dur = op.dur ?? 1400;
+      const t = clamp01((elapsed - op.start) / dur);
+      const te = easeInOutCubic(t);
+      const toX = target.mesh.position.x;
+      mover.mesh.position.x = lerp(slotX(op.from), toX, te);
+      mover.shadow.position.x = mover.mesh.position.x;
+      if (t >= 1) {
+        op._done = true;
+        mover.mesh.visible = false;
+        mover.shadow.visible = false;
+        delete cubes[op.from]; // слились — отдельного кубика больше нет вообще
+        const newColor = op.toColor ?? colorFor(op.toGlyph);
+        regenMats(target, op.toGlyph, newColor);
+        target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
+        spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB);
+        target.mesh.scale.setScalar(1.09); // чуть выше обычного пика — «долгий держится дольше»
+        op._pulsedAt = elapsed;
+      }
     }
-    const mover = op._mover;
-    const t = clamp01((elapsed - op.start) / dur);
-    const targetPos = target.mesh.position;
-    const p = flyArcPosition(op.arriving.from, targetPos.x, targetPos.y, targetPos.z, t, op.arriving.arcHeight ?? 0.8);
-    mover.mesh.position.set(p.x, p.y, p.z);
-    mover.shadow.position.set(p.x, FLOOR_Y + 0.01, p.z + 0.05);
-    if (t >= 1) {
-      op._done = true;
-      mover.mesh.visible = false;
-      mover.shadow.visible = false;
-      const newColor = op.toColor ?? colorFor(op.toGlyph);
-      regenMats(target, op.toGlyph, newColor);
-      target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
-      spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB);
-      target.mesh.scale.setScalar(1.09); // чуть выше обычного пика — «долгий держится дольше»
-      op._pulsedAt = elapsed;
-    }
-    // мягкий спад пика масштаба после слияния — тот же принцип держащегося
-    // чуть дольше «вдоха», не мгновенный сброс
+    // ИСПРАВЛЕНО (заход 15, реальный баг «результат крупнее стандарта» —
+    // не тонкая настройка). Спад пика масштаба раньше стоял ПОД ТЕМ ЖЕ
+    // guard'ом `if (op._done) return`, что и вся остальная функция — на
+    // первом же кадре ПОСЛЕ слияния этот guard обрывал функцию раньше, чем
+    // спад успевал сделать хоть шаг: масштаб застревал на 1.09 навсегда.
+    // Тот же самый класс ошибки уже чинили в applyTransform (заход 11) —
+    // здесь я сама воспроизвела его заново, поставив финализацию и
+    // продолжающийся спад за одним и тем же early-return. Спад вынесен из-
+    // под guard'а — идёт каждый кадр после слияния, независимо от op._done.
     if (op._pulsedAt != null) {
       const pt = clamp01((elapsed - op._pulsedAt) / 500);
       target.mesh.scale.setScalar(lerp(1.09, 1, easeOutCubic(pt)));
@@ -1373,18 +1408,20 @@ function injectStylesOnce() {
       letter-spacing:.02em; padding:5px 12px; border-radius:999px;
       background:#3A3E48; color:rgba(230,225,210,.55);
       border:1px solid rgba(255,255,255,.12); transition:all .35s ease; }
-    .slot-step-chip.is-grammar { text-transform:lowercase; }
-    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase; }
-    .slot-step-chip.active { color:#2A2D35; border-color:transparent; }
-    /* «Грамматика» — жёлто-охровый тон, как в ранних версиях под алфавитом. */
-    .slot-step-chip.is-grammar.active { background:#CDA84E; }
-    /* РЕШЕНО (правка после захода 10, прямое указание): цвет «правило N» —
-       ВСЕГДА цвет карточки этого правила (step.color, тот же hex, что в
-       sanskrit-sandhi-app.html), а не охровый — и у предварительного
-       (обычного) правила, и у главного (primary) ОДИНАКОВО. Разница между
-       ними — ТОЛЬКО размер плашки (см. .is-primary ниже), не цвет. Если
-       step.color не задан — нейтральный синий по умолчанию. */
-    .slot-step-chip.is-rule.active { background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
+    /* ИСПРАВЛЕНО (заход 15, «ждала наличие цвета у фона плашек — сейчас нет
+       фона, цветная рамка»). Раньше цвет фона был ТОЛЬКО у .active — как
+       только шаг заканчивался, чип возвращался к нейтральному тёмному фону
+       и терял цвет совсем, оставалась только тонкая нейтральная рамка. Это
+       была ошибка модели: цвет — ПОСТОЯННЫЙ признак принадлежности («это
+       грамматика» / «это правило N»), не индикатор «сейчас идёт». Теперь
+       цвет — прямо на классе is-grammar/is-rule, всегда; .active добавляет
+       СВЕЧЕНИЕ (сейчас именно этот шаг играет), не единственный источник
+       цвета. */
+    .slot-step-chip.is-grammar { text-transform:lowercase; background:#CDA84E; color:#2A2D35; }
+    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase;
+      background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
+    .slot-step-chip.active { border-color:transparent;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 0 10px 2px rgba(255,255,255,.28); }
     /* PRIMARY — тот единственный шаг, ради которого сделан весь ролик
        («шаг 2» из её формулировки: правило N, а не вспомогательная ссылка).
        Вдвое выше и в 1.5 раза шире обычного чипа — font-size и padding
