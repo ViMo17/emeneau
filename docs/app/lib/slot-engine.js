@@ -489,14 +489,21 @@ export function mountSlotExample(container, data) {
   const authoredSteps = resolvedAuthoredSteps;
   authoredSteps.forEach(step => {
     const chip = document.createElement('div');
-    chip.className = 'slot-step-chip' + (step.kind === 'grammar' ? ' is-grammar' : ' is-rule');
+    // РЕШЕНО (заход 10, уточнено следующим сообщением): 'grammar' — жёлто-
+    // охровый тон. Любое 'rule' (и предварительное, и главное) — цвет
+    // карточки ЭТОГО правила (step.color), одинаково у обоих. Разница
+    // между обычным и главным правилом («шаг 2» из её формулировки) —
+    // ТОЛЬКО размер: `primary:true` в данных даёт класс is-primary
+    // (крупнее), цвет он не переопределяет — оба берут его из одного и
+    // того же --rule-chip-color.
+    const cls = ['slot-step-chip', step.kind === 'grammar' ? 'is-grammar' : 'is-rule'];
+    if (step.kind === 'rule' && step.primary) cls.push('is-primary');
+    chip.className = cls.join(' ');
     chip.textContent = step.kind === 'grammar' ? (step.label || 'грам.') : (step.label || ('правило ' + (step.ruleNum ?? '?')));
     // Цвет кнопки «Правило N» — из данных примера (step.color, hex-число),
     // ожидается тот же цвет, что и у карточки этого правила на панели слева
-    // в sanskrit-sandhi-app.html (классы .c1–.c4) — так кнопка в анимации
-    // визуально указывает на «своё» правило в основном интерфейсе, не на
-    // произвольный золотой, который ничего не означал и совпадал по цвету
-    // с сигналом «вот-вот произойдёт» у самих кубиков (перегрузка смысла).
+    // в sanskrit-sandhi-app.html (классы .c1–.c4) — применяется к любому
+    // 'rule'-шагу, не только primary (см. комментарий выше).
     if (step.kind === 'rule' && step.color != null) {
       chip.style.setProperty('--rule-chip-color', '#' + step.color.toString(16).padStart(6, '0'));
     }
@@ -642,12 +649,27 @@ export function mountSlotExample(container, data) {
       labelsEl.appendChild(el);
       op._frameEl = el;
     }
-    // нижний край видимой грани (yOff отрицательный) — линия идёт под
-    // буквами, не поверх них
-    const pts = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56)));
-    const left = Math.min(...pts.map(p => p.x));
-    const right = Math.max(...pts.map(p => p.x));
-    const y = Math.max(...pts.map(p => p.y));
+    // РЕШЕНО (заход 10, «на всю протяжённость задействованных слотов»).
+    // Раньше границы брались от ЦЕНТРА крайних кубиков (frontAnchor без
+    // сдвига по X) — рамка не доходила до реальных краёв слотов, была уже
+    // самой группы. Теперь у крайнего левого и крайнего правого кубика
+    // берётся точка со сдвигом на пол-слота НАРУЖУ (±SLOT/2, через
+    // quaternion — как и остальные якоря, верно при любом повороте) — рамка
+    // покрывает слот целиком, а не только видимую ширину буквы на грани.
+    const sorted = sources.slice().sort((a, b) => a.mesh.position.x - b.mesh.position.x);
+    const leftCube = sorted[0], rightCube = sorted[sorted.length - 1];
+    const edgeAnchor = (mesh, xOff) => {
+      const local = new THREE.Vector3(xOff, -CUBE_SIZE * 0.56, CUBE_SIZE * 0.42).applyQuaternion(mesh.quaternion);
+      return mesh.position.clone().add(local);
+    };
+    const pLeft = project(edgeAnchor(leftCube.mesh, -SLOT / 2));
+    const pRight = project(edgeAnchor(rightCube.mesh, SLOT / 2));
+    // Y — по нижнему краю грани у всех кубиков группы (не только крайних),
+    // на случай если группа не строго горизонтальна на экране (наклон камеры/поворот)
+    const ys = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56)).y);
+    const y = Math.max(pLeft.y, pRight.y, ...ys);
+    const left = Math.min(pLeft.x, pRight.x);
+    const right = Math.max(pLeft.x, pRight.x);
     const el = op._frameEl;
     el.style.left = left + 'px';
     el.style.top = y + 'px';
@@ -799,7 +821,7 @@ export function mountSlotExample(container, data) {
 
     if (elapsed < op.start || elapsed > op.start + dur) {
       if (elapsed > op.start + dur) {
-        target.mesh.rotation.z = 0;
+        target.mesh.scale.setScalar(1);
         sources.forEach(src => src.mesh.scale.setScalar(1));
       }
       return;
@@ -828,8 +850,28 @@ export function mountSlotExample(container, data) {
     }
     sources.forEach(src => src.mesh.scale.setScalar(1 + srcPulse));
 
-    const t = clamp01((elapsed - op.start) / dur);
-    target.mesh.rotation.z = Math.sin(elapsed * 0.0125) * 0.05 * Math.sin(t * Math.PI);
+    // ИСПРАВЛЕНО (заход 10, «Е слишком сильно трясётся, придумай другую
+    // иллюстрацию»). Раньше цель дрожала вращением (rotation.z, случайного
+    // вида синус-тряска, читалась как визуальный шум, а не как понятный
+    // сигнал). Заменено на масштабный «удар»-пульс — тот же язык, что уже
+    // используется у источников (см. srcPulse выше) и на паузе перед split:
+    // один согласованный приём «пульс = вот-вот изменится» по всему движку,
+    // а не отдельный жест для каждого случая. Пульс цели синхронизирован не
+    // с ОТПРАВКОЙ волны (как у источника), а с её ПРИХОДОМ (waveTravel
+    // спустя) — цель откликается именно когда волна её достигает, не раньше.
+    // Сила пульса растёт от волны к волне (последняя — самая заметная,
+    // прямо перед началом transform) — нарастающее напряжение, а не ровный
+    // шум на всём протяжении шага.
+    let targetPulse = 0;
+    for (let i = 0; i < waveCount; i++) {
+      const arriveAt = op.start + i * waveGap + waveTravel;
+      const pt = (elapsed - arriveAt) / 320;
+      if (pt >= 0 && pt <= 1) {
+        const grow = 0.045 + i * 0.02;
+        targetPulse = Math.max(targetPulse, Math.sin(pt * Math.PI) * grow);
+      }
+    }
+    target.mesh.scale.setScalar(1 + targetPulse);
   }
 
   /* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
@@ -904,6 +946,21 @@ export function mountSlotExample(container, data) {
     }
   }
 
+  /* РЕШЕНО (заход 10, «серебро должно быть на гунировании, не на шаге
+     правило 3»). Раньше серебро (SILVER_COLOR) нигде не касалось самой
+     трансформации — кубик уходил в matsBlank (тот же ЕГО СОБСТВЕННЫЙ цвет,
+     без буквы) на время оборота, без какого-либо сигнала «я меняюсь».
+     Серебро по ошибке осталось только на паузе перед split (см. правку
+     applySplit ниже — убрано оттуда). Теперь три явные фазы, ровно как она
+     описала: (1) кубик получает импульс — материал сразу переключается на
+     matsSignal (серебро, СТАРАЯ буква ещё видна — понятно, КТО меняется);
+     (2) на ~15% оборота буква меняется, но материал остаётся matsSignal —
+     уже пересобранный под НОВУЮ букву (см. regenMats) — кубик «стал E», но
+     ещё серебряный, переход цветом не завершён; (3) в момент приземления
+     (t=1, тот же кадр, что и сброс поворота/позиции — не отдельная пауза,
+     чтобы не плодить лишнее ожидание, см. её же жалобу про паузу в split)
+     — переключение на matsMain, истинный цвет столбца. matsBlank в этой
+     операции больше не используется. */
   function applyTransform(op, elapsed) {
     const cube = cubes[op.at];
     if (!cube) return;
@@ -914,7 +971,7 @@ export function mountSlotExample(container, data) {
     if (elapsed < op.start || elapsed > op.start + dur) return;
     if (!op._began) {
       op._began = true;
-      cube.mesh.material = cube.matsBlank; // буква пропадает на время оборота
+      cube.mesh.material = cube.matsSignal; // серебро на СТАРОЙ букве — «получила импульс»
     }
     const t = clamp01((elapsed - op.start) / dur);
     cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
@@ -927,15 +984,18 @@ export function mountSlotExample(container, data) {
       // matsReady/matsSignal), не только текущий — фикс бага, из-за которого
       // «сигнальный»/«финальный» материал ещё долго хранил исходную,
       // добуквенную версию (см. комментарий в regenMats). Новая буква
-      // наносится сразу же, тем же моментом ~15% пути, что и раньше.
+      // наносится сразу же, тем же моментом ~15% пути, что и раньше —
+      // но материал остаётся серебряным (matsSignal), не matsMain: буква уже
+      // «Е», цвет ещё не вернулся, это следующая, отдельная фаза (см. ниже).
       regenMats(cube, op.toGlyph, newColor);
-      cube.mesh.material = cube.matsMain;
+      cube.mesh.material = cube.matsSignal;
     }
     if (t >= 1 && !op._done) {
       op._done = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
       cube.mesh.position.x = slotX(op.at);
+      cube.mesh.material = cube.matsMain; // возвращает себе истинный цвет столбца
     }
   }
 
@@ -953,7 +1013,14 @@ export function mountSlotExample(container, data) {
     if (!src) return;
     const riseDur = op.riseDur ?? 1300; // было 1000
     const holdOpacity = op.holdOpacity ?? 0.55;
-    const holdDur = op.holdDur ?? 2400; // было 2000
+    // ИСПРАВЛЕНО (заход 10, «ненужная пауза, когда Е исчезает в воздухе, мы
+    // смотрим на экран без событий»). 2400мс — почти два с половиной
+    // секунды ПОСЛЕ того, как E уже зависла на месте (riseDur кончился) И
+    // результаты (А+Й) уже прилетели и легли в ряд — то есть чистое время
+    // без единого нового события на экране. Смысл паузы («дать сравнить
+    // старое и новое рядом») остаётся, но 2400мс для этого избыточны;
+    // сокращено до 1000 — сравнение всё ещё читается, воздуха меньше.
+    const holdDur = op.holdDur ?? 1000; // было 2400 (до этого — 2000)
     const fadeDur = op.fadeDur ?? 1100; // было 900
     const holdOffset = op.holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
@@ -964,18 +1031,21 @@ export function mountSlotExample(container, data) {
     // связи это читалось «слишком быстро», зритель не успевал понять, ЧТО
     // сейчас произойдёт (Е уходит, А+Й приходят), прежде чем это уже
     // произошло. Явная пауза перед подъёмом: кубик НЕ двигается, но заметно
-    // сигналит «вот-вот» — переключается на сигнальный (золотой) цвет и
-    // мягко пульсирует масштабом (2 удара, как вдох-вдох), плюс два кольца-
-    // пульса расходятся вокруг него на сцене. Только после этого — подъём.
-    // Общий приём для ЛЮБОГО split, не частность agnayas.
+    // сигналит «вот-вот» — мягко пульсирует масштабом (2 удара, как
+    // вдох-вдох), плюс два кольца-пульса расходятся вокруг него на сцене.
+    // ИСПРАВЛЕНО (заход 10, доведено до конца): цвет здесь БОЛЬШЕ НЕ
+    // меняется — раньше это было золото (жалоба «Е оранжевая»), потом по
+    // ошибке серебро (заход 8) — но серебро теперь однозначно закреплено
+    // за трансформацией гуны (см. applyTransform), а не за паузой перед
+    // split; держать его ЕЩЁ и здесь означало бы два разных события одним
+    // и тем же цветом — путаница, а не сигнал. Пульс масштабом и кольца
+    // сами по себе уже достаточно ясно говорят «сейчас что-то произойдёт»,
+    // без перекраски кубика. Общий приём для ЛЮБОГО split, не частность
+    // agnayas.
     const anticipateDur = op.anticipateDur ?? 900;
     const activeStart = op.start + anticipateDur; // отсюда начинается реальное движение
     if (elapsed < activeStart) {
       const t = clamp01((elapsed - op.start) / anticipateDur);
-      if (!op._anticipateBegan) {
-        op._anticipateBegan = true;
-        src.mesh.material = src.matsSignal;
-      }
       // два «удара»: |sin| за один период даёт два симметричных горба
       // (пик на четверти и на трёх четвертях, ноль на старте/середине/конце)
       const beat = Math.abs(Math.sin(t * Math.PI * 2)) * 0.06;
@@ -1148,28 +1218,38 @@ function injectStylesOnce() {
   style.textContent = `
     .slot-steps { display:flex; gap:8px; justify-content:center; align-items:center;
       padding:8px 4px 2px; flex:0 0 auto; }
+    /* РЕШЕНО (заход 10, «не прозрачный фон»): раньше неактивный чип был почти
+       невидимым (rgba(255,255,255,.06)) — теперь сплошной тёмный фон, читается
+       как отдельный элемент интерфейса в любом состоянии, не только активном. */
     .slot-step-chip { font-family:'Helvetica Neue',Arial,sans-serif; font-size:11px;
-      letter-spacing:.02em; padding:4px 10px; border-radius:999px;
-      background:rgba(255,255,255,.06); color:rgba(230,225,210,.45);
-      border:1px solid rgba(255,255,255,.08); transition:all .35s ease; }
+      letter-spacing:.02em; padding:5px 12px; border-radius:999px;
+      background:#3A3E48; color:rgba(230,225,210,.55);
+      border:1px solid rgba(255,255,255,.12); transition:all .35s ease; }
     .slot-step-chip.is-grammar { text-transform:lowercase; }
-    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase;
-      /* крупнее и весомее — по прямой просьбе («кнопку Правило — сделаем
-         крупнее»): это единственная кнопка ленты, ведущая к конкретной
-         карточке правила в основном интерфейсе, ей уместен больший вес. */
-      font-size:13px; font-weight:600; padding:6px 16px; letter-spacing:.03em; }
+    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase; }
     .slot-step-chip.active { color:#2A2D35; border-color:transparent; }
-    .slot-step-chip.is-grammar.active { background:#DECDAF; }
-    /* Цвет по умолчанию — тот же синий, что у .c3 карточек внутренних сандхи
-       в sanskrit-sandhi-app.html (нейтральный вариант, если step.color не
-       задан); --rule-chip-color переопределяется инлайном под цвет ИМЕННО
-       той карточки, к которой относится конкретное правило (см. вызов выше). */
+    /* «Грамматика» — жёлто-охровый тон, как в ранних версиях под алфавитом. */
+    .slot-step-chip.is-grammar.active { background:#CDA84E; }
+    /* РЕШЕНО (правка после захода 10, прямое указание): цвет «правило N» —
+       ВСЕГДА цвет карточки этого правила (step.color, тот же hex, что в
+       sanskrit-sandhi-app.html), а не охровый — и у предварительного
+       (обычного) правила, и у главного (primary) ОДИНАКОВО. Разница между
+       ними — ТОЛЬКО размер плашки (см. .is-primary ниже), не цвет. Если
+       step.color не задан — нейтральный синий по умолчанию. */
     .slot-step-chip.is-rule.active { background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
+    /* PRIMARY — тот единственный шаг, ради которого сделан весь ролик
+       («шаг 2» из её формулировки: правило N, а не вспомогательная ссылка).
+       Вдвое выше и в 1.5 раза шире обычного чипа — font-size и padding
+       подобраны раздельно (не transform:scale, чтобы не растянуть пилюлю в
+       овал и не исказить буквы). Цвет не переопределяется — тот же
+       var(--rule-chip-color), что и у обычного правила (см. выше);
+       единственное отличие primary — размер. */
+    .slot-step-chip.is-primary { font-size:16px; font-weight:700; padding:14px 19px; }
     .slot-step-chip.flash { animation: slot-step-pop .55s ease; }
     @keyframes slot-step-pop {
-      0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,.55); }
-      35%  { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(232,200,96,0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,200,96,0); }
+      0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(205,168,78,.55); }
+      35%  { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(205,168,78,0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(205,168,78,0); }
     }
     /* Кольцо-пульс на кубике-источнике (нимитта) — эталон: широкое, размытое,
        светлое кольцо оттенка СОБСТВЕННОГО цвета кубика (см. ringColorFrom),
