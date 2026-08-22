@@ -1290,7 +1290,18 @@ export function mountSlotExample(container, data) {
         regenMats(target, op.toGlyph, newColor);
         target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
         spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB);
-        target.mesh.scale.setScalar(1.09); // чуть выше обычного пика — «долгий держится дольше»
+        // РЕШЕНО (заход 20, «сейчас нет никакого эффекта — может кубик
+        // разбухнет со вспышкой?»). Была права: +9% масштаба без ничего
+        // больше — на практике незаметно, не читается как событие. Теперь
+        // настоящая вспышка: пик масштаба заметно выше (1.35, не 1.09) +
+        // реальное свечение материала (emissive/emissiveIntensity — не
+        // имитация цветом текстуры, а живое GPU-свойство, то же самое,
+        // чем светятся неоновые вывески в играх), тон — тот же нейтральный
+        // GROUP_COLOR, что у кольца-пульса рядом (одна и та же вспышка,
+        // не два разных цветовых события одновременно). Оба — масштаб и
+        // свечение — спадают синхронно, одной и той же кривой, до 0.
+        target.mesh.material.forEach(m => { m.emissive.setHex(GROUP_COLOR); m.emissiveIntensity = 0.9; });
+        target.mesh.scale.setScalar(1.35);
         op._pulsedAt = elapsed;
       }
     }
@@ -1303,9 +1314,14 @@ export function mountSlotExample(container, data) {
     // здесь я сама воспроизвела его заново, поставив финализацию и
     // продолжающийся спад за одним и тем же early-return. Спад вынесен из-
     // под guard'а — идёт каждый кадр после слияния, независимо от op._done.
+    // Пик и длительность спада — заход 20 (0.9/1.35 вместо прежних
+    // умеренных значений, 600мс вместо 500 — заметная, но короткая вспышка,
+    // не растянутая).
     if (op._pulsedAt != null) {
-      const pt = clamp01((elapsed - op._pulsedAt) / 500);
-      target.mesh.scale.setScalar(lerp(1.09, 1, easeOutCubic(pt)));
+      const pt = clamp01((elapsed - op._pulsedAt) / 600);
+      const e = easeOutCubic(pt);
+      target.mesh.scale.setScalar(lerp(1.35, 1, e));
+      target.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, e); });
     }
   }
 
