@@ -146,6 +146,32 @@
   }
   #intro-reopen-btn:hover { background: rgba(200,188,158,.2); }
 
+  /* Разработчицкие ссылки на тестовые полигоны (заход 13) — намеренно
+     неброские, в углу; убрать вместе с блоком в теле страницы, когда
+     сайт будет готов для посетителей. */
+  #dev-links {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10px;
+  }
+  #dev-links a {
+    color: rgba(200,188,158,.55);
+    background: rgba(20,20,26,.5);
+    border: 1px solid rgba(200,188,158,.25);
+    border-radius: 5px;
+    padding: 3px 8px;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  #dev-links a:hover { color: rgba(225,215,190,.9); background: rgba(20,20,26,.7); }
+
   #panel-sandhi {
     flex: 0 0 clamp(360px, 22vw, 400px);
     width: clamp(360px, 22vw, 400px);
@@ -1350,6 +1376,16 @@
   </div>
 </div>
 
+<!-- РАЗРАБОТЧИЦКИЙ ЛИНК-ПАНЕЛЬ (заход 13) — единственное место, где теперь
+     искать тестовые полигоны слот-движка, без ввода URL вручную. Чисто
+     служебная, ни на что в самом приложении не влияет — можно убрать перед
+     тем, как считать сайт готовым для посетителей, тогда же снять и её CSS
+     ниже (#dev-links). -->
+<div id="dev-links">
+  <a href="test-slot-engine.html" target="_blank">полигон: agnayas (правило 3)</a>
+  <a href="test-slot-engine-rule7.html" target="_blank">полигон: āsīt (правило 7)</a>
+</div>
+
 <div id="root">
 
   <!-- ══ ЛЕВАЯ ПАНЕЛЬ: САНДХИ ══ -->
@@ -2244,7 +2280,14 @@ EXAMPLES[71] = [
 EXAMPLES[3] = [
   {
     desc: 'agni- «огонь» + guṇa + -as → agnayas «огни»',
-    module: './examples/rule3-agnayas.js',
+    // ЗАМЕНЕНО (заход 13): было './examples/rule3-agnayas.js' (старый,
+    // рукописный модуль — не удалён, остаётся в репозитории как эталон/
+    // источник проверенных чисел, см. комментарии в slot-engine.js). Новая
+    // версия — на общем слот-движке, утверждена пользователем после серии
+    // правок (заходы 7–12): падение с отскоком, серебро на гунировании,
+    // рамка группы, merge/arrive и т.д. — весь путь задокументирован в
+    // second-examples-todo.md и algoritm-agnayas-shablon.md.
+    module: './examples/rule3-agnayas-slots.js',
     roleDemo: { steps: [
       { tag: 'грам.', type: 'lexical', source: 'i', result: 'e',
         gunaCells: ['gc-weak-i', 'gc-guna-i'],

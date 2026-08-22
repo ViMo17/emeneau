@@ -428,7 +428,16 @@ function stepIndexAt(elapsed, runtimeSteps) {
 export function mountSlotExample(container, data) {
   injectStylesOnce();
 
-  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;position:relative;display:flex;flex-direction:column;">
+  // РЕШЕНО (заход 13, интеграция в основное приложение): раньше .slot-stage
+  // был только height:100% — работало исключительно потому, что ЛЮБОЙ
+  // тестовый контейнер, куда до сих пор монтировался пример, сам получал
+  // явную высоту снаружи (vh/px в test-slot-engine*.html). Контейнер
+  // #anim-tiles в sanskrit-sandhi-app.html — чистый flex:1 1 auto;min-height:0
+  // БЕЗ такой явной высоты; без страховки сцена рисковала схлопнуться в
+  // 0px именно там, где это труднее всего заметить (в реальном приложении,
+  // не в изолированном тесте). min-height:220px — тот же самый пол, что уже
+  // был у старого .eff-stage (rule3-agnayas.js) для той же самой цели.
+  container.innerHTML = `<div class="slot-stage" style="width:100%;height:100%;min-height:220px;position:relative;display:flex;flex-direction:column;">
     <div class="slot-canvas-wrap" style="position:relative;flex:1 1 auto;min-height:0;">
       <div class="slot-labels" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
     </div>
@@ -476,6 +485,9 @@ export function mountSlotExample(container, data) {
       ...(data.ops || [])
         .filter(op => op.type === 'split')
         .flatMap(op => (op.arrivals || []).map(a => a.newSlot)),
+      ...(data.ops || [])
+        .filter(op => op.type === 'arrive')
+        .flatMap(op => (op.items || []).map(a => a.newSlot)),
     ])].sort((a, b) => a - b);
     const revealStagger = data.revealStagger ?? 130;
     const revealRamp = data.revealRamp ?? 700;
@@ -626,6 +638,26 @@ export function mountSlotExample(container, data) {
   function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
     const local = new THREE.Vector3(0, yOff, zOff).applyQuaternion(mesh.quaternion);
     return mesh.position.clone().add(local);
+  }
+
+  /* ОБЩИЙ ХЕЛПЕР ПРИЛЁТА (заход 12, вынесено при добавлении arrive/merge).
+     Раньше эта же математика (разгон/торможение + дуга по высоте) была
+     ЖЁСТКО зашита прямо внутри applySplit — единственное место, где кубик
+     материализуется за кадром и прилетает по дуге. Как только понадобилась
+     ровно та же самая механика ещё в двух местах (arrive — тихий приход
+     буквы без слияния; merge — приход буквы, которая исчезает в момент
+     касания цели), переписывать её заново означало бы повторить ту самую
+     ошибку, из-за которой начался весь этот заход («опять делается с
+     нуля, хотя уже есть готовое и проверенное»). Теперь одна функция,
+     три места вызова. */
+  function flyArcPosition(from, toX, toY, toZ, t, arcHeight = 1.0) {
+    const te = easeInOutCubic(t);
+    const arc = Math.sin(t * Math.PI) * arcHeight;
+    return {
+      x: lerp(from.x, toX, te),
+      y: lerp(from.y, toY, te) + arc,
+      z: lerp(from.z, toZ, te),
+    };
   }
 
   /* РАМКА-ПОДЧЁРКИВАНИЕ ПОД ГРУППОЙ (заход 9, «объединить АС»). Тонкая
@@ -1112,13 +1144,8 @@ export function mountSlotExample(container, data) {
       }
       nc.mesh.visible = true;
       const t = clamp01((elapsed - (activeStart + arr.delay)) / arr.dur);
-      const te = easeInOutCubic(t);
-      const arc = Math.sin(t * Math.PI) * (arr.arcHeight ?? 1.0);
-      nc.mesh.position.set(
-        lerp(arr.from.x, slotX(arr.newSlot), te),
-        lerp(arr.from.y, 0, te) + arc,
-        lerp(arr.from.z, 0, te)
-      );
+      const p = flyArcPosition(arr.from, slotX(arr.newSlot), 0, 0, t, arr.arcHeight ?? 1.0);
+      nc.mesh.position.set(p.x, p.y, p.z);
     });
 
     // фаза 3: после паузы для сравнения — исходный растворяется совсем.
@@ -1137,6 +1164,97 @@ export function mountSlotExample(container, data) {
         src.mesh.visible = false;
         delete cubes[op._srcKey]; // источник совсем ушёл — временный ключ больше не нужен
       }
+    }
+  }
+
+  /* ARRIVE (заход 12, шаг «грам.» в āsīt: окончание -īt тихо присоединяется
+     к основе, без единого события сандхи). Кубик(и) материализуются ЗА
+     кадром и прилетают по дуге в свой слот — та же матчасть, что у
+     прилёта результатов split (flyArcPosition), но БЕЗ второй половины
+     split (никто не тает, никто не превращается) — просто прибыл и
+     остался. Специально БЕЗ сигнального цвета/вспышки в момент посадки:
+     это тихое морфологическое присоединение, не сандхи — принцип «эффект
+     только там, где реально сработало правило» (шаблон-документ, заход по
+     āsīt). Несколько элементов сразу — items[], каждый со своим
+     delay/dur/from/arcHeight, как у split.arrivals.
+     { type:'arrive', items:[{into,newSlot,from,delay,dur,arcHeight}], start } */
+  function applyArrive(op, elapsed) {
+    (op.items || []).forEach(item => {
+      if (elapsed < op.start + item.delay) return;
+      let nc = op._made?.[item.newSlot];
+      if (!nc) {
+        nc = makeCube(item.into, item.newSlot * 131 + 17);
+        nc._fallDone = true;
+        nc.mesh.visible = false;
+        scene.add(nc.mesh);
+        scene.add(nc.shadow);
+        cubes[item.newSlot] = nc;
+        op._made = op._made || {};
+        op._made[item.newSlot] = nc;
+      }
+      nc.mesh.visible = true;
+      const t = clamp01((elapsed - (op.start + item.delay)) / item.dur);
+      const p = flyArcPosition(item.from, slotX(item.newSlot), 0, 0, t, item.arcHeight ?? 1.0);
+      nc.mesh.position.set(p.x, p.y, p.z);
+    });
+  }
+
+  /* MERGE (заход 12, шаг «правило 7» в āsīt: a+a→ā — обратная операция к
+     split, 2 кубика → 1). Один кубик (arriving) материализуется за кадром
+     и летит по той же дуге (flyArcPosition — общий хелпер, см. выше) не в
+     пустой слот, а ПРЯМО В ЦЕЛЬ (существующий кубик at) — движение
+     совместимости, не столкновения: никакого отскока, никакой дрожи (то,
+     что у approach — дрожь+пружина — здесь сознательно отсутствует, это
+     разные визуальные языки для разных явлений, см. шаблон-документ).
+     В момент полного прибытия (t=1): прилетевший кубик исчезает, кубик
+     цели пересобирается на новую букву (regenMats, тем же приёмом, что
+     transform) — ОДНА вспышка (GROUP_COLOR, тот же нейтральный тон, что у
+     рамки группы в agnayas — здесь означает «структурное слияние», не
+     категория звука, категория не меняется) и чуть удлинённый пик пульса
+     на новой букве — «долгий гласный держится дольше», содержательный
+     штрих, не декоративный. Ровно тот же класс бага, что чинили в
+     applyTransform (заход 11) — здесь СРАЗУ не даём ему появиться: не
+     полагаемся на строгую верхнюю границу в раннем return, финализация
+     идёт через отдельный op._done guard.
+     { type:'merge', arriving:{tr,from,dur,arcHeight}, at, toGlyph, toColor,
+       start, pulseHoldMs } */
+  function applyMerge(op, elapsed) {
+    if (elapsed < op.start) return;
+    if (op._done) return;
+    const target = cubes[op.at];
+    if (!target) return;
+    const dur = op.arriving.dur ?? 1400;
+    if (!op._made) {
+      const seed = op.at * 151 + 7;
+      const mv = makeCube(op.arriving.tr, seed);
+      mv._fallDone = true;
+      scene.add(mv.mesh);
+      scene.add(mv.shadow);
+      op._mover = mv;
+      op._made = true;
+    }
+    const mover = op._mover;
+    const t = clamp01((elapsed - op.start) / dur);
+    const targetPos = target.mesh.position;
+    const p = flyArcPosition(op.arriving.from, targetPos.x, targetPos.y, targetPos.z, t, op.arriving.arcHeight ?? 0.8);
+    mover.mesh.position.set(p.x, p.y, p.z);
+    mover.shadow.position.set(p.x, FLOOR_Y + 0.01, p.z + 0.05);
+    if (t >= 1) {
+      op._done = true;
+      mover.mesh.visible = false;
+      mover.shadow.visible = false;
+      const newColor = op.toColor ?? colorFor(op.toGlyph);
+      regenMats(target, op.toGlyph, newColor);
+      target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
+      spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB);
+      target.mesh.scale.setScalar(1.09); // чуть выше обычного пика — «долгий держится дольше»
+      op._pulsedAt = elapsed;
+    }
+    // мягкий спад пика масштаба после слияния — тот же принцип держащегося
+    // чуть дольше «вдоха», не мгновенный сброс
+    if (op._pulsedAt != null) {
+      const pt = clamp01((elapsed - op._pulsedAt) / 500);
+      target.mesh.scale.setScalar(lerp(1.09, 1, easeOutCubic(pt)));
     }
   }
 
@@ -1208,6 +1326,8 @@ export function mountSlotExample(container, data) {
       else if (op.type === 'approach') applyApproach(op, elapsed);
       else if (op.type === 'transform') applyTransform(op, elapsed);
       else if (op.type === 'split') applySplit(op, elapsed);
+      else if (op.type === 'arrive') applyArrive(op, elapsed);
+      else if (op.type === 'merge') applyMerge(op, elapsed);
       else if (op.type === 'settle') applySettle(op, elapsed);
       else if (op.type === 'dim') applyDim(op, elapsed);
     });
@@ -1312,6 +1432,28 @@ function injectStylesOnce() {
       background: rgba(226,217,190,.75);
       box-shadow: 0 0 7px 1px rgba(226,217,190,.55);
       pointer-events: none;
+    }
+    /* ПЕРЕНЕСЕНО (заход 12) из test-slot-engine.html — единственный стиль,
+       остававшийся вне движка, до сих пор жил в каждой HTML-странице
+       примера отдельно. Риск был реальный: новый пример (например āsīt),
+       забыв скопировать этот блок, получил бы полностью невидимые
+       бегущие волны influence — без единой ошибки в консоли, молча.
+       Теперь здесь, как и всё остальное — новому примеру ничего копировать
+       не нужно. Цвет border ставится инлайном из spawnWave (по умолчанию
+       серебряный, см. SILVER_COLOR/SILVER_RGB) — то, что ниже, только
+       фолбэк на случай, если стиль применится на долю кадра раньше инлайна. */
+    .slot-wave-ring {
+      position: absolute;
+      width: 14px; height: 14px;
+      margin: -7px 0 0 -7px;
+      border-radius: 50%;
+      border: 2px solid rgba(205,211,217,.85);
+      animation: slot-wave-travel var(--wave-dur) ease-out forwards;
+    }
+    @keyframes slot-wave-travel {
+      0%   { transform: translate(0,0) scale(0.6); opacity: 0; filter: brightness(1); }
+      12%  { opacity: 1; filter: brightness(1.8); }
+      100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; filter: brightness(1); }
     }
   `;
   document.head.appendChild(style);
