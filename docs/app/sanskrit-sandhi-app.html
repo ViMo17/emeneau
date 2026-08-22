@@ -965,6 +965,9 @@
     overflow-y: auto;
   }
   #grammar-explain .role-legend-title { color: rgba(30,28,24,.75); }
+  /* display:none по умолчанию (та же логика, что у #grammar-explain выше) —
+     JS (renderRoleStep) переключает на 'block' только для шагов с gunaCells. */
+  #guna-rationale-block { display: none; }
   #guna-rationale-text {
     font-size: 15px; /* было 13px — «увеличь на 2пт», заход 22 */
     line-height: 1.55;
@@ -1413,6 +1416,7 @@
 <div id="dev-links">
   <a href="test-slot-engine.html" target="_blank">полигон: agnayas (правило 3)</a>
   <a href="test-slot-engine-rule7.html" target="_blank">полигон: āsīt (правило 7)</a>
+  <a href="test-slot-engine-rule15.html" target="_blank">полигон: śādhi (правило 15)</a>
 </div>
 
 <div id="root">
@@ -1536,18 +1540,28 @@
          none (JS, renderRoleDemoSynced) — переключение шагов там делает
          сама 3D-анимация, синхронизированное событие slotstep. -->
     <div id="grammar-explain">
-      <div class="role-legend-title">Гуна / вриддхи — почему</div>
-      <div id="guna-rationale-text">
-        Гуна и вриддхи — не звук встречает звук (как в сандхи), а форма слова
-        требует определённой ступени корня: усиление вызывает ВСЯ грамматическая
-        единица целиком (окончание, суффикс), а не одна соседняя буква.
-        Определение: Панини, <span class="cite">Aṣṭādhyāyī</span> 1.1.1
-        <span class="skt">वृद्धिरादैच्</span> (<i>vṛddhir ādaic</i> — ā/ai/au
-        называются вриддхи), 1.1.2 <span class="skt">अदेङ्गुणः</span>
-        (<i>adeṅ guṇaḥ</i> — a/e/o называются гуна), 1.1.3
-        <span class="skt">इको गुणवृद्धी</span> (гуна/вриддхи заменяют
-        i/ī/u/ū/ṛ/ṝ/ḷ). Систематическое изложение: Whitney, <span class="cite">Sanskrit
-        Grammar</span>, §235 ff.
+      <!-- РЕШЕНО (заход 24, «оба описания вместе, не помещаются»): раньше
+           общее объяснение гуны/вриддхи показывалось ВСЕГДА, независимо от
+           того, какой шаг сейчас активен — даже на шаге «правило 3», где
+           оно вообще не по теме (там про сам распад E, не про гуну).
+           Теперь #guna-rationale-block скрывается/показывается вместе —
+           JS (renderRoleStep) включает его только если у ТЕКУЩЕГО шага
+           есть gunaCells (тот же маркер, что уже отмечает «этот шаг
+           подсвечивает таблицу гуна/вриддхи» — не новый признак). -->
+      <div id="guna-rationale-block">
+        <div class="role-legend-title">Гуна / вриддхи — почему</div>
+        <div id="guna-rationale-text">
+          Гуна и вриддхи — не звук встречает звук (как в сандхи), а форма слова
+          требует определённой ступени корня: усиление вызывает ВСЯ грамматическая
+          единица целиком (окончание, суффикс), а не одна соседняя буква.
+          Определение: Панини, <span class="cite">Aṣṭādhyāyī</span> 1.1.1
+          <span class="skt">वृद्धिरादैच्</span> (<i>vṛddhir ādaic</i> — ā/ai/au
+          называются вриддхи), 1.1.2 <span class="skt">अदेङ्गुणः</span>
+          (<i>adeṅ guṇaḥ</i> — a/e/o называются гуна), 1.1.3
+          <span class="skt">इको गुणवृद्धी</span> (гуна/вриддхи заменяют
+          i/ī/u/ū/ṛ/ṝ/ḷ). Систематическое изложение: Whitney, <span class="cite">Sanskrit
+          Grammar</span>, §235 ff.
+        </div>
       </div>
       <div id="role-steps">
         <div id="role-steps-ribbon"></div>
@@ -2472,21 +2486,35 @@ function unmountCurrentAnim() {
   clearRoleDemo();
 }
 
+// ИСПРАВЛЕНО (заход 25). Раньше currentAnim выставлялся только ПОСЛЕ того,
+// как долетал await import() — если клик по примеру случался ДВАЖДЫ до
+// того, как первый импорт успевал долететь, guard выше (currentAnim &&
+// modulePath===...) ничего не ловил (currentAnim ещё null), и оба монтажа
+// стартовали параллельно, оба читая ОДИН И ТОТ ЖЕ модульный data.ops (см.
+// фикс в slot-engine.js — та часть проблемы устранена там; здесь —
+// устраняется сама возможность гонки, не только её последствия). Токен:
+// у каждого вызова свой номер, актуальным считается только ПОСЛЕДНИЙ —
+// устаревшее разрешение import() просто ничего не монтирует.
+let mountToken = 0;
+
 async function mountAnimExample(modulePath) {
   // повторный клик по уже смонтированному примеру — просто перезапуск, без пересборки сцены
   if (currentAnim && currentAnim.modulePath === modulePath) {
     currentAnim.controller.replay();
     return;
   }
+  const myToken = ++mountToken;
   unmountCurrentAnim();
   animEmpty.style.display = 'none';
   animWrap.style.display  = 'flex';
   animTiles.innerHTML = '';
   try {
     const mod = await import(modulePath);
+    if (myToken !== mountToken) return; // устарело — за время загрузки уже выбрали другой пример
     const controller = mod.mount(animTiles);
     currentAnim = { controller, modulePath };
   } catch (err) {
+    if (myToken !== mountToken) return;
     console.error('Не удалось загрузить анимацию:', modulePath, err);
     animTiles.innerHTML = '<div style="font-size:10px;color:#c88;text-align:center;padding:20px;">Ошибка загрузки анимации — см. консоль</div>';
   }
@@ -2941,6 +2969,7 @@ wrap.appendChild(roleSvg);
 
 const roleStepsWrap   = document.getElementById('role-steps');
 const grammarExplain  = document.getElementById('grammar-explain');
+const gunaRationaleBlock = document.getElementById('guna-rationale-block');
 const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
 let currentSlotStepListener = null; // слушатель события slotstep текущего 3D-примера (см. clearRoleDemo)
@@ -3026,6 +3055,7 @@ function clearRoleDemo() {
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
   grammarExplain.style.display = 'none'; // заход 21 — блок гуны/вриддхи виден только при активном примере
+  gunaRationaleBlock.style.display = 'none'; // заход 24 — и внутри него: только когда шаг реально про гуну
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
   // РЕШЕНО (заход 17): снимаем слушатель slotstep предыдущего примера —
   // иначе при каждой смене 3D-примера слушатели копятся на animTiles
@@ -3065,6 +3095,12 @@ function renderRoleStep(step) {
   roleSvg.querySelectorAll('line, g').forEach(el => el.remove());
   wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
+  // РЕШЕНО (заход 24, «оба описания вместе, не помещаются»): общее
+  // объяснение гуны/вриддхи показывается ТОЛЬКО когда текущий шаг реально
+  // про гуну/вриддхи (тот же признак gunaCells, что уже подсвечивает
+  // таблицу) — не по умолчанию всегда. На шаге «правило 3» (без gunaCells)
+  // блок скрыт целиком, остаётся только текст самого этого шага.
+  gunaRationaleBlock.style.display = (step.gunaCells && step.gunaCells.length) ? 'block' : 'none';
   (step.gunaCells || []).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('gv-active');
@@ -3160,7 +3196,12 @@ function renderRoleDemo(demo) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'role-step-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = 'Шаг ' + (i + 1) + ' · прав. ' + step.tag;
+    // ИСПРАВЛЕНО (заход 26, формат подписи по прямой просьбе — тот же,
+    // что теперь у чипов слот-движка под 3D-анимацией): «Шаг N · прав. X»
+    // → «Шаг N. Грамматика» / «Шаг N. Правило X» — единый вид в обоих
+    // местах экрана, не два разных.
+    const tag = step.tag === 'грам.' ? 'Грамматика' : ('Правило ' + step.tag);
+    btn.textContent = 'Шаг ' + (i + 1) + '. ' + tag;
     btn.addEventListener('click', () => {
       roleStepsRibbon.querySelectorAll('.role-step-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
