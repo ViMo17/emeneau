@@ -961,14 +961,29 @@ export function mountSlotExample(container, data) {
      чтобы не плодить лишнее ожидание, см. её же жалобу про паузу в split)
      — переключение на matsMain, истинный цвет столбца. matsBlank в этой
      операции больше не используется. */
+  /* ИСПРАВЛЕНО (заход 11, «Е должна стать голубой, теряет серебряный» —
+     реальный баг, не тонкая настройка). Строгая проверка `elapsed >
+     op.start + dur` в самом начале возвращала из функции РАНЬШЕ, чем кадр
+     мог попасть ровно в точку t>=1 внутри тела — при обычной частоте кадров
+     (~60fps, шаг ~16.7мс) шанс, что elapsed окажется РОВНО равен op.start+dur,
+     практически нулевой: либо кадр ещё до границы (t<1, материал остаётся
+     серебряным), либо уже за ней (ранний return, до t>=1 дело не доходит
+     вовсе). Из-за этого финализация (переход на matsMain — истинный цвет)
+     почти никогда не срабатывала на практике, а не «иногда». Общий фикс —
+     не только для agnayas: верхняя граница убрана из раннего return, вместо
+     неё — guard по уже выставленному op._done (дешёвый выход после того,
+     как всё уже сделано); t считается через clamp01, который сам ограничит
+     переполёт значением 1 — финализация гарантированно происходит РОВНО
+     ОДИН РАЗ, на первом же кадре, где elapsed достиг или превысил конец. */
   function applyTransform(op, elapsed) {
     const cube = cubes[op.at];
     if (!cube) return;
+    if (elapsed < op.start) return;
+    if (op._done) return;
     const spinTurns = op.spinTurns ?? 1;
     const dur = Math.abs(spinTurns) * MS_PER_360;
     const bounceH = op.bounceH ?? 0.3;
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
-    if (elapsed < op.start || elapsed > op.start + dur) return;
     if (!op._began) {
       op._began = true;
       cube.mesh.material = cube.matsSignal; // серебро на СТАРОЙ букве — «получила импульс»
@@ -990,7 +1005,7 @@ export function mountSlotExample(container, data) {
       regenMats(cube, op.toGlyph, newColor);
       cube.mesh.material = cube.matsSignal;
     }
-    if (t >= 1 && !op._done) {
+    if (t >= 1) {
       op._done = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
@@ -1125,20 +1140,33 @@ export function mountSlotExample(container, data) {
     }
   }
 
-  // stepDelay/bounceDur слегка увеличены (было 150/500) — по обратной связи
-  // финал должен идти ПЛАВНО, не спеша; цвет меняется РОВНО на вершине волны
-  // (t=0.5, было t>=0.4 — заметно раньше пика), «буква заменяет цвет на
-  // вершине волны», её формулировка.
+  // stepDelay слегка увеличен (было 150) — по обратной связи финал должен
+  // идти ПЛАВНО, не спеша; цвет меняется РОВНО на вершине волны (t=0.5).
+  //
+  // РЕШЕНО (заход 11, «повыше и как-то интереснее, может более упруго»).
+  // Раньше — одна плоская симметричная синусоида на всю длительность
+  // (bounceH=0.12, вверх-вниз с одной и той же скоростью, никакой
+  // «пружинности»). Предложила и сделала двойной прыжок: основной высокий
+  // взлёт (t 0–0.6, амплитуда 0.32 — почти втрое выше) и заметно меньший
+  // довдох сразу следом (t 0.6–1.0, ~30% от основной высоты) — та же
+  // логика «удар, потом меньший отзвук», что уже используется в паузе
+  // перед split (два убывающих импульса) — общий язык движка для
+  // «пружинистости», не новый изобретённый жест. Обе половины стыкуются
+  // без разрыва (обе синусоиды дают 0 на границе t=0.6).
   function applySettle(op, elapsed) {
     const stepDelay = op.stepDelay ?? 180;
     const bounceDur = op.bounceDur ?? 600;
+    const bounceH = op.bounceH ?? 0.32; // было 0.12
     op.slots.forEach((slot, i) => {
       const cube = cubes[slot];
       if (!cube) return;
       const start = op.start + i * stepDelay;
       if (elapsed < start || elapsed > start + bounceDur) return;
       const t = clamp01((elapsed - start) / bounceDur);
-      cube.mesh.position.y = Math.sin(t * Math.PI) * 0.12;
+      const h = t <= 0.6
+        ? bounceH * Math.sin((t / 0.6) * Math.PI)
+        : bounceH * 0.3 * Math.sin(((t - 0.6) / 0.4) * Math.PI);
+      cube.mesh.position.y = h;
       if (!cube._settled && t >= 0.5) {
         cube._settled = true;
         cube.mesh.material = cube.matsReady;
