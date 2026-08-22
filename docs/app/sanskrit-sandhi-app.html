@@ -931,26 +931,30 @@
     gap: 6px;
     margin-top: 4px;
   }
-  /* Гуна/вриддхи — обоснование, закреплённый блок под алфавитом (не по шагам) */
-  #guna-rationale {
+  /* РЕШЕНО (заход 17, «дать фон, бежевый, увеличь шрифт»): один блок вместо
+     двух — тот же бежевый (#E0D2BE), что у карточек правил 41–49 (.rd-bg-c4),
+     текст тёмный (та же логика, что у #rd-text на светлом фоне). */
+  #grammar-explain {
     flex: 0 0 auto;
-    background: rgba(196,169,130, 0.09);
-    border: 1px solid rgba(196,169,130, 0.28);
-    border-radius: 10px;
-    padding: 10px 12px;
+    background: #E0D2BE;
+    border-radius: 12px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     margin-top: 4px;
+    box-shadow: 0 1px 2px rgba(200,175,140,.28), 0 6px 14px rgba(0,0,0,.18),
+                inset 0 -1px 0.5px rgba(140,110,65,.22);
   }
+  #grammar-explain .role-legend-title { color: rgba(30,28,24,.75); }
   #guna-rationale-text {
-    font-size: 10.5px;
-    line-height: 1.5;
+    font-size: 13px;
+    line-height: 1.55;
     font-family: 'Helvetica Neue', sans-serif;
-    color: rgba(225,215,190, 0.78);
+    color: #2A241C;
   }
-  #guna-rationale-text .cite { font-style: italic; color: rgba(225,215,190, 0.92); }
-  #guna-rationale-text .skt { color: #C4A982; font-weight: 600; }
+  #guna-rationale-text .cite { font-style: italic; color: #1e1c18; }
+  #guna-rationale-text .skt { color: #7A5A2E; font-weight: 600; }
   .role-legend-title {
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
@@ -983,8 +987,11 @@
   .role-legend-sw.trg { background: transparent; outline: 2px dashed rgba(255,244,220,.85); outline-offset: 2px; }
   .role-legend-sw.res { background: rgba(230,225,210,0.06); outline: 2px solid #fff; outline-offset: 2px; }
 
-  /* ══ Лента шагов преобразования (для примеров-цепочек и для одношаговых — единый вид) ══ */
-  #role-steps { flex: 0 0 auto; margin-top: 4px; }
+  /* ══ Лента шагов преобразования (для примеров-цепочек и для одношаговых — единый вид).
+     Живёт внутри #grammar-explain (бежевый фон) — цвета пересчитаны под светлый фон,
+     раньше были рассчитаны на тёмный (заход 17). Для примеров с 3D-анимацией эта лента
+     скрывается целиком (JS, renderRoleDemoSynced) — переключение делает сама анимация. ══ */
+  #role-steps { flex: 0 0 auto; }
   #role-steps-ribbon {
     display: flex;
     flex-direction: row;
@@ -996,31 +1003,26 @@
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: rgba(225,215,190, 0.65);
-    background: rgba(200,188,158, 0.10);
-    border: 1px solid rgba(200,188,158, 0.28);
+    color: rgba(42,36,28,.65);
+    background: rgba(30,28,24,.08);
+    border: 1px solid rgba(30,28,24,.18);
     border-radius: 7px;
     padding: 6px 11px;
     cursor: pointer;
     white-space: nowrap;
   }
-  .role-step-btn:hover { background: rgba(200,188,158, 0.20); color: rgba(225,215,190, 0.85); }
+  .role-step-btn:hover { background: rgba(30,28,24,.14); color: rgba(30,28,24,.9); }
   .role-step-btn.active {
-    background: #E8C860;
-    border-color: #E8C860;
-    box-shadow: 0 0 0 2px rgba(232,200,96,.30);
-    color: #201a04;
+    background: #7A5A2E;
+    border-color: #7A5A2E;
+    box-shadow: 0 0 0 2px rgba(122,90,46,.30);
+    color: #F5EEDF;
   }
   #role-steps-text {
-    margin-top: 8px;
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 12px;
-    line-height: 1.5;
-    color: rgba(225,215,190, 0.88);
-    background: rgba(200,188,158, 0.08);
-    border: 1px solid rgba(200,188,158, 0.22);
-    border-radius: 8px;
-    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #2A241C;
   }
   .guna-table {
     border-collapse: separate;
@@ -1493,12 +1495,29 @@
       <span><i style="background:#F0BF88"></i> губ.</span>
     </div>
 
-    <!-- Гуна/вриддхи — ПОЧЕМУ это происходит (закреплённый блок, не завязан на шаг
-         примера — в отличие от #role-steps-text ниже). Отвечает на вопрос «это
-         действие звука на звук (сандхи) или требование формы слова (грамматика)?» —
-         гуна/вриддхи всегда второе: вызывается ЦЕЛОЙ грамматической единицей
-         (окончанием/суффиксом), не отдельной соседней буквой. -->
-    <div id="guna-rationale">
+    <!-- РЕШЕНО (заход 17, «легенду РОЛИ В ПРИМЕРЕ надо вернуть под алфавит»):
+         была последней в панели, теперь сразу после алфавита/col-legend. -->
+    <div id="role-legend">
+      <div class="role-legend-title">Роли в примере</div>
+      <div class="role-legend-row">
+        <div class="role-legend-item"><span class="role-legend-sw src"></span>источник · было</div>
+        <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
+        <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
+      </div>
+    </div>
+
+    <!-- РЕШЕНО (заход 17, «два блока с пояснениями грамматики — нужен один
+         блок»). Раньше guna-rationale (общее объяснение гуны/вриддхи,
+         всегда одно и то же) и role-steps-text (объяснение ИМЕННО текущего
+         шага, меняется) были двумя отдельными плавающими тёмными блоками.
+         Теперь один визуальный контейнер (#grammar-explain), общий фон
+         (бежевый — тот же #E0D2BE, что у карточек правил 41–49, rd-bg-c4)
+         и увеличенный шрифт. Лента кнопок-шагов (role-steps-ribbon) внутри
+         того же контейнера — для примеров БЕЗ 3D-анимации она по-прежнему
+         кликабельна; для примеров С 3D-анимацией скрывается через display:
+         none (JS, renderRoleDemoSynced) — переключение шагов там делает
+         сама 3D-анимация, синхронизированное событие slotstep. -->
+    <div id="grammar-explain">
       <div class="role-legend-title">Гуна / вриддхи — почему</div>
       <div id="guna-rationale-text">
         Гуна и вриддхи — не звук встречает звук (как в сандхи), а форма слова
@@ -1512,20 +1531,10 @@
         i/ī/u/ū/ṛ/ṝ/ḷ). Систематическое изложение: Whitney, <span class="cite">Sanskrit
         Grammar</span>, §235 ff.
       </div>
-    </div>
-
-    <div id="role-steps" style="display:none">
-      <div id="role-steps-ribbon"></div>
-      <div id="role-steps-text"></div>
-    </div>
-
-    <div id="role-legend">
-      <div class="role-legend-title">Роли в примере</div>
-      <div class="role-legend-row">
-        <div class="role-legend-item"><span class="role-legend-sw src"></span>источник · было</div>
-        <div class="role-legend-item"><span class="role-legend-sw trg"></span>триггер · рядом</div>
-        <div class="role-legend-item"><span class="role-legend-sw res"></span>результат · стало</div>
+      <div id="role-steps">
+        <div id="role-steps-ribbon"></div>
       </div>
+      <div id="role-steps-text"></div>
     </div>
   </div>
 
@@ -2492,7 +2501,12 @@ function showCenter(cd) {
         chip.classList.add('active');
         if (ex.module) mountAnimExample(ex.module);
         else unmountCurrentAnim();
-        if (ex.roleDemo) renderRoleDemo(ex.roleDemo);
+        // РЕШЕНО (заход 17): пример с 3D-модулем — синхронизированная версия
+        // (без кнопочной ленты, переключается событием slotstep от самой
+        // анимации); без модуля — прежнее поведение, ничего не изменилось
+        // для остальных 62 правил.
+        if (ex.roleDemo && ex.module) renderRoleDemoSynced(ex.roleDemo);
+        else if (ex.roleDemo) renderRoleDemo(ex.roleDemo);
         else clearRoleDemo();
       });
       lpPicker.appendChild(chip);
@@ -2891,6 +2905,7 @@ wrap.appendChild(roleSvg);
 const roleStepsWrap   = document.getElementById('role-steps');
 const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
+let currentSlotStepListener = null; // слушатель события slotstep текущего 3D-примера (см. clearRoleDemo)
 
 function cellEl(tr) { return document.getElementById('ac-' + tr); }
 
@@ -2973,6 +2988,14 @@ function clearRoleDemo() {
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
+  // РЕШЕНО (заход 17): снимаем слушатель slotstep предыдущего примера —
+  // иначе при каждой смене 3D-примера слушатели копятся на animTiles
+  // (элемент переиспользуется, innerHTML очищается, но addEventListener
+  // на самом animTiles — нет, он не привязан к содержимому).
+  if (currentSlotStepListener) {
+    animTiles.removeEventListener('slotstep', currentSlotStepListener);
+    currentSlotStepListener = null;
+  }
 }
 
 function activateRoleCell(tr, role) {
@@ -3057,6 +3080,25 @@ function renderRoleStep(step) {
   }
 
   roleStepsText.textContent = step.text || '';
+}
+
+/* РЕШЕНО (заход 17, «дублируется запись про шаги» + «синхронизировать с
+   анимацией»). Для примеров С 3D-анимацией (ex.module задан) кнопочная
+   лента не нужна вообще — переключение шагов делает сама анимация, у неё
+   уже есть собственные чипы под кубиками (см. slot-engine.js). Эта функция
+   показывает первый шаг сразу (как раньше) и слушает событие slotstep на
+   animTiles — 3D-модуль дошёл до нового шага → 2D-подсветка алфавита
+   переключается следом, без отдельного клика и без своей ленты. */
+function renderRoleDemoSynced(demo) {
+  clearRoleDemo();
+  if (!demo || !demo.steps || !demo.steps.length) return;
+  roleStepsWrap.style.display = 'none'; // кнопки не нужны — синхронизация делает их лишними
+  renderRoleStep(demo.steps[0]);
+  currentSlotStepListener = e => {
+    const step = demo.steps[e.detail.index];
+    if (step) renderRoleStep(step);
+  };
+  animTiles.addEventListener('slotstep', currentSlotStepListener);
 }
 
 /* Открывает пример целиком: строит ленту кнопок-шагов (даже если шаг один — единый вид
