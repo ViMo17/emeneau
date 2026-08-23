@@ -1716,8 +1716,7 @@ function injectStylesOnce() {
     .slot-step-chip.is-grammar { background:#CDA84E; color:#2A2D35; }
     .slot-step-chip.is-rule { font-variant-numeric: tabular-nums;
       background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
-    .slot-step-chip.active { border-color:transparent;
-      box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 0 10px 2px rgba(255,255,255,.28); }
+    .slot-step-chip.active { border-color:transparent; }
     /* PRIMARY — тот единственный шаг, ради которого сделан весь ролик
        («шаг 2» из её формулировки: правило N, а не вспомогательная ссылка).
        Вдвое выше и в 1.5 раза шире обычного чипа — font-size и padding

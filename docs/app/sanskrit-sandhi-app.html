@@ -892,17 +892,12 @@
     flex-shrink: 0;
     margin-top: 3px;
   }
-  .guna-note {
-    font-size: 9px;
-    font-family: 'Helvetica Neue', sans-serif;
-    font-style: italic;
-    color: rgba(225,215,190, 0.55);
-    flex-shrink: 0;
-    letter-spacing: 0.02em;
-  }
-  /* ДОБАВЛЕНО (заход 32) — постоянное пояснение к таблице гуна/вриддхи,
-     тот же тёплый приглушённый стиль, что у остального в левой панели
-     (не бежевый блок, как было в правой — тут другой контекст, тёмный фон). */
+  /* СОКРАЩЕНО (заход 37, «бегунок с левой панели — убрать»): было — общее
+     пояснение + список из трёх цитат Панини + отдельная цитата Whitney;
+     убрано по прямой просьбе («2-3 строки определения, без ссылок на
+     источники») — прежний список классов (.guna-rationale-lead, ul/li,
+     .gr-sutra, .skt, .cite, .guna-rationale-cite) больше не нужен, текст
+     теперь один короткий абзац. */
   .guna-rationale {
     margin-top: 8px;
     padding-top: 8px;
@@ -912,16 +907,7 @@
     line-height: 1.5;
     color: rgba(225,215,190, 0.68);
   }
-  .guna-rationale p { margin: 0 0 6px; }
-  .guna-rationale p:last-child { margin-bottom: 0; }
-  .guna-rationale-lead { color: rgba(225,215,190, 0.8); }
-  .guna-rationale ul { margin: 0 0 6px; padding-left: 14px; }
-  .guna-rationale li { margin-bottom: 3px; }
-  .guna-rationale li:last-child { margin-bottom: 0; }
-  .guna-rationale .gr-sutra { color: rgba(225,215,190, 0.5); font-variant-numeric: tabular-nums; }
-  .guna-rationale .skt { color: #C4A982; font-weight: 600; }
-  .guna-rationale .cite { font-style: italic; }
-  .guna-rationale-cite { color: rgba(225,215,190, 0.5); font-size: 9.5px; }
+  .guna-rationale p { margin: 0; }
   #col-legend {
     flex: 0 0 auto;
     display: flex;
@@ -1477,22 +1463,14 @@
           <td class="grade-vriddhi" id="gc-vriddhi-a">ā</td><td class="grade-vriddhi" id="gc-vriddhi-i">āi</td><td class="grade-vriddhi" id="gc-vriddhi-u">āu</td><td class="grade-vriddhi" id="gc-vriddhi-r">ār</td><td class="grade-vriddhi" id="gc-vriddhi-l">āl</td>
         </tr>
       </table>
-      <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
-
-      <!-- ДОБАВЛЕНО (заход 32, «в примерах общая теория не нужна, пусть
-           будет отдельно»): постоянное пояснение к самой таблице, не
-           завязанное ни на один пример — переехало сюда из правой панели,
-           переработано (абзацы, список вместо сплошного текста, лишние
-           слова убраны). -->
+      <!-- ИСПРАВЛЕНО (заход 37, «бегунок с левой панели — убрать, чтобы всё
+           поместилось»): убраны .guna-note и обе цитаты источников (Панини,
+           Whitney) — не по недосмотру, по прямой просьбе «достаточно 2-3
+           строк определения». Текст держит только то, что НЕ дублирует
+           саму таблицу выше (та уже показывает, какая буква какой ступени
+           — здесь только ПОЧЕМУ огласовка вообще происходит). -->
       <div class="guna-rationale">
-        <p>Гуна и вриддхи — не сандхи: не контакт двух звуков, а морфологически обусловленная ступень чередования корневого гласного. Огласовка охватывает всю грамматическую единицу (основу, суффикс), не отдельную соседнюю букву.</p>
-        <p class="guna-rationale-lead">Определение — Pāṇini, <span class="cite">Aṣṭādhyāyī</span>:</p>
-        <ul>
-          <li><span class="gr-sutra">1.1.1</span> <span class="skt">वृद्धिरादैच्</span> <i>(vṛddhir ādaic)</i> — ā, ai, au: вриддхи</li>
-          <li><span class="gr-sutra">1.1.2</span> <span class="skt">अदेङ्गुणः</span> <i>(adeṅ guṇaḥ)</i> — a, e, o: гуна</li>
-          <li><span class="gr-sutra">1.1.3</span> <span class="skt">इको गुणवृद्धी</span> <i>(iko guṇavṛddhī)</i> — гуна и вриддхи замещают i/ī, u/ū, ṛ/ṝ, ḷ</li>
-        </ul>
-        <p class="guna-rationale-cite">Whitney, <span class="cite">Sanskrit Grammar</span>, §235 ff.</p>
+        <p>Гуна (guṇa) и вриддхи (vṛddhi) — ступень чередования корневого гласного, обусловленная формой слова, а не соседним звуком. Огласовка охватывает всю морфологическую единицу — основу и окончание целиком.</p>
       </div>
     </div>
   </div>
