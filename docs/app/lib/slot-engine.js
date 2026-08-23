@@ -1029,8 +1029,20 @@ export function mountSlotExample(container, data, opts = {}) {
     // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
     const slots = resolveSlotRef(op.movers ?? op.mover, wordGroupsList);
     const movers = slots.map(s => cubes[s]).filter(Boolean);
-    const target = cubes[op.target];
-    if (!movers.length || !target) return;
+    if (!movers.length) return;
+    // ИСПРАВЛЕНО (заход 28, реальный баг — не мнимый, нашла именно чтением
+    // кода, не только симуляцией с упрощённой копией функции). Раньше
+    // строка ниже была `const target = cubes[op.target]; if (!movers.length
+    // || !target) return;` — то есть ЦЕЛЬ ДОЛЖНА была существовать на
+    // КАЖДОМ кадре, иначе approach обрывался целиком. Это ломается ровно в
+    // сценарии «приближение вызывает реакцию» (śādhi: DH приближается к S,
+    // а S по ходу приближения ИСЧЕЗАЕТ через elide) — как только цель
+    // исчезала, движение mover'ов замирало на полпути, а не доезжало до
+    // конца. Направление движения (dir) вычисляется по НОМЕРУ слота цели
+    // (slotX(op.target)) — цель как живой объект для этого не нужна
+    // вообще, нужна только для дрожи/пульса НА ней самой (см. ниже, оба
+    // теперь под `if (target)`).
+    const target = cubes[op.target]; // может быть undefined — это ОК
     const approachDur = op.approachDur ?? 1150; // было 800
     const holdDur = op.holdDur ?? 550; // было 400
     const retreat = op.retreat !== false;
@@ -1048,7 +1060,7 @@ export function mountSlotExample(container, data, opts = {}) {
       if (elapsed > retreatEnd) {
         // retreat:false — остаёмся у цели (shift), а не возвращаемся домой (0)
         movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + (retreat ? 0 : shift); });
-        target.mesh.rotation.z = 0;
+        if (target) target.mesh.rotation.z = 0;
       }
       return;
     }
@@ -1059,7 +1071,7 @@ export function mountSlotExample(container, data, opts = {}) {
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * te; });
     } else if (elapsed <= peakEnd) {
       movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
-      if (op.pulse !== false && !op._pulsed) {
+      if (target && op.pulse !== false && !op._pulsed) {
         op._pulsed = true;
         spawnPulseRing(
           frontAnchor(target.mesh),
@@ -1074,11 +1086,14 @@ export function mountSlotExample(container, data, opts = {}) {
     }
 
     // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
-    if (elapsed <= peakEnd) {
-      const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
-      target.mesh.rotation.z = Math.sin(elapsed * 0.024) * jitterAmp * growT;
-    } else {
-      target.mesh.rotation.z = 0; // обрыв резкий, не спад
+    // (только если цель ещё существует — см. комментарий выше)
+    if (target) {
+      if (elapsed <= peakEnd) {
+        const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
+        target.mesh.rotation.z = Math.sin(elapsed * 0.024) * jitterAmp * growT;
+      } else {
+        target.mesh.rotation.z = 0; // обрыв резкий, не спад
+      }
     }
   }
 
