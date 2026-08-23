@@ -1442,57 +1442,57 @@ export function mountSlotExample(container, data, opts = {}) {
 
   /* ELIDE (заход 27, правило 15, śādhi: s между ā и dh пропадает, ничего
      не появляется взамен) — первое применение к пункту «элизия» из списка
-     недостающего в шаблон-документе. НЕ split (никто не прилетает взамен)
-     и НЕ merge (не с кем сливаться) — честное самостоятельное исчезновение.
-     Сдвиг соседних букв, чтобы закрыть образовавшийся промежуток, — НЕ
-     часть этой операции: для этого используется уже готовый `approach`
-     (retreat:false) с любым СУЩЕСТВУЮЩИМ соседним кубиком в роли `target`
-     (только для направления сдвига — сама остановка определяется
-     `distance`, не точными координатами цели) — тот же приём, что уже
-     проверен на āsīt (шаг 1). Не изобретаем вторую версию того же самого
-     только потому, что здесь причина другая.
+     недостающего в шаблон-документе. Сдвиг соседних букв, чтобы закрыть
+     образовавшийся промежуток, — НЕ часть этой операции: используется уже
+     готовый `approach` (retreat:false) с любым СУЩЕСТВУЮЩИМ соседним
+     кубиком в роли `target` — тот же приём, что уже проверен на āsīt.
 
-     ИСПРАВЛЕНО (заход 30, «продумай, как таять нагляднее»). Раньше —
-     равномерное сжатие по всем трём осям сразу, синхронно с прозрачностью,
-     одной кривой (easeInCubic) — читалось как обычное «поп»-исчезновение,
-     не как таяние. Теперь — честные ДВЕ фазы:
-       1) РАСПЛЫВ (0..0.55): кубик приплюскивается по высоте и слегка
-          растекается вширь (не setScalar — три оси меняются РАЗНО), тень
-          под ним синхронно растёт («лужица»), цвет тускнеет к нейтральному
-          GROUP_COLOR (color кубика — не текстура, а множитель поверх неё,
-          той же техникой, что и вспышка merge, заход 20);
-       2) СТЯГИВАНИЕ (0.55..1): уже приплюснутая «лужица» стягивается в
-          точку и растворяется — масштаб и прозрачность к нулю вместе,
-          тень гаснет следом.
-     { type:'elide', at, start, dur=900 } */
+     ИСПРАВЛЕНО (заход 31, «в одной из первых версий предлагала букву для
+     замены поднимать в отстойник вверх, а уничтожающуюся — спускать в
+     такой же отстойник вниз»). Оценила критично по трём пунктам — идея
+     оказалась сильнее заходов 27 и 30 (равномерное сжатие, потом
+     сплющивание-«лужица», оба отвергнуты): направление становится
+     СМЫСЛОВЫМ, не декоративным — вверх (см. split) означает «превращается,
+     что-то продолжается в новой форме» (E→A+Y), вниз — «пропадает без
+     следа» (чистая элизия). Одна и та же механика для обоих направлений
+     (rise→hold→fade, буквально та же, что у split), только знак `y` у
+     holdOffset отрицательный. z у holdOffset — ОТ камеры (не к ней, как у
+     E) — по смыслу «тонет, удаляется», и практически: снизу кадра меньше
+     запаса, чем сверху (заход 25 сдвинул камеру вверх ради подъёма E) —
+     посчитано реальной проекционной математикой камеры перед тем, как
+     менять числа, не на глаз.
+     { type:'elide', at, start, riseDur=1300, holdOpacity=0.5, holdDur=800,
+       fadeDur=1100, holdOffset={x:0,y:-2.4,z:-0.4} } */
   function applyElide(op, elapsed) {
     if (elapsed < op.start) return;
     const cube = cubes[op.at];
     if (!cube || op._done) return;
-    const dur = op.dur ?? 900; // было 700 — таянию нужно время, чтобы прочитаться
-    const t = clamp01((elapsed - op.start) / dur);
-    const splitPoint = 0.55;
-    const flatY = 0.22, spreadXZ = 1.12, shadowGrow = 1.35;
-    if (t <= splitPoint) {
-      const te = easeInOutCubic(clamp01(t / splitPoint));
-      cube.mesh.scale.set(1 + (spreadXZ - 1) * te, 1 - (1 - flatY) * te, 1 + (spreadXZ - 1) * te);
-      cube.mesh.position.y = -CUBE_SIZE * 0.22 * te; // слегка оседает
-      cube.shadow.scale.setScalar(1 + (shadowGrow - 1) * te);
-      const tint = new THREE.Color(GROUP_COLOR);
-      cube.mesh.material.forEach(m => { m.color.set(0xffffff).lerp(tint, te * 0.7); });
+    const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
+    const holdOpacity = op.holdOpacity ?? 0.5;
+    const holdDur = op.holdDur ?? 800;
+    const fadeDur = op.fadeDur ?? 1100;
+    const holdOffset = op.holdOffset ?? { x: 0, y: -2.4, z: -0.4 };
+    const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
+    const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
+    const riseEnd = op.start + riseDur;
+    if (elapsed <= riseEnd) {
+      const t = clamp01((elapsed - op.start) / riseDur);
+      const te = easeInOutCubic(t);
+      cube.mesh.position.lerpVectors(basePos, holdPos, te);
+      setOpacity(cube.mesh, lerp(1, holdOpacity, te));
+    } else if (elapsed <= riseEnd + holdDur) {
+      cube.mesh.position.copy(holdPos);
+      const idle = (elapsed - riseEnd) * 0.0022;
+      cube.mesh.position.y += Math.sin(idle) * 0.06; // то же лёгкое покачивание, что у split
     } else {
-      const te = easeInCubic(clamp01((t - splitPoint) / (1 - splitPoint)));
-      cube.mesh.scale.set(spreadXZ * (1 - te), flatY * (1 - te), spreadXZ * (1 - te));
-      setOpacity(cube.mesh, 1 - te);
-      cube.shadow.material.opacity = 1 - te;
-      cube.shadow.scale.setScalar(shadowGrow * (1 - te * 0.5)); // лужица стягивается медленнее, чем гаснет
-    }
-    if (t >= 1) {
-      op._done = true;
-      cube.mesh.visible = false;
-      cube.shadow.visible = false;
-      spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB);
-      delete cubes[op.at];
+      const t = clamp01((elapsed - (riseEnd + holdDur)) / fadeDur);
+      setOpacity(cube.mesh, lerp(holdOpacity, 0, t));
+      if (t >= 1) {
+        op._done = true;
+        cube.mesh.visible = false;
+        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB);
+        delete cubes[op.at];
+      }
     }
   }
 
