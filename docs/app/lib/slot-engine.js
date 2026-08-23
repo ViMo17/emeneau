@@ -1471,7 +1471,12 @@ export function mountSlotExample(container, data, opts = {}) {
     const holdOpacity = op.holdOpacity ?? 0.5;
     const holdDur = op.holdDur ?? 800;
     const fadeDur = op.fadeDur ?? 1100;
-    const holdOffset = op.holdOffset ?? { x: 0, y: -2.4, z: -0.4 };
+    // ИСПРАВЛЕНО (заход 32, «S наезжает на надпись Правило»): было y:-2.4
+    // (зеркально подъёму E) — реальный запас до края кадра снизу оказался
+    // впятеро меньше, чем у E сверху (0.038 против 0.075 в NDC), потому что
+    // камера заранее сдвинута вверх ради отстойника E (заход 25). y:-1.8
+    // даёт запас 0.204 — с той же математикой, посчитано, не подобрано на глаз.
+    const holdOffset = op.holdOffset ?? { x: 0, y: -1.8, z: -0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
     const riseEnd = op.start + riseDur;
@@ -1624,8 +1629,15 @@ function injectStylesOnce() {
        цвет — прямо на классе is-grammar/is-rule, всегда; .active добавляет
        СВЕЧЕНИЕ (сейчас именно этот шаг играет), не единственный источник
        цвета. */
-    .slot-step-chip.is-grammar { text-transform:lowercase; background:#CDA84E; color:#2A2D35; }
-    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums; text-transform:lowercase;
+    /* ИСПРАВЛЕНО (заход 32, «просила раз десять — ввести слово Шаг перед
+       названием» — текст УЖЕ был капитализирован с захода 26 («Шаг N.
+       Слово»), но text-transform:lowercase здесь молча перебивал это
+       визуально обратно в нижний регистр на экране. Просьба не была
+       проигнорирована — CSS откатывал результат позже в конвейере
+       рендеринга, отсюда и повторявшееся расхождение между тем, что было
+       в коде, и тем, что было видно.) */
+    .slot-step-chip.is-grammar { background:#CDA84E; color:#2A2D35; }
+    .slot-step-chip.is-rule { font-variant-numeric: tabular-nums;
       background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
     .slot-step-chip.active { border-color:transparent;
       box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 0 10px 2px rgba(255,255,255,.28); }

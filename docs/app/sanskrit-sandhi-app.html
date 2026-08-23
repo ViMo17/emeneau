@@ -900,6 +900,28 @@
     flex-shrink: 0;
     letter-spacing: 0.02em;
   }
+  /* ДОБАВЛЕНО (заход 32) — постоянное пояснение к таблице гуна/вриддхи,
+     тот же тёплый приглушённый стиль, что у остального в левой панели
+     (не бежевый блок, как было в правой — тут другой контекст, тёмный фон). */
+  .guna-rationale {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(200,188,158, 0.18);
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: rgba(225,215,190, 0.68);
+  }
+  .guna-rationale p { margin: 0 0 6px; }
+  .guna-rationale p:last-child { margin-bottom: 0; }
+  .guna-rationale-lead { color: rgba(225,215,190, 0.8); }
+  .guna-rationale ul { margin: 0 0 6px; padding-left: 14px; }
+  .guna-rationale li { margin-bottom: 3px; }
+  .guna-rationale li:last-child { margin-bottom: 0; }
+  .guna-rationale .gr-sutra { color: rgba(225,215,190, 0.5); font-variant-numeric: tabular-nums; }
+  .guna-rationale .skt { color: #C4A982; font-weight: 600; }
+  .guna-rationale .cite { font-style: italic; }
+  .guna-rationale-cite { color: rgba(225,215,190, 0.5); font-size: 9.5px; }
   #col-legend {
     flex: 0 0 auto;
     display: flex;
@@ -965,17 +987,6 @@
     overflow-y: auto;
   }
   #grammar-explain .role-legend-title { color: rgba(30,28,24,.75); }
-  /* display:none по умолчанию (та же логика, что у #grammar-explain выше) —
-     JS (renderRoleStep) переключает на 'block' только для шагов с gunaCells. */
-  #guna-rationale-block { display: none; }
-  #guna-rationale-text {
-    font-size: 15px; /* было 13px — «увеличь на 2пт», заход 22 */
-    line-height: 1.55;
-    font-family: 'Helvetica Neue', sans-serif;
-    color: #2A241C;
-  }
-  #guna-rationale-text .cite { font-style: italic; color: #1e1c18; }
-  #guna-rationale-text .skt { color: #7A5A2E; font-weight: 600; }
   .role-legend-title {
     font-size: 10px;
     font-family: 'Helvetica Neue', sans-serif;
@@ -1467,6 +1478,22 @@
         </tr>
       </table>
       <div class="guna-note">Вриддхи → гуна: никогда. Верхние две строки — та же слабая ступень, но по ветке в полугласный, а не в гуну.</div>
+
+      <!-- ДОБАВЛЕНО (заход 32, «в примерах общая теория не нужна, пусть
+           будет отдельно»): постоянное пояснение к самой таблице, не
+           завязанное ни на один пример — переехало сюда из правой панели,
+           переработано (абзацы, список вместо сплошного текста, лишние
+           слова убраны). -->
+      <div class="guna-rationale">
+        <p>Гуна и вриддхи — не сандхи: не контакт двух звуков, а морфологически обусловленная ступень чередования корневого гласного. Огласовка охватывает всю грамматическую единицу (основу, суффикс), не отдельную соседнюю букву.</p>
+        <p class="guna-rationale-lead">Определение — Pāṇini, <span class="cite">Aṣṭādhyāyī</span>:</p>
+        <ul>
+          <li><span class="gr-sutra">1.1.1</span> <span class="skt">वृद्धिरादैच्</span> <i>(vṛddhir ādaic)</i> — ā, ai, au: вриддхи</li>
+          <li><span class="gr-sutra">1.1.2</span> <span class="skt">अदेङ्गुणः</span> <i>(adeṅ guṇaḥ)</i> — a, e, o: гуна</li>
+          <li><span class="gr-sutra">1.1.3</span> <span class="skt">इको गुणवृद्धी</span> <i>(iko guṇavṛddhī)</i> — гуна и вриддхи замещают i/ī, u/ū, ṛ/ṝ, ḷ</li>
+        </ul>
+        <p class="guna-rationale-cite">Whitney, <span class="cite">Sanskrit Grammar</span>, §235 ff.</p>
+      </div>
     </div>
   </div>
 
@@ -1528,41 +1555,14 @@
       </div>
     </div>
 
-    <!-- РЕШЕНО (заход 17, «два блока с пояснениями грамматики — нужен один
-         блок»). Раньше guna-rationale (общее объяснение гуны/вриддхи,
-         всегда одно и то же) и role-steps-text (объяснение ИМЕННО текущего
-         шага, меняется) были двумя отдельными плавающими тёмными блоками.
-         Теперь один визуальный контейнер (#grammar-explain), общий фон
-         (бежевый — тот же #E0D2BE, что у карточек правил 41–49, rd-bg-c4)
-         и увеличенный шрифт. Лента кнопок-шагов (role-steps-ribbon) внутри
-         того же контейнера — для примеров БЕЗ 3D-анимации она по-прежнему
-         кликабельна; для примеров С 3D-анимацией скрывается через display:
-         none (JS, renderRoleDemoSynced) — переключение шагов там делает
-         сама 3D-анимация, синхронизированное событие slotstep. -->
+    <!-- РЕШЕНО (заход 32, «в примерах общая теория не нужна, пусть будет
+         отдельно»). Общее объяснение гуны/вриддхи переехало в левую
+         панель, под саму таблицу (#guna-box) — это пояснение К ТАБЛИЦЕ,
+         не к конкретному примеру, и не должно всплывать/пропадать вместе
+         с шагами анимации. #grammar-explain теперь только для текста
+         ТЕКУЩЕГО шага — один блок, одно назначение, не два в одном, как
+         было в заходе 17-24. -->
     <div id="grammar-explain">
-      <!-- РЕШЕНО (заход 24, «оба описания вместе, не помещаются»): раньше
-           общее объяснение гуны/вриддхи показывалось ВСЕГДА, независимо от
-           того, какой шаг сейчас активен — даже на шаге «правило 3», где
-           оно вообще не по теме (там про сам распад E, не про гуну).
-           Теперь #guna-rationale-block скрывается/показывается вместе —
-           JS (renderRoleStep) включает его только если у ТЕКУЩЕГО шага
-           есть gunaCells (тот же маркер, что уже отмечает «этот шаг
-           подсвечивает таблицу гуна/вриддхи» — не новый признак). -->
-      <div id="guna-rationale-block">
-        <div class="role-legend-title">Гуна / вриддхи — почему</div>
-        <div id="guna-rationale-text">
-          Гуна и вриддхи — не звук встречает звук (как в сандхи), а форма слова
-          требует определённой ступени корня: усиление вызывает ВСЯ грамматическая
-          единица целиком (окончание, суффикс), а не одна соседняя буква.
-          Определение: Панини, <span class="cite">Aṣṭādhyāyī</span> 1.1.1
-          <span class="skt">वृद्धिरादैच्</span> (<i>vṛddhir ādaic</i> — ā/ai/au
-          называются вриддхи), 1.1.2 <span class="skt">अदेङ्गुणः</span>
-          (<i>adeṅ guṇaḥ</i> — a/e/o называются гуна), 1.1.3
-          <span class="skt">इको गुणवृद्धी</span> (гуна/вриддхи заменяют
-          i/ī/u/ū/ṛ/ṝ/ḷ). Систематическое изложение: Whitney, <span class="cite">Sanskrit
-          Grammar</span>, §235 ff.
-        </div>
-      </div>
       <div id="role-steps">
         <div id="role-steps-ribbon"></div>
       </div>
@@ -1870,13 +1870,13 @@ EXAMPLES[7] = [{
     // не подсвечивается (общий приём renderRoleStep для «нет отношения
     // источник→результат»), текст объясняет причину архаичного -īt.
     { tag: 'грам.',
-      text: 'Личное окончание 3 л. ед.ч. имперфекта у большинства корневых глаголов — просто -t. У as- «быть» — архаичная особенность именно этой парадигмы: -īt (ср. 1 л. āsam, 2 л. āsīs, 3 л. āsīt, 3 мн. āsan; Кочергина, Занятие XVII).' },
+      text: 'Личное окончание 3 л. ед. ч. имперфекта у корневых (атематических) глаголов — -t. У as- «быть» засвидетельствована архаичная особенность именно этой парадигмы: -īt (ср. полную парадигму: 1 л. āsam, 2 л. āsīs, 3 л. āsīt, 3 мн. āsan; Кочергина, Занятие XVII).' },
     // Шаг 2 [Сандхи 7] — само правило: два одинаковых кратких a сливаются
     // в один долгий. type:'lexical' — триггера нет вообще («самоподобие»),
     // та же формула, что уже используется для грамматических шагов без
     // катализатора (см. agnayas).
     { tag: '7', type: 'lexical', source: 'a', result: 'ā',
-      text: 'А вот это само правило 7: два одинаковых кратких a встречаются на стыке (аугмент a- + начальный a корня as-) — оба сливаются в один долгий ā. Триггер не нужен — случай самоподобия, не гуна и не вриддхи.' },
+      text: 'Правило 7: два одинаковых кратких a на морфемном стыке (аугмент a- + начальный a корня as-) сливаются в один долгий ā. Триггер отсутствует — самоподобие (savarṇa), не гуна и не вриддхи.' },
   ] }
 }];
 EXAMPLES[13] = [{
@@ -2360,9 +2360,9 @@ EXAMPLES[3] = [
     roleDemo: { steps: [
       { tag: 'грам.', type: 'lexical', source: 'i', result: 'e',
         gunaCells: ['gc-weak-i', 'gc-guna-i'],
-        text: 'Не правило 3 — грамматика: i-основа гунируется в сильном падеже (им.мн.) ещё до контакта с окончанием. i становится e.' },
+        text: 'Грамматический процесс, предшествующий сандхи: i-основа переходит в ступень гуна (i → e) в сильных формах парадигмы (им. п. мн. ч.) — следствие грамматической формы, а не фонетического окружения.' },
       { tag: '3', type: 'compound', source: 'e', trigger: 'a', result: ['a', 'ya'],
-        text: 'А вот это уже само правило 3: e перед гласным (a из окончания -as) распадается на a (та же долгота, что у дифтонга) и новый полугласный y.' }
+        text: 'Само правило 3: гласный e перед следующим a (начало окончания -as) распадается на краткий a — той же ступени, что и сам e (гуна, не вриддхи), — и полугласный y.' }
     ] }
   }
 ];
@@ -2969,7 +2969,6 @@ wrap.appendChild(roleSvg);
 
 const roleStepsWrap   = document.getElementById('role-steps');
 const grammarExplain  = document.getElementById('grammar-explain');
-const gunaRationaleBlock = document.getElementById('guna-rationale-block');
 const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
 let currentSlotStepListener = null; // слушатель события slotstep текущего 3D-примера (см. clearRoleDemo)
@@ -3055,7 +3054,6 @@ function clearRoleDemo() {
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
   grammarExplain.style.display = 'none'; // заход 21 — блок гуны/вриддхи виден только при активном примере
-  gunaRationaleBlock.style.display = 'none'; // заход 24 — и внутри него: только когда шаг реально про гуну
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
   // РЕШЕНО (заход 17): снимаем слушатель slotstep предыдущего примера —
   // иначе при каждой смене 3D-примера слушатели копятся на animTiles
@@ -3095,12 +3093,9 @@ function renderRoleStep(step) {
   roleSvg.querySelectorAll('line, g').forEach(el => el.remove());
   wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
-  // РЕШЕНО (заход 24, «оба описания вместе, не помещаются»): общее
-  // объяснение гуны/вриддхи показывается ТОЛЬКО когда текущий шаг реально
-  // про гуну/вриддхи (тот же признак gunaCells, что уже подсвечивает
-  // таблицу) — не по умолчанию всегда. На шаге «правило 3» (без gunaCells)
-  // блок скрыт целиком, остаётся только текст самого этого шага.
-  gunaRationaleBlock.style.display = (step.gunaCells && step.gunaCells.length) ? 'block' : 'none';
+  // Подсветка ячеек таблицы гуна/вриддхи слева (gunaCells) — независимо от
+  // текста в правой панели (заход 32: общий текст уехал под саму таблицу,
+  // не завязан на шаг вообще); эта подсветка по-прежнему про КОНКРЕТНЫЙ шаг.
   (step.gunaCells || []).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('gv-active');
