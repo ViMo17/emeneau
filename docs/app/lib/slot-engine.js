@@ -258,17 +258,31 @@ function regenMats(cube, newTr, newColor) {
 
 /* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —
    никогда не исчезает совсем даже высоко в воздухе), плюс учитывает текущую
-   прозрачность самого кубика (бледный кубик — бледная тень). */
+   прозрачность самого кубика (бледный кубик — бледная тень).
+   ИСПРАВЛЕНО (заход 36, «тёмная рамка на уровне пола, неподвижная, как
+   размытая тень»). Формула heightAbove = Math.max(0, y-FLOOR_Y) была
+   верна только для движения ВВЕРХ (E в отстойнике split) — при уходе
+   кубика НИЖЕ пола (elide, заход 31/34 — до этого ни одна операция
+   вниз не уводила) Math.max(0,...) обнулял отрицательную разницу, и
+   формула читала «глубоко под полом» как «ровно на полу»: heightK=1,
+   тень НЕ тускнела вообще, оставалась в полный размер на прежнем месте
+   (по x/z кубика, но НЕ по y — тень всегда на уровне пола) — кубик уходил
+   вниз, а его полноразмерная тень зависала на месте, как отдельный
+   неподвижный тёмный объект. Теперь тень дополнительно гаснет
+   пропорционально глубине ПОД полом, полностью пропадает даже до того,
+   как кубик успевает уйти далеко вниз. */
 function updateShadow(cube) {
-  cube.shadow.visible = cube.mesh.visible;
   cube.shadow.position.x = cube.mesh.position.x + 0.08;
   cube.shadow.position.z = cube.mesh.position.z + 0.05;
   const heightAbove = Math.max(0, cube.mesh.position.y - FLOOR_Y);
+  const depthBelow = Math.max(0, FLOOR_Y - cube.mesh.position.y);
   const heightK = Math.max(0.35, 1 - heightAbove * 0.14);
+  const belowK = Math.max(0, 1 - depthBelow * 1.6); // гаснет полностью к глубине ~0.6 под полом
   const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
   const matOpacity = mats[0].opacity ?? 1;
+  cube.shadow.visible = cube.mesh.visible && belowK > 0;
   cube.shadow.scale.setScalar(heightK);
-  cube.shadow.material.opacity = heightK * matOpacity;
+  cube.shadow.material.opacity = heightK * matOpacity * belowK;
 }
 
 function setOpacity(mesh, val) {
@@ -1092,6 +1106,18 @@ export function mountSlotExample(container, data, opts = {}) {
         // movers[0] (ближний к цели, то же соглашение, что уже использует
         // dir/baseXs[0] выше в этой же функции) — пульс должен быть только
         // на нём.
+        // ИСПРАВЛЕНО (заход 35, «ДХ даёт импульс, но С не получает его —
+        // сделай отклик, который заставляет С уйти вниз»). Раньше пульс
+        // был только НА DH — сигнал «DH что-то делает», но ничего не
+        // связывало это визуально с реакцией у S: у зрителя не было
+        // повода читать одно как ПРИЧИНУ другого. Теперь при каждом
+        // пульсе синхронно уходит ещё и бегущая волна DH→S (тот же
+        // spawnWave, что и в influence, только короткая дистанция —
+        // кубики уже почти соприкасаются, waveTravel короче на порядок,
+        // чем у influence). Цель — по номеру слота (slotX(op.target)),
+        // не по живому кубику: к моменту, когда доходит поздний пульс,
+        // S уже может начать реагировать/исчезать (elide) — тот же
+        // принцип устойчивости к исчезающей цели, что и в заходе 28.
         if (op.holdPulse) {
           const pulseGap = op.holdPulseGap ?? 500;
           const idx = Math.floor((elapsed - leg1End) / pulseGap);
@@ -1102,6 +1128,13 @@ export function mountSlotExample(container, data, opts = {}) {
             spawnPulseRing(
               frontAnchor(trigger.mesh),
               pulseGap * 0.9,
+              op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr))
+            );
+            const waveTravel = op.holdWaveTravel ?? 400;
+            spawnWave(
+              frontAnchor(trigger.mesh),
+              new THREE.Vector3(slotX(op.target), 0, 0),
+              waveTravel,
               op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr))
             );
           }
@@ -1511,7 +1544,12 @@ export function mountSlotExample(container, data, opts = {}) {
     // отклонение В СТОРОНУ ОТ подходящего DH (не декоративная асимметрия
     // произвольно, а «отступает» от источника воздействия), диагональный
     // путь вместо строго вертикального.
-    const holdOffset = op.holdOffset ?? { x: -0.6, y: -1.8, z: -0.4 };
+    // ИСПРАВЛЕНО (заход 35, «всё ещё слишком близко к тексту» — второй заход
+    // на эту же жалобу): было y:-1.8 (запас в NDC уже был 0.204, больше,
+    // чем у подъёма E — сам 3D-запас был не главной причиной, см. также
+    // увеличенный CSS-отступ .slot-steps выше). y:-1.4 — дополнительный
+    // запас (0.318) на случай, если оба фактора складывались.
+    const holdOffset = op.holdOffset ?? { x: -0.6, y: -1.4, z: -0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
     const riseEnd = op.start + riseDur;
@@ -1643,8 +1681,12 @@ function injectStylesOnce() {
   const style = document.createElement('style');
   style.id = 'slot-engine-style';
   style.textContent = `
+    /* ИСПРАВЛЕНО (заход 35, «S слишком близко к тексту» — часть причины
+       не в 3D-глубине погружения (там как раз уже был запас, посчитано),
+       а в самом CSS-отступе между сценой и лентой: было всего 8px сверху,
+       независимо от того, что происходит в 3D. */
     .slot-steps { display:flex; gap:8px; justify-content:center; align-items:center;
-      padding:8px 4px 2px; flex:0 0 auto; }
+      padding:20px 4px 2px; flex:0 0 auto; }
     /* РЕШЕНО (заход 10, «не прозрачный фон»): раньше неактивный чип был почти
        невидимым (rgba(255,255,255,.06)) — теперь сплошной тёмный фон, читается
        как отдельный элемент интерфейса в любом состоянии, не только активном. */
