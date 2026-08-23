@@ -1085,17 +1085,25 @@ export function mountSlotExample(container, data, opts = {}) {
         // кубика — сложнее, чем нужно сейчас), взяла ПРИЁМ и переложила на
         // уже готовый spawnPulseRing. Необязательно (op.holdPulse) — старые
         // примеры (agnayas, āsīt) его не передают, не затронуты.
+        // ИСПРАВЛЕНО (заход 34, «круги идут по букве И — неверно»): было
+        // movers.forEach(...) — пульс спавнился на ВСЕХ mover'ах разом,
+        // включая I, которая не триггер, а просто едет рядом с DH внутри
+        // одной морфологической единицы (-dhi). Триггер — конкретно
+        // movers[0] (ближний к цели, то же соглашение, что уже использует
+        // dir/baseXs[0] выше в этой же функции) — пульс должен быть только
+        // на нём.
         if (op.holdPulse) {
           const pulseGap = op.holdPulseGap ?? 500;
           const idx = Math.floor((elapsed - leg1End) / pulseGap);
           const key = '_holdPulse' + idx;
           if (!op[key]) {
             op[key] = true;
-            movers.forEach(m => spawnPulseRing(
-              frontAnchor(m.mesh),
+            const trigger = movers[0];
+            spawnPulseRing(
+              frontAnchor(trigger.mesh),
               pulseGap * 0.9,
-              op.holdPulseColor ?? ringColorFrom(colorFor(m.tr))
-            ));
+              op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr))
+            );
           }
         }
       } else if (elapsed <= leg2End) {
@@ -1497,7 +1505,13 @@ export function mountSlotExample(container, data, opts = {}) {
     // впятеро меньше, чем у E сверху (0.038 против 0.075 в NDC), потому что
     // камера заранее сдвинута вверх ради отстойника E (заход 25). y:-1.8
     // даёт запас 0.204 — с той же математикой, посчитано, не подобрано на глаз.
-    const holdOffset = op.holdOffset ?? { x: 0, y: -1.8, z: -0.4 };
+    // ИСПРАВЛЕНО (заход 34, «пусть С не улетает строго под ДХ, более
+    // свободная форма»): было x:0 — строго вертикальное погружение, прямо
+    // под ту точку, куда в итоге приезжает DH (после leg2). x:-0.6 —
+    // отклонение В СТОРОНУ ОТ подходящего DH (не декоративная асимметрия
+    // произвольно, а «отступает» от источника воздействия), диагональный
+    // путь вместо строго вертикального.
+    const holdOffset = op.holdOffset ?? { x: -0.6, y: -1.8, z: -0.4 };
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
     const riseEnd = op.start + riseDur;
