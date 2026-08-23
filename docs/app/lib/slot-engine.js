@@ -1077,6 +1077,27 @@ export function mountSlotExample(container, data, opts = {}) {
         progress = op.midDistance * easeInOutCubic(clamp01((elapsed - op.start) / leg1Dur));
       } else if (elapsed <= holdEnd) {
         progress = op.midDistance; // пауза — здесь и должна случиться реакция (данные примера)
+        // РЕШЕНО (заход 33, «не видно факта воздействия ДХ на С» — взято из
+        // docs/effects/rule-assimilation-v2-via-elements.html, старого
+        // файла до движка: там триггер постоянно пульсировал кольцом,
+        // пока шло воздействие на цель — не перенесла дословно его технику
+        // (перерисовка кольца прямо в текстуру грани, свою для каждого
+        // кубика — сложнее, чем нужно сейчас), взяла ПРИЁМ и переложила на
+        // уже готовый spawnPulseRing. Необязательно (op.holdPulse) — старые
+        // примеры (agnayas, āsīt) его не передают, не затронуты.
+        if (op.holdPulse) {
+          const pulseGap = op.holdPulseGap ?? 500;
+          const idx = Math.floor((elapsed - leg1End) / pulseGap);
+          const key = '_holdPulse' + idx;
+          if (!op[key]) {
+            op[key] = true;
+            movers.forEach(m => spawnPulseRing(
+              frontAnchor(m.mesh),
+              pulseGap * 0.9,
+              op.holdPulseColor ?? ringColorFrom(colorFor(m.tr))
+            ));
+          }
+        }
       } else if (elapsed <= leg2End) {
         progress = op.midDistance + (distance - op.midDistance) * easeInOutCubic(clamp01((elapsed - holdEnd) / leg2Dur));
       } else {
