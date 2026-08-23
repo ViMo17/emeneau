@@ -1049,12 +1049,48 @@ export function mountSlotExample(container, data, opts = {}) {
     const retreatDur = retreat ? (op.retreatDur ?? 950) : 0; // было 700
     const distance = op.distance ?? 0.5;
     const jitterAmp = op.jitterAmp ?? 0.16;
+    const baseXs = slots.map(s => slotX(s));
+    const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
+
+    // РЕШЕНО (заход 29, «ДХИ просто въезжает — не читается взаимодействие»).
+    // Раньше единственный способ пройти путь — одна сплошная кривая от 0 до
+    // distance, без паузы. Если distance большая (закрыть исходный зазор И
+    // занять место исчезающей соседней буквы ОДНИМ движением) — это читается
+    // как «проехало насквозь», а не «подошло → произошла реакция → въехало
+    // в освободившееся место»: нет отдельного, заметного момента прибытия.
+    // midDistance (необязательный параметр) — путь идёт в ДВА отрезка с
+    // явной паузой между ними (midHoldDur), ровно там, где и должна
+    // произойти реакция (обычно — elide соседней буквы, синхронизировано
+    // данными примера снаружи, не встроено сюда). Без midDistance поведение
+    // не меняется ни на йоту — старые примеры (agnayas, āsīt) его не
+    // передают. Общая возможность движка, не разовый хак под один пример.
+    if (op.midDistance != null) {
+      const leg1Dur = approachDur;
+      const midHoldDur = op.midHoldDur ?? 0;
+      const leg2Dur = op.leg2Dur ?? approachDur;
+      const leg1End = op.start + leg1Dur;
+      const holdEnd = leg1End + midHoldDur;
+      const leg2End = holdEnd + leg2Dur;
+      if (elapsed < op.start) return;
+      let progress; // 0..distance, в тех же единицах, что и distance
+      if (elapsed <= leg1End) {
+        progress = op.midDistance * easeInOutCubic(clamp01((elapsed - op.start) / leg1Dur));
+      } else if (elapsed <= holdEnd) {
+        progress = op.midDistance; // пауза — здесь и должна случиться реакция (данные примера)
+      } else if (elapsed <= leg2End) {
+        progress = op.midDistance + (distance - op.midDistance) * easeInOutCubic(clamp01((elapsed - holdEnd) / leg2Dur));
+      } else {
+        progress = distance;
+      }
+      const shift = SLOT * progress * dir;
+      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
+      return;
+    }
+
+    const shift = SLOT * distance * dir;
     const peakStart = op.start + approachDur;
     const peakEnd = peakStart + holdDur;
     const retreatEnd = peakEnd + retreatDur;
-    const baseXs = slots.map(s => slotX(s));
-    const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
-    const shift = SLOT * distance * dir;
 
     if (elapsed < op.start || elapsed > retreatEnd) {
       if (elapsed > retreatEnd) {
