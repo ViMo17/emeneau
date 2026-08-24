@@ -39,7 +39,7 @@
 // Материал/геометрия кубика — не здесь, берутся из уже готового chalk-module.js.
 
 import * as THREE from 'three';
-import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
+import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture, paintGlyph } from './chalk-module.js';
 
 export const N_SLOTS = 10;
 export const CUBE_SIZE = 1.1;
@@ -838,6 +838,76 @@ export function mountSlotExample(container, data, opts = {}) {
     setTimeout(() => ring.remove(), dur + 80);
   }
 
+  /* ПУЛЬС В ТЕКСТУРЕ ГРАНИ (заход 41, перенесено из docs/effects/
+     rule-assimilation-varga-t-d.html через rule71-vak-asti.js — там это и
+     называлось «эталон»). Отличие от spawnPulseRing выше: тот — отдельный
+     DOM-слой поверх сцены, позиционируется проекцией 3D→экран каждый
+     кадр; этот — кольцо нарисовано ПРЯМО в canvas передней грани кубика,
+     жёстко часть самой геометрии, поворачивается/масштабируется вместе с
+     кубиком без всякой проекционной математики. Две функции: build —
+     один раз при первой необходимости (готовит холст-эталон без кольца,
+     чтобы каждый кадр рисовать поверх чистой копии, не поверх предыдущего
+     кольца), redraw — каждый кадр с текущим радиусом/прозрачностью.
+     Использование: buildPulseFace на кубике один раз (лениво, кешируется
+     в cube._pulseFace), на время пульсации — cube.mesh.material меняется
+     на КОПИЮ matsMain с подменённым индексом 4 (не мутирует сам matsMain
+     — иначе после возврата к обычному виду грань осталась бы с кольцом
+     навсегда), после — возвращается обычный matsMain как есть. */
+  function buildPulseFace(hex, glyph) {
+    const SZ = 256;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = SZ;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+    ctx.fillRect(0, 0, SZ, SZ);
+    const baseCv = document.createElement('canvas');
+    baseCv.width = baseCv.height = SZ;
+    baseCv.getContext('2d').drawImage(cv, 0, 0); // чистая заливка — эталон для перерисовки каждый кадр
+    if (glyph) paintGlyph(cv, glyph);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    const material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false });
+    return { material, canvas: cv, baseCanvas: baseCv, glyph };
+  }
+  // radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца
+  function redrawPulseFace(pf, radiusFrac, alpha, ringRgb) {
+    const sz = pf.canvas.width;
+    const ctx = pf.canvas.getContext('2d');
+    ctx.clearRect(0, 0, sz, sz);
+    ctx.drawImage(pf.baseCanvas, 0, 0);
+    if (radiusFrac !== null) {
+      const cx = sz / 2, cy = sz / 2, r = Math.max(1, radiusFrac * (sz / 2));
+      ctx.save();
+      ctx.filter = `blur(${sz * 0.024}px)`;
+      ctx.strokeStyle = `rgba(${ringRgb},${alpha})`;
+      ctx.lineWidth = sz * 0.05;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    if (pf.glyph) paintGlyph(pf.canvas, pf.glyph);
+    pf.material.map.needsUpdate = true;
+  }
+  /* Включить/выключить пульсирующую грань у конкретного кубика. Строит
+     pulseFace лениво (один раз на кубик, кешируется), подменяет ТОЛЬКО
+     индекс 4 (передняя грань) в СВЕЖЕЙ копии текущего набора материалов —
+     сам matsMain не трогается ни разу, поэтому «выключить» — это просто
+     вернуть cube.mesh.material = cube.matsMain как было. */
+  function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
+    if (!cube._pulseFace) {
+      cube._pulseFace = buildPulseFace(colorFor(cube.tr), cube.tr);
+    }
+    if (radiusFrac === null) {
+      cube.mesh.material = cube.matsMain;
+      return;
+    }
+    if (cube.mesh.material !== cube._pulsingMats) {
+      cube._pulsingMats = [...cube.matsMain];
+      cube._pulsingMats[4] = cube._pulseFace.material;
+      cube.mesh.material = cube._pulsingMats;
+    }
+    redrawPulseFace(cube._pulseFace, radiusFrac, alpha, ringRgb);
+  }
+
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.outputEncoding = THREE.sRGBEncoding;
   stageEl.appendChild(renderer.domElement);
@@ -1091,45 +1161,30 @@ export function mountSlotExample(container, data, opts = {}) {
         progress = op.midDistance * easeInOutCubic(clamp01((elapsed - op.start) / leg1Dur));
       } else if (elapsed <= holdEnd) {
         progress = op.midDistance; // пауза — здесь и должна случиться реакция (данные примера)
-        // РЕШЕНО (заход 33, «не видно факта воздействия ДХ на С» — взято из
-        // docs/effects/rule-assimilation-v2-via-elements.html, старого
-        // файла до движка: там триггер постоянно пульсировал кольцом,
-        // пока шло воздействие на цель — не перенесла дословно его технику
-        // (перерисовка кольца прямо в текстуру грани, свою для каждого
-        // кубика — сложнее, чем нужно сейчас), взяла ПРИЁМ и переложила на
-        // уже готовый spawnPulseRing. Необязательно (op.holdPulse) — старые
-        // примеры (agnayas, āsīt) его не передают, не затронуты.
-        // ИСПРАВЛЕНО (заход 34, «круги идут по букве И — неверно»): было
-        // movers.forEach(...) — пульс спавнился на ВСЕХ mover'ах разом,
-        // включая I, которая не триггер, а просто едет рядом с DH внутри
-        // одной морфологической единицы (-dhi). Триггер — конкретно
-        // movers[0] (ближний к цели, то же соглашение, что уже использует
-        // dir/baseXs[0] выше в этой же функции) — пульс должен быть только
-        // на нём.
-        // ИСПРАВЛЕНО (заход 35, «ДХ даёт импульс, но С не получает его —
-        // сделай отклик, который заставляет С уйти вниз»). Раньше пульс
-        // был только НА DH — сигнал «DH что-то делает», но ничего не
-        // связывало это визуально с реакцией у S: у зрителя не было
-        // повода читать одно как ПРИЧИНУ другого. Теперь при каждом
-        // пульсе синхронно уходит ещё и бегущая волна DH→S (тот же
-        // spawnWave, что и в influence, только короткая дистанция —
-        // кубики уже почти соприкасаются, waveTravel короче на порядок,
-        // чем у influence). Цель — по номеру слота (slotX(op.target)),
-        // не по живому кубику: к моменту, когда доходит поздний пульс,
-        // S уже может начать реагировать/исчезать (elide) — тот же
-        // принцип устойчивости к исчезающей цели, что и в заходе 28.
+        // РЕШЕНО (заход 33, доработано в заходе 41 — «визуально эти круги
+        // красивее», перенос техники из docs/effects/rule-assimilation-
+        // v2-via-elements.html / rule71-vak-asti.js). Раньше пульс на
+        // триггере был отдельными DOM-вспышками через равные интервалы
+        // (spawnPulseRing по таймеру) — теперь НЕПРЕРЫВНАЯ пульсация,
+        // нарисованная прямо в текстуру передней грани самого триггера
+        // (setFacePulse/redrawPulseFace) — радиус растёт по кругу с
+        // sin-конвертом на вход/выход каждого цикла, кольцо жёстко часть
+        // геометрии кубика, не отдельный слой поверх сцены. Волна к цели
+        // (spawnWave) остаётся ДИСКРЕТНЫМИ пакетами — это другое явление
+        // (конкретный сигнал долетает и что-то вызывает), не путать со
+        // сплошной пульсацией «я источник, я влияю».
         if (op.holdPulse) {
-          const pulseGap = op.holdPulseGap ?? 500;
-          const idx = Math.floor((elapsed - leg1End) / pulseGap);
-          const key = '_holdPulse' + idx;
-          if (!op[key]) {
-            op[key] = true;
-            const trigger = movers[0];
-            spawnPulseRing(
-              frontAnchor(trigger.mesh),
-              pulseGap * 0.9,
-              op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr))
-            );
+          const trigger = movers[0];
+          const pulsePeriod = op.holdPulsePeriod ?? 1400;
+          const cyclePos = ((elapsed - leg1End) % pulsePeriod) / pulsePeriod;
+          const radiusFrac = lerp(0.25, 1.0, cyclePos);
+          const envelope = Math.sin(cyclePos * Math.PI);
+          setFacePulse(trigger, radiusFrac, 0.85 * envelope, op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr)));
+          const waveGap = op.holdWaveGap ?? 500;
+          const waveIdx = Math.floor((elapsed - leg1End) / waveGap);
+          const waveKey = '_holdWave' + waveIdx;
+          if (!op[waveKey]) {
+            op[waveKey] = true;
             const waveTravel = op.holdWaveTravel ?? 400;
             spawnWave(
               frontAnchor(trigger.mesh),
@@ -1140,6 +1195,15 @@ export function mountSlotExample(container, data, opts = {}) {
           }
         }
       } else if (elapsed <= leg2End) {
+        // Пульсация выключается ровно один раз при выходе из паузы —
+        // возвращает триггеру его обычный, некольцевой набор материалов
+        // (см. setFacePulse: null означает «выключить», просто
+        // cube.mesh.material = cube.matsMain, matsMain никогда не
+        // мутировался, так что возврат мгновенный и чистый).
+        if (op.holdPulse && !op._pulseOff) {
+          op._pulseOff = true;
+          setFacePulse(movers[0], null);
+        }
         progress = op.midDistance + (distance - op.midDistance) * easeInOutCubic(clamp01((elapsed - holdEnd) / leg2Dur));
       } else {
         progress = distance;
