@@ -1004,27 +1004,37 @@ export function mountSlotExample(container, data, opts = {}) {
     const waveTravel = op.waveTravel ?? 1400; // было 1100
     const dur = (waveCount - 1) * waveGap + waveTravel;
 
-    // Сустейн-кольца на источниках — независимо от фазы волн, до ringHoldDur.
+    // Сустейн-«пульс» на источниках — независимо от фазы волн, до ringHoldDur.
     const ringHoldDur = op.ringHoldDur ?? dur;
-    op._frameHoldEnd = op.start + ringHoldDur; // общее окно и для рамки, и для колец
+    op._frameHoldEnd = op.start + ringHoldDur; // общее окно и для рамки, и для пульса
     updateGroupFrame(op, sources, elapsed);
-    const ringGap = op.ringGap ?? 900;
-    // Цвет колец — ОДИН на всю группу (GROUP_COLOR), если источников больше
+    // Цвет пульса — ОДИН на всю группу (GROUP_COLOR), если источников больше
     // одного (настоящая группа-нимитта, см. GROUP_COLOR выше); для одиночной
     // буквы-источника прежнее поведение сохранено — тонировка в её
     // собственный фонетический цвет (там нечего объединять, один кубик).
     const ringRgb = sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr));
+    // ИСПРАВЛЕНО (заход 43, унификация по реестру эталонных эффектов —
+    // algoritm-agnayas-shablon.md). Было: отдельные DOM-вспышки через
+    // равные интервалы (spawnPulseRing по таймеру, ringGap=900) — та же
+    // техника, что уже заменена в śādhi (заходы 33/41) на непрерывную
+    // текстурную пульсацию. Теперь то же самое здесь: каждый источник
+    // группы пульсирует кольцом В СВОЕЙ ЖЕ ГРАНИ, синхронно — одна и та же
+    // формула cyclePos на всех сразу, не по отдельности, поэтому группа
+    // читается как единое дышащее целое (та же цель, что уже стояла у
+    // group-frame ниже), а не набор случайно моргающих вспышек. ringGap
+    // (интервал между разовыми вспышками) стал не нужен — заменён на
+    // ringPulsePeriod (длительность ОДНОГО цикла непрерывной пульсации);
+    // старые данные, не передающие ни то ни другое, получают дефолт 1400 —
+    // то же значение, что уже используется в śādhi.
     if (elapsed >= op.start && elapsed <= op.start + ringHoldDur) {
-      const ringIdx = Math.floor((elapsed - op.start) / ringGap);
-      const key = '_ring' + ringIdx;
-      if (!op[key]) {
-        op[key] = true;
-        sources.forEach(src => spawnPulseRing(
-          frontAnchor(src.mesh),
-          1300,
-          ringRgb
-        ));
-      }
+      const pulsePeriod = op.ringPulsePeriod ?? 1400;
+      const cyclePos = ((elapsed - op.start) % pulsePeriod) / pulsePeriod;
+      const radiusFrac = lerp(0.25, 1.0, cyclePos);
+      const envelope = Math.sin(cyclePos * Math.PI);
+      sources.forEach(src => setFacePulse(src, radiusFrac, 0.85 * envelope, ringRgb));
+    } else if (elapsed > op.start + ringHoldDur && !op._ringOff) {
+      op._ringOff = true;
+      sources.forEach(src => setFacePulse(src, null));
     }
 
     if (elapsed < op.start || elapsed > op.start + dur) {
