@@ -1307,9 +1307,22 @@ export function mountSlotExample(container, data, opts = {}) {
     const dur = Math.abs(spinTurns) * MS_PER_360;
     const bounceH = op.bounceH ?? 0.3;
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
+    // ИСПРАВЛЕНО (заход 45, «К сереет при переходе в Г — серебро
+    // зарезервировано за гунацией, а тут парная звонкая замена внутри
+    // варги, совсем другая категория»). Раньше matsSignal (серебро) был
+    // ЖЁСТКО зашит как единственный вариант промежуточной фазы — годится
+    // для гунации/вриддхи (там серебро/золото и есть сам смысл: «идёт
+    // огласовка»), но ложно намекает на ту же природу у любого другого
+    // transform, для которого он тоже используется. op.signal ('silver' —
+    // дефолт, обратная совместимость с agnayas; 'blank' — нейтральная
+    // грань БЕЗ буквы, тот же цвет кубика, никакого намёка на гуну/вриддхи)
+    // — та же техника, что была у эталона (matsBlank на время оборота),
+    // просто через общий параметр движка, не отдельным куском кода внутри
+    // примера.
+    const signalMats = op.signal === 'blank' ? 'matsBlank' : 'matsSignal';
     if (!op._began) {
       op._began = true;
-      cube.mesh.material = cube.matsSignal; // серебро на СТАРОЙ букве — «получила импульс»
+      cube.mesh.material = cube[signalMats];
     }
     const t = clamp01((elapsed - op.start) / dur);
     cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
@@ -1323,10 +1336,11 @@ export function mountSlotExample(container, data, opts = {}) {
       // «сигнальный»/«финальный» материал ещё долго хранил исходную,
       // добуквенную версию (см. комментарий в regenMats). Новая буква
       // наносится сразу же, тем же моментом ~15% пути, что и раньше —
-      // но материал остаётся серебряным (matsSignal), не matsMain: буква уже
-      // «Е», цвет ещё не вернулся, это следующая, отдельная фаза (см. ниже).
+      // но материал остаётся тем же промежуточным (silver ИЛИ blank, см.
+      // выше), не matsMain: буква уже новая, цвет ещё не вернулся, это
+      // следующая, отдельная фаза (см. ниже).
       regenMats(cube, op.toGlyph, newColor);
-      cube.mesh.material = cube.matsSignal;
+      cube.mesh.material = cube[signalMats];
     }
     if (t >= 1) {
       op._done = true;
