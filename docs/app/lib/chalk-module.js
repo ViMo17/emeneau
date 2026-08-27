@@ -21,9 +21,22 @@ function paintGlyph(cv, ch) {
   const ctx = cv.getContext('2d');
   ctx.save();
   ctx.fillStyle = '#000000';
-  ctx.font = `700 ${Math.round(sz*0.58)}px 'Helvetica Neue', Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // ДОБАВЛЕНО (заход 48, «сжатые крайние блоки — несколько букв на одном
+  // кубике, авто-подгонка шрифта»): раньше размер был жёстко один (58% от
+  // стороны холста) — годился только под одну букву. Для более длинных
+  // строк (инертный контекст, сжатый на краю раскладки — «yam», «yati» и
+  // т.п.) уменьшаем размер, пока строка не поместится по ширине грани с
+  // запасом по краям. Одиночная буква проходит цикл без изменений — эта
+  // правка не трогает уже существующий внешний вид ни одного кубика.
+  let fontSize = Math.round(sz * 0.58);
+  ctx.font = `700 ${fontSize}px 'Helvetica Neue', Arial, sans-serif`;
+  const maxWidth = sz * 0.86;
+  while (ctx.measureText(ch).width > maxWidth && fontSize > sz * 0.12) {
+    fontSize -= 2;
+    ctx.font = `700 ${fontSize}px 'Helvetica Neue', Arial, sans-serif`;
+  }
   ctx.fillText(ch, sz/2, sz/2);
   ctx.restore();
 }
