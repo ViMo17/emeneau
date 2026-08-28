@@ -1370,6 +1370,237 @@ export function applySplit(op, elapsed, ctx) {
   }
 }
 
+/* ARRIVE (заход 12, шаг «грам.» в āsīt: окончание -īt тихо присоединяется
+   к основе, без единого события сандхи). Кубик(и) материализуются ЗА
+   кадром и прилетают по дуге в свой слот — та же матчасть, что у прилёта
+   результатов split (flyArcPosition), но БЕЗ второй половины split (никто
+   не тает, никто не превращается) — просто прибыл и остался. Специально
+   БЕЗ сигнального цвета/вспышки в момент посадки: это тихое морфологическое
+   присоединение, не сандхи — принцип «эффект только там, где реально
+   сработало правило» (шаблон-документ, заход по āsīt). Несколько элементов
+   сразу — items[], каждый со своим delay/dur/from/arcHeight, как у
+   split.arrivals.
+   { type:'arrive', items:[{into,newSlot,from,delay,dur,arcHeight}], start }
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 6/10). Внешние
+   зависимости — cubes и scene — через ctx, тем же образом, что и у
+   applySplit (единственная другая операция, добавляющая новые THREE-
+   объекты на сцену за кадром). */
+export function applyArrive(op, elapsed, ctx) {
+  const { cubes, scene } = ctx;
+  (op.items || []).forEach(item => {
+    if (elapsed < op.start + item.delay) return;
+    let nc = op._made?.[item.newSlot];
+    if (!nc) {
+      nc = makeCube(item.into, item.newSlot * 131 + 17);
+      nc._fallDone = true;
+      nc.mesh.visible = false;
+      scene.add(nc.mesh);
+      scene.add(nc.shadow);
+      cubes[item.newSlot] = nc;
+      op._made = op._made || {};
+      op._made[item.newSlot] = nc;
+    }
+    nc.mesh.visible = true;
+    const t = clamp01((elapsed - (op.start + item.delay)) / item.dur);
+    const p = flyArcPosition(item.from, slotX(item.newSlot), 0, 0, t, item.arcHeight ?? 1.0);
+    nc.mesh.position.set(p.x, p.y, p.z);
+  });
+}
+
+/* MERGE — слияние (заход 15, полностью переработано под «все буквы падают
+   вместе, с зазором, потом происходит притяжение»). Раньше кубик, который
+   сливается, материализовался ЗА кадром и прилетал по дуге — то есть
+   физически не существовал до собственного шага, хотя по её описанию все
+   буквы должны быть видны с самого начала, просто с паузой между
+   смысловыми частями слова. Теперь merge работает с УЖЕ существующим,
+   упавшим кубиком (от — номер его исходного слота, ровно как movers у
+   approach), просто едет вдоль ряда в позицию цели по прямой (без дуги —
+   это скольжение по своей полосе, не прилёт со стороны, дуга здесь была
+   бы визуально противоречащей самой идее). Слот-ключ источника (from)
+   специально НЕ переименовывается у соседей справа — они просто держат
+   СВОИ исходные номера слотов, даже когда их РЕАЛЬНАЯ позиция на экране
+   смещена соседней approach-операцией (см. applyApproach retreat:false) —
+   для порядка/подсчёта это неважно, важна только сортировка номеров, а
+   не их непрерывность.
+   { type:'merge', from, at, toGlyph, toColor, start, dur=1400, pulseHoldMs }
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 7/10). Единственная
+   внешняя зависимость — cubes — через ctx; spawnPulseRing уже принимает
+   ctx с прошлых переносов. */
+export function applyMerge(op, elapsed, ctx) {
+  const { cubes } = ctx;
+  if (elapsed < op.start) return;
+  const target = cubes[op.at];
+  if (!target) return;
+  // ИСПРАВЛЕНО (заход 18, реальный баг «Ā застревает увеличенной
+  // навсегда» — нашла симуляцией, не на глаз). Раньше mover искался
+  // (`cubes[op.from]`) и проверялся на существование ОДНИМ guard'ом со
+  // всей функцией, ДО ветки `if (!op._done)`. Как только слияние
+  // завершается, кубик-источник УДАЛЯЕТСЯ из cubes{} (см. `delete
+  // cubes[op.from]` ниже) — а на СЛЕДУЮЩЕМ кадре тот же guard находит
+  // mover===undefined и обрывает ВСЮ функцию, включая спад пика
+  // масштаба, который к этому моменту ещё не начинался. Тот же самый
+  // класс бага, что уже чинили в applyTransform (заход 11) и в этой же
+  // функции по-другому (заход 15) — здесь я сама создала его ТРЕТИЙ раз,
+  // просто в новом месте. Теперь mover ищется и проверяется ТОЛЬКО
+  // внутри фазы полёта (где он ещё нужен) — спад пика зависит только от
+  // target, который никогда не удаляется, и потому не обрывается.
+  if (!op._done) {
+    const mover = cubes[op.from];
+    if (!mover) return; // источник ещё не существует/уже удалён раньше времени — не должно происходить штатно, но не роняем функцию
+    const dur = op.dur ?? 1400;
+    const t = clamp01((elapsed - op.start) / dur);
+    const te = easeInOutCubic(t);
+    const toX = target.mesh.position.x;
+    mover.mesh.position.x = lerp(slotX(op.from), toX, te);
+    mover.shadow.position.x = mover.mesh.position.x;
+    if (t >= 1) {
+      op._done = true;
+      mover.mesh.visible = false;
+      mover.shadow.visible = false;
+      delete cubes[op.from]; // слились — отдельного кубика больше нет вообще
+      const newColor = op.toColor ?? colorFor(op.toGlyph);
+      regenMats(target, op.toGlyph, newColor);
+      target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
+      spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB, ctx);
+      // РЕШЕНО (заход 20, «сейчас нет никакого эффекта — может кубик
+      // разбухнет со вспышкой?»). Была права: +9% масштаба без ничего
+      // больше — на практике незаметно, не читается как событие. Теперь
+      // настоящая вспышка: пик масштаба заметно выше (1.35, не 1.09) +
+      // реальное свечение материала (emissive/emissiveIntensity — не
+      // имитация цветом текстуры, а живое GPU-свойство, то же самое,
+      // чем светятся неоновые вывески в играх), тон — тот же нейтральный
+      // GROUP_COLOR, что у кольца-пульса рядом (одна и та же вспышка,
+      // не два разных цветовых события одновременно). Оба — масштаб и
+      // свечение — спадают синхронно, одной и той же кривой, до 0.
+      target.mesh.material.forEach(m => { m.emissive.setHex(GROUP_COLOR); m.emissiveIntensity = 0.9; });
+      target.mesh.scale.setScalar(1.35);
+      op._pulsedAt = elapsed;
+    }
+  }
+  // ИСПРАВЛЕНО (заход 15, реальный баг «результат крупнее стандарта» —
+  // не тонкая настройка). Спад пика масштаба раньше стоял ПОД ТЕМ ЖЕ
+  // guard'ом `if (op._done) return`, что и вся остальная функция — на
+  // первом же кадре ПОСЛЕ слияния этот guard обрывал функцию раньше, чем
+  // спад успевал сделать хоть шаг: масштаб застревал на 1.09 навсегда.
+  // Тот же самый класс ошибки уже чинили в applyTransform (заход 11) —
+  // здесь я сама воспроизвела его заново, поставив финализацию и
+  // продолжающийся спад за одним и тем же early-return. Спад вынесен из-
+  // под guard'а — идёт каждый кадр после слияния, независимо от op._done.
+  // Пик и длительность спада — заход 20 (0.9/1.35 вместо прежних
+  // умеренных значений, 600мс вместо 500 — заметная, но короткая вспышка,
+  // не растянутая).
+  if (op._pulsedAt != null) {
+    const pt = clamp01((elapsed - op._pulsedAt) / 600);
+    const e = easeOutCubic(pt);
+    target.mesh.scale.setScalar(lerp(1.35, 1, e));
+    target.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, e); });
+  }
+}
+
+// РЕШЕНО (заход 11, «повыше и как-то интереснее, может более упруго»).
+// Двойной прыжок: основной высокий взлёт (t 0–0.6, амплитуда 0.32) и
+// заметно меньший довдох сразу следом (t 0.6–1.0, ~30% от основной
+// высоты) — та же логика «удар, потом меньший отзвук», что уже
+// используется в паузе перед split. Обе половины стыкуются без разрыва
+// (обе синусоиды дают 0 на границе t=0.6). Цвет меняется РОВНО на
+// вершине волны (t=0.5).
+//
+// ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 8/10). Единственная
+// внешняя зависимость — cubes — через ctx.
+export function applySettle(op, elapsed, ctx) {
+  const { cubes } = ctx;
+  const stepDelay = op.stepDelay ?? 180;
+  const bounceDur = op.bounceDur ?? 600;
+  const bounceH = op.bounceH ?? 0.32; // было 0.12
+  op.slots.forEach((slot, i) => {
+    const cube = cubes[slot];
+    if (!cube) return;
+    const start = op.start + i * stepDelay;
+    if (elapsed < start || elapsed > start + bounceDur) return;
+    const t = clamp01((elapsed - start) / bounceDur);
+    const h = t <= 0.6
+      ? bounceH * Math.sin((t / 0.6) * Math.PI)
+      : bounceH * 0.3 * Math.sin(((t - 0.6) / 0.4) * Math.PI);
+    cube.mesh.position.y = h;
+    if (!cube._settled && t >= 0.5) {
+      cube._settled = true;
+      cube.mesh.material = cube.matsReady;
+    }
+  });
+}
+
+/* DIM (форма ручного управления, оставлена для обратной совместимости и
+   точечных случаев) — притенение неактивных букв по явному списку слотов
+   и окну времени. Для нового материала предпочтительно data.steps выше —
+   он сам считает пересечения и снимает притенение к концу; ручной 'dim'
+   по-прежнему полезен для локальных, не связанных с шагами эффектов.
+   { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 }
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 9/10). Единственная
+   внешняя зависимость — cubes — через ctx. */
+export function applyDim(op, elapsed, ctx) {
+  const { cubes } = ctx;
+  if (elapsed < op.start || elapsed > op.end) return;
+  const dimOpacity = op.dimOpacity ?? 0.22;
+  const ramp = op.ramp ?? 700;
+  op.slots.forEach(slot => {
+    const cube = cubes[slot];
+    if (!cube) return;
+    let opacity;
+    if (elapsed < op.start + ramp) opacity = lerp(1, dimOpacity, clamp01((elapsed - op.start) / ramp));
+    else if (elapsed < op.end - ramp) opacity = dimOpacity;
+    else opacity = lerp(dimOpacity, 1, clamp01((elapsed - (op.end - ramp)) / ramp));
+    setOpacity(cube.mesh, opacity);
+  });
+}
+
+/* Притенение неактивных букв по текущему шагу (data.steps) — общий,
+   автоматический механизм, отдельный от ручного 'dim' выше. Между
+   авторскими шагами МОЖЕТ быть зазор — движок сам превращает его в явное
+   «проявление» (activeSlots:'ALL', см. buildRuntimeSteps/sameActiveSlots).
+
+   РЕШЕНО (заход 7, «двойное мерцание»/«перекрашивание неудовлетворительно»).
+   Переход на КАЖДОЙ границе шагов считается РОВНО ОДИН РАЗ — ramp-in в
+   шаге, наступающем ПОСЛЕ границы, читает реальную (уже подведённую к
+   цели) яркость prev, не декларативный target — отдельного ramp-out нет,
+   он был бы конфликтующим, не просто лишним.
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 10/10 — ПОСЛЕДНЯЯ
+   функция плана). Не op-based (сигнатура отличается от всех остальных
+   apply* — вызывается раз в кадр без привязки к конкретной операции),
+   но по той же схеме: внешние зависимости (cubes, runtimeSteps, data) —
+   через ctx, ничего не создаётся заново под неё отдельно. */
+export function applyStepDim(elapsed, ctx) {
+  const { cubes, runtimeSteps, data } = ctx;
+  if (!runtimeSteps) return;
+  const dimOpacity = data.dimOpacity ?? 0.22;
+  const RAMP = data.stepRamp ?? 550;
+  const REVEAL_STAGGER = data.revealStagger ?? 130;
+  const REVEAL_RAMP = data.revealRamp ?? 700;
+  const idx = stepIndexAt(elapsed, runtimeSteps);
+  const cur = runtimeSteps[idx];
+  const prev = runtimeSteps[idx - 1];
+  const orderedSlots = Object.keys(cubes)
+    .filter(key => /^\d+$/.test(key))
+    .map(Number)
+    .sort((a, b) => a - b); // порядок слева направо — тот самый, что просила пользователь
+  const enteringReveal = prev && cur.activeSlots === 'ALL';
+  orderedSlots.forEach((slot, order) => {
+    const cube = cubes[slot];
+    let target = stepTargetOpacity(cur, slot, dimOpacity);
+    if (enteringReveal) {
+      const t = clamp01((elapsed - cur.start - order * REVEAL_STAGGER) / REVEAL_RAMP);
+      target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
+    } else if (prev && elapsed - cur.start < RAMP) {
+      const t = clamp01((elapsed - cur.start) / RAMP);
+      target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
+    }
+    setOpacity(cube.mesh, target);
+  });
+}
+
 export function mountSlotExample(container, data, opts = {}) {
   injectStylesOnce();
 
@@ -1583,46 +1814,9 @@ export function mountSlotExample(container, data, opts = {}) {
      перед settle); сужение притенения под НОВЫЙ узкий шаг (обратное
      направление) остаётся одновременным, как раньше — туда претензий не
      было, и резкое «внимание сузилось» там уместнее плавного расползания. */
-  function applyStepDim(elapsed) {
-    if (!runtimeSteps) return;
-    const dimOpacity = data.dimOpacity ?? 0.22;
-    const RAMP = data.stepRamp ?? 550;
-    const REVEAL_STAGGER = data.revealStagger ?? 130;
-    const REVEAL_RAMP = data.revealRamp ?? 700;
-    const idx = stepIndexAt(elapsed, runtimeSteps);
-    const cur = runtimeSteps[idx];
-    const prev = runtimeSteps[idx - 1];
-    const orderedSlots = Object.keys(cubes)
-      .filter(key => /^\d+$/.test(key))
-      .map(Number)
-      .sort((a, b) => a - b); // порядок слева направо — тот самый, что просила пользователь
-    const enteringReveal = prev && cur.activeSlots === 'ALL';
-    // РЕШЕНО (заход 7, «двойное мерцание»/«перекрашивание неудовлетворительно»).
-    // Раньше здесь был ЕЩЁ один блок — «ramp-out к next» — считавший тот же
-    // самый переход ВТОРОЙ раз, с другого конца: пока текущий шаг доживал
-    // последние RAMP мс, он сам плавно вёл яркость к цели следующего шага, а
-    // когда elapsed переходил границу — код следующего шага СНОВА запускал
-    // переход «от prev к себе» с нуля, читая из prev не реальную (уже
-    // подведённую к цели) яркость, а декларативный target шага (1, если
-    // шаг ALL) — кубик дёргался обратно вверх и ещё раз плавно гас. Раз шаги
-    // идут подряд без разрывов (buildRuntimeSteps это гарантирует), переход
-    // на КАЖДОЙ границе обязан считаться РОВНО ОДИН РАЗ — и это уже полностью
-    // берёт на себя ramp-in ниже, в шаге, который наступает ПОСЛЕ границы.
-    // Отдельный ramp-out поэтому не просто лишний, а прямо конфликтующий —
-    // убран целиком.
-    orderedSlots.forEach((slot, order) => {
-      const cube = cubes[slot];
-      let target = stepTargetOpacity(cur, slot, dimOpacity);
-      if (enteringReveal) {
-        const t = clamp01((elapsed - cur.start - order * REVEAL_STAGGER) / REVEAL_RAMP);
-        target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
-      } else if (prev && elapsed - cur.start < RAMP) {
-        const t = clamp01((elapsed - cur.start) / RAMP);
-        target = lerp(stepTargetOpacity(prev, slot, dimOpacity), target, t);
-      }
-      setOpacity(cube.mesh, target);
-    });
-  }
+  // applyStepDim теперь на уровне модуля (заход 60, Стадия 2, 8/10) — см.
+  // блок в конце секции apply*-функций (после applyDim). Вызывается здесь
+  // как applyStepDim(elapsed, ctx).
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
@@ -1669,7 +1863,7 @@ export function mountSlotExample(container, data, opts = {}) {
   // Стадия 2 профессионализации) — тот же самый объект передаётся во все,
   // расширяется по мере переноса следующих apply*-функций (camera, stageEl,
   // labelsEl, scene и т.д.), не создаётся заново под каждую.
-  const ctx = { cubes, camera, stageEl, labelsEl, wordGroupsList, scene };
+  const ctx = { cubes, camera, stageEl, labelsEl, wordGroupsList, scene, runtimeSteps, data };
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
@@ -1736,27 +1930,10 @@ export function mountSlotExample(container, data, opts = {}) {
      только там, где реально сработало правило» (шаблон-документ, заход по
      āsīt). Несколько элементов сразу — items[], каждый со своим
      delay/dur/from/arcHeight, как у split.arrivals.
-     { type:'arrive', items:[{into,newSlot,from,delay,dur,arcHeight}], start } */
-  function applyArrive(op, elapsed) {
-    (op.items || []).forEach(item => {
-      if (elapsed < op.start + item.delay) return;
-      let nc = op._made?.[item.newSlot];
-      if (!nc) {
-        nc = makeCube(item.into, item.newSlot * 131 + 17);
-        nc._fallDone = true;
-        nc.mesh.visible = false;
-        scene.add(nc.mesh);
-        scene.add(nc.shadow);
-        cubes[item.newSlot] = nc;
-        op._made = op._made || {};
-        op._made[item.newSlot] = nc;
-      }
-      nc.mesh.visible = true;
-      const t = clamp01((elapsed - (op.start + item.delay)) / item.dur);
-      const p = flyArcPosition(item.from, slotX(item.newSlot), 0, 0, t, item.arcHeight ?? 1.0);
-      nc.mesh.position.set(p.x, p.y, p.z);
-    });
-  }
+     { type:'arrive', items:[{into,newSlot,from,delay,dur,arcHeight}], start }
+
+     ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 6/10) — см. блок
+     после applySplit. Вызывается здесь как applyArrive(op, elapsed, ctx). */
 
   /* MERGE — слияние (заход 15, полностью переработано под «все буквы падают
      вместе, с зазором, потом происходит притяжение»). Раньше кубик, который
@@ -1773,76 +1950,10 @@ export function mountSlotExample(container, data, opts = {}) {
      смещена соседней approach-операцией (см. applyApproach retreat:false) —
      для порядка/подсчёта это неважно, важна только сортировка номеров, а
      не их непрерывность.
-     { type:'merge', from, at, toGlyph, toColor, start, dur=1400, pulseHoldMs } */
-  function applyMerge(op, elapsed) {
-    if (elapsed < op.start) return;
-    const target = cubes[op.at];
-    if (!target) return;
-    // ИСПРАВЛЕНО (заход 18, реальный баг «Ā застревает увеличенной
-    // навсегда» — нашла симуляцией, не на глаз). Раньше mover искался
-    // (`cubes[op.from]`) и проверялся на существование ОДНИМ guard'ом со
-    // всей функцией, ДО ветки `if (!op._done)`. Как только слияние
-    // завершается, кубик-источник УДАЛЯЕТСЯ из cubes{} (см. `delete
-     // cubes[op.from]` ниже) — а на СЛЕДУЮЩЕМ кадре тот же guard находит
-    // mover===undefined и обрывает ВСЮ функцию, включая спад пика
-    // масштаба, который к этому моменту ещё не начинался. Тот же самый
-    // класс бага, что уже чинили в applyTransform (заход 11) и в этой же
-    // функции по-другому (заход 15) — здесь я сама создала его ТРЕТИЙ раз,
-    // просто в новом месте. Теперь mover ищется и проверяется ТОЛЬКО
-    // внутри фазы полёта (где он ещё нужен) — спад пика зависит только от
-    // target, который никогда не удаляется, и потому не обрывается.
-    if (!op._done) {
-      const mover = cubes[op.from];
-      if (!mover) return; // источник ещё не существует/уже удалён раньше времени — не должно происходить штатно, но не роняем функцию
-      const dur = op.dur ?? 1400;
-      const t = clamp01((elapsed - op.start) / dur);
-      const te = easeInOutCubic(t);
-      const toX = target.mesh.position.x;
-      mover.mesh.position.x = lerp(slotX(op.from), toX, te);
-      mover.shadow.position.x = mover.mesh.position.x;
-      if (t >= 1) {
-        op._done = true;
-        mover.mesh.visible = false;
-        mover.shadow.visible = false;
-        delete cubes[op.from]; // слились — отдельного кубика больше нет вообще
-        const newColor = op.toColor ?? colorFor(op.toGlyph);
-        regenMats(target, op.toGlyph, newColor);
-        target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
-        spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB, ctx);
-        // РЕШЕНО (заход 20, «сейчас нет никакого эффекта — может кубик
-        // разбухнет со вспышкой?»). Была права: +9% масштаба без ничего
-        // больше — на практике незаметно, не читается как событие. Теперь
-        // настоящая вспышка: пик масштаба заметно выше (1.35, не 1.09) +
-        // реальное свечение материала (emissive/emissiveIntensity — не
-        // имитация цветом текстуры, а живое GPU-свойство, то же самое,
-        // чем светятся неоновые вывески в играх), тон — тот же нейтральный
-        // GROUP_COLOR, что у кольца-пульса рядом (одна и та же вспышка,
-        // не два разных цветовых события одновременно). Оба — масштаб и
-        // свечение — спадают синхронно, одной и той же кривой, до 0.
-        target.mesh.material.forEach(m => { m.emissive.setHex(GROUP_COLOR); m.emissiveIntensity = 0.9; });
-        target.mesh.scale.setScalar(1.35);
-        op._pulsedAt = elapsed;
-      }
-    }
-    // ИСПРАВЛЕНО (заход 15, реальный баг «результат крупнее стандарта» —
-    // не тонкая настройка). Спад пика масштаба раньше стоял ПОД ТЕМ ЖЕ
-    // guard'ом `if (op._done) return`, что и вся остальная функция — на
-    // первом же кадре ПОСЛЕ слияния этот guard обрывал функцию раньше, чем
-    // спад успевал сделать хоть шаг: масштаб застревал на 1.09 навсегда.
-    // Тот же самый класс ошибки уже чинили в applyTransform (заход 11) —
-    // здесь я сама воспроизвела его заново, поставив финализацию и
-    // продолжающийся спад за одним и тем же early-return. Спад вынесен из-
-    // под guard'а — идёт каждый кадр после слияния, независимо от op._done.
-    // Пик и длительность спада — заход 20 (0.9/1.35 вместо прежних
-    // умеренных значений, 600мс вместо 500 — заметная, но короткая вспышка,
-    // не растянутая).
-    if (op._pulsedAt != null) {
-      const pt = clamp01((elapsed - op._pulsedAt) / 600);
-      const e = easeOutCubic(pt);
-      target.mesh.scale.setScalar(lerp(1.35, 1, e));
-      target.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, e); });
-    }
-  }
+     { type:'merge', from, at, toGlyph, toColor, start, dur=1400, pulseHoldMs }
+
+     ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 7/10) — см. блок
+     после applyArrive. Вызывается здесь как applyMerge(op, elapsed, ctx). */
 
   /* ELIDE (заход 27, правило 15, śādhi: s между ā и dh пропадает, ничего
      не появляется взамен) — первое применение к пункту «элизия» из списка
@@ -1881,47 +1992,18 @@ export function mountSlotExample(container, data, opts = {}) {
   // перед split (два убывающих импульса) — общий язык движка для
   // «пружинистости», не новый изобретённый жест. Обе половины стыкуются
   // без разрыва (обе синусоиды дают 0 на границе t=0.6).
-  function applySettle(op, elapsed) {
-    const stepDelay = op.stepDelay ?? 180;
-    const bounceDur = op.bounceDur ?? 600;
-    const bounceH = op.bounceH ?? 0.32; // было 0.12
-    op.slots.forEach((slot, i) => {
-      const cube = cubes[slot];
-      if (!cube) return;
-      const start = op.start + i * stepDelay;
-      if (elapsed < start || elapsed > start + bounceDur) return;
-      const t = clamp01((elapsed - start) / bounceDur);
-      const h = t <= 0.6
-        ? bounceH * Math.sin((t / 0.6) * Math.PI)
-        : bounceH * 0.3 * Math.sin(((t - 0.6) / 0.4) * Math.PI);
-      cube.mesh.position.y = h;
-      if (!cube._settled && t >= 0.5) {
-        cube._settled = true;
-        cube.mesh.material = cube.matsReady;
-      }
-    });
-  }
+  // applySettle теперь на уровне модуля (заход 60, Стадия 2, 8/10) — см.
+  // блок после applyMerge. Вызывается здесь как applySettle(op, elapsed, ctx).
 
   /* DIM (форма ручного управления, оставлена для обратной совместимости и
      точечных случаев) — притенение неактивных букв по явному списку слотов
      и окну времени. Для нового материала предпочтительно data.steps выше —
      он сам считает пересечения и снимает притенение к концу; ручной 'dim'
      по-прежнему полезен для локальных, не связанных с шагами эффектов.
-     { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 } */
-  function applyDim(op, elapsed) {
-    if (elapsed < op.start || elapsed > op.end) return;
-    const dimOpacity = op.dimOpacity ?? 0.22;
-    const ramp = op.ramp ?? 700;
-    op.slots.forEach(slot => {
-      const cube = cubes[slot];
-      if (!cube) return;
-      let opacity;
-      if (elapsed < op.start + ramp) opacity = lerp(1, dimOpacity, clamp01((elapsed - op.start) / ramp));
-      else if (elapsed < op.end - ramp) opacity = dimOpacity;
-      else opacity = lerp(dimOpacity, 1, clamp01((elapsed - (op.end - ramp)) / ramp));
-      setOpacity(cube.mesh, opacity);
-    });
-  }
+     { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 }
+
+     ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 60, Стадия 2, 9/10) — см. блок
+     после applySettle. Вызывается здесь как applyDim(op, elapsed, ctx). */
 
   function frame(now) {
     const elapsed = now - t0;
@@ -1936,13 +2018,13 @@ export function mountSlotExample(container, data, opts = {}) {
       else if (op.type === 'approach') applyApproach(op, elapsed, ctx);
       else if (op.type === 'transform') applyTransform(op, elapsed, ctx);
       else if (op.type === 'split') applySplit(op, elapsed, ctx);
-      else if (op.type === 'arrive') applyArrive(op, elapsed);
-      else if (op.type === 'merge') applyMerge(op, elapsed);
+      else if (op.type === 'arrive') applyArrive(op, elapsed, ctx);
+      else if (op.type === 'merge') applyMerge(op, elapsed, ctx);
       else if (op.type === 'elide') applyElide(op, elapsed, ctx);
-      else if (op.type === 'settle') applySettle(op, elapsed);
-      else if (op.type === 'dim') applyDim(op, elapsed);
+      else if (op.type === 'settle') applySettle(op, elapsed, ctx);
+      else if (op.type === 'dim') applyDim(op, elapsed, ctx);
     });
-    applyStepDim(elapsed);
+    applyStepDim(elapsed, ctx);
     updateSteps(elapsed);
     Object.values(cubes).forEach(updateShadow);
     camera.position.copy(camBase);
