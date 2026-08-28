@@ -13,6 +13,7 @@ const browserGlobals = {
   requestAnimationFrame: 'readonly',
   cancelAnimationFrame: 'readonly',
   ResizeObserver: 'readonly',
+  MutationObserver: 'readonly',
   CustomEvent: 'readonly',
   performance: 'readonly',
   setTimeout: 'readonly',
@@ -35,7 +36,11 @@ export default [
     ],
   },
   {
-    files: ['docs/app/lib/**/*.js', 'docs/app/examples/**/*.js'],
+    // docs/app/**/*.js целиком, не только lib/ и examples/ — иначе каждый
+    // новый файл верхнего уровня (data.js, role-demo.js и т.п., по мере
+    // разбиения sanskrit-sandhi-app.html) требовал бы отдельной правки
+    // этого списка; замороженные эталонные модули уже исключены выше.
+    files: ['docs/app/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
