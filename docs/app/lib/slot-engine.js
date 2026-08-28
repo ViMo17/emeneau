@@ -162,7 +162,7 @@ export const COL_VEL = 0xA8D878, COL_PAL = 0x7DCFCA, COL_RET = 0xC5B0D8,
 // одна фонема, записанная двумя символами, неразличимы формально.
 const MULTI_CHAR_PHONEMES = new Set(['kh','gh','ch','jh','ṭh','ḍh','th','dh','ph','bh','ai','au']);
 
-function colorFor(tr) {
+export function colorFor(tr) {
   // ИСПРАВЛЕНО (заход 48-49, критическая ошибка поймана до пуша дважды):
   // «сжатый многобуквенный блок → нейтральный цвет» проверялась по
   // tr.length>1 — но это ловит и однофонемные многобуквенные записи (см.
@@ -218,18 +218,18 @@ function ringColorFrom(hex) {
   return hslToRgbStr(h, Math.min(1, s + 0.25), Math.min(0.86, l + 0.22)); // тот же тон, заметно светлее
 }
 
-function clamp01(t) { return Math.max(0, Math.min(1, t)); }
-function lerp(a, b, t) { return a + (b - a) * t; }
-function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+export function clamp01(t) { return Math.max(0, Math.min(1, t)); }
+export function lerp(a, b, t) { return a + (b - a) * t; }
+export function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 // добавлено (плавность): мягкий разгон И торможение — там, где раньше
 // движение стартовало сразу на полной скорости (easeOutCubic в t=0 имеет
 // не нулевую производную, отсюда «рывок» в начале хода).
-function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+export function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 // добавлено (заход 27, elide — правило 15): медленный старт, ускоряющееся
 // исчезновение — читается как растворение, не механическое схлопывание.
-function easeInCubic(t) { return t * t * t; }
-function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
-function easeOutBounce(t) {
+export function easeInCubic(t) { return t * t * t; }
+export function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
+export function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
   if (t < 1/d1) return n1*t*t;
   if (t < 2/d1) return n1*(t-=1.5/d1)*t+0.75;
@@ -243,7 +243,7 @@ function easeOutBounce(t) {
 // движка, не сверкой с рабочим файлом — отсюда жалоба «кубики перестали
 // подпрыгивать». Возвращён прямой вызов уже готовой, ничем не изменённой
 // easeOutBounce — то есть буквально то падение, что в agnayas.
-function easeFall(t) { return easeOutBounce(t); }
+export function easeFall(t) { return easeOutBounce(t); }
 
 /* ═══════════════════ КУБИК ═══════════════════
    Каждый кубик хранит НЕСКОЛЬКО готовых наборов материалов (не перерисовывает
@@ -359,7 +359,7 @@ function setOpacity(mesh, val) {
    `approach.movers`/`mover`, `steps[].activeSlots`. Не меняет уже написанные данные с
    голыми числами — старые примеры (agnayas и любые будущие) продолжают работать как
    есть; формула — это ДОПОЛНИТЕЛЬНАЯ возможность, не обязательная замена. */
-function computeWordGroups(initial) {
+export function computeWordGroups(initial) {
   const slots = (initial || []).map(x => x.slot).sort((a, b) => a - b);
   const groups = [];
   let cur = [];
@@ -370,7 +370,7 @@ function computeWordGroups(initial) {
   if (cur.length) groups.push(cur);
   return groups;
 }
-function resolveSlotRef(ref, groups) {
+export function resolveSlotRef(ref, groups) {
   if (ref == null) return [];
   if (typeof ref === 'number') return [ref];
   if (Array.isArray(ref)) return ref.flatMap(r => resolveSlotRef(r, groups));
@@ -404,7 +404,7 @@ function resolveSlotRef(ref, groups) {
    не трогаем, ими управляет сама операция split): если слот входит в
    activeSlots текущего шага — полная непрозрачность, если нет — притенён.
    У границ шагов — плавный переход (RAMP мс), не рывок. */
-function stepTargetOpacity(step, slot, dimOpacity) {
+export function stepTargetOpacity(step, slot, dimOpacity) {
   if (!step) return 1;
   if (step.activeSlots === 'ALL') return 1;
   return (step.activeSlots || []).includes(slot) ? 1 : dimOpacity;
@@ -434,13 +434,13 @@ function stepTargetOpacity(step, slot, dimOpacity) {
 // полпути и откатывалась назад — левая и правая половина ряда оказывались
 // на разной стадии прерванной волны. Теперь проверяется явно: одинаковый
 // состав — зазор просто пропускается, без проявления.
-function sameActiveSlots(a, b) {
+export function sameActiveSlots(a, b) {
   if (a === 'ALL' || b === 'ALL') return a === b;
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
   const sa = [...a].sort((x, y) => x - y), sb = [...b].sort((x, y) => x - y);
   return sa.every((v, i) => v === sb[i]);
 }
-function buildRuntimeSteps(steps) {
+export function buildRuntimeSteps(steps) {
   if (!steps || !steps.length) return null;
   const list = [];
   // РЕШЕНО (заход 7, «падают уже прозрачные буквы»). Раньше до старта первого
@@ -465,7 +465,7 @@ function buildRuntimeSteps(steps) {
   return list;
 }
 
-function stepIndexAt(elapsed, runtimeSteps) {
+export function stepIndexAt(elapsed, runtimeSteps) {
   for (let i = 0; i < runtimeSteps.length; i++) {
     if (elapsed < runtimeSteps[i].end) return i;
   }
