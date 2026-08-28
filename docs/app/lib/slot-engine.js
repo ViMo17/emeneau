@@ -759,6 +759,617 @@ export function applyElide(op, elapsed, ctx) {
     }
 }
 
+// ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 59, Стадия 2 продолжается —
+// applyInfluence, 3/10). Пульс на передней грани кубика — чистые функции,
+// работают только с самим cube и его canvas-текстурой, ctx им не нужен
+// вообще. Перенесены первыми в этой волне, потому что applyInfluence зовёт
+// их напрямую (через setFacePulse).
+/* ПУЛЬС В ТЕКСТУРЕ ГРАНИ (заход 41, перенесено из docs/effects/
+   rule-assimilation-varga-t-d.html через rule71-vak-asti.js — там это и
+   называлось «эталон»). Отличие от spawnPulseRing: тот — отдельный
+   DOM-слой поверх сцены, позиционируется проекцией 3D→экран каждый кадр;
+   этот — кольцо нарисовано ПРЯМО в canvas передней грани кубика, жёстко
+   часть самой геометрии, поворачивается/масштабируется вместе с кубиком
+   без всякой проекционной математики. Две функции: build — один раз при
+   первой необходимости (готовит холст-эталон без кольца, чтобы каждый
+   кадр рисовать поверх чистой копии, не поверх предыдущего кольца),
+   redraw — каждый кадр с текущим радиусом/прозрачностью. Использование:
+   buildPulseFace на кубике один раз (лениво, кешируется в cube._pulseFace),
+   на время пульсации — cube.mesh.material меняется на КОПИЮ matsMain с
+   подменённым индексом 4 (не мутирует сам matsMain — иначе после возврата
+   к обычному виду грань осталась бы с кольцом навсегда), после —
+   возвращается обычный matsMain как есть. */
+export function buildPulseFace(hex, glyph) {
+  const SZ = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = SZ;
+  const cvCtx = cv.getContext('2d');
+  cvCtx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+  cvCtx.fillRect(0, 0, SZ, SZ);
+  const baseCv = document.createElement('canvas');
+  baseCv.width = baseCv.height = SZ;
+  baseCv.getContext('2d').drawImage(cv, 0, 0); // чистая заливка — эталон для перерисовки каждый кадр
+  if (glyph) paintGlyph(cv, glyph);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.encoding = THREE.sRGBEncoding;
+  const material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false });
+  return { material, canvas: cv, baseCanvas: baseCv, glyph };
+}
+// radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца
+export function redrawPulseFace(pf, radiusFrac, alpha, ringRgb) {
+  const sz = pf.canvas.width;
+  const pfCtx = pf.canvas.getContext('2d');
+  pfCtx.clearRect(0, 0, sz, sz);
+  pfCtx.drawImage(pf.baseCanvas, 0, 0);
+  if (radiusFrac !== null) {
+    const cx = sz / 2, cy = sz / 2, r = Math.max(1, radiusFrac * (sz / 2));
+    pfCtx.save();
+    pfCtx.filter = `blur(${sz * 0.024}px)`;
+    pfCtx.strokeStyle = `rgba(${ringRgb},${alpha})`;
+    pfCtx.lineWidth = sz * 0.05;
+    pfCtx.beginPath(); pfCtx.arc(cx, cy, r, 0, Math.PI * 2); pfCtx.stroke();
+    pfCtx.restore();
+  }
+  if (pf.glyph) paintGlyph(pf.canvas, pf.glyph);
+  pf.material.map.needsUpdate = true;
+}
+/* Включить/выключить пульсирующую грань у конкретного кубика. Строит
+   pulseFace лениво (один раз на кубик, кешируется), подменяет ТОЛЬКО
+   индекс 4 (передняя грань) в СВЕЖЕЙ копии текущего набора материалов —
+   сам matsMain не трогается ни разу, поэтому «выключить» — это просто
+   вернуть cube.mesh.material = cube.matsMain как было. */
+export function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
+  if (!cube._pulseFace) {
+    cube._pulseFace = buildPulseFace(colorFor(cube.tr), cube.tr);
+  }
+  if (radiusFrac === null) {
+    cube.mesh.material = cube.matsMain;
+    return;
+  }
+  if (cube.mesh.material !== cube._pulsingMats) {
+    cube._pulsingMats = [...cube.matsMain];
+    cube._pulsingMats[4] = cube._pulseFace.material;
+    cube.mesh.material = cube._pulsingMats;
+  }
+  redrawPulseFace(cube._pulseFace, radiusFrac, alpha, ringRgb);
+}
+
+// Как и spawnPulseRing — DOM-кольцо, координаты через project(vec3, ctx),
+// поэтому берёт ctx явным параметром вместо захвата через замыкание.
+export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
+  const { labelsEl } = ctx;
+  const pA = project(fromVec3, ctx), pB = project(toVec3, ctx);
+  const ring = document.createElement('div');
+  ring.className = 'slot-wave-ring';
+  ring.style.left = pA.x + 'px';
+  ring.style.top = pA.y + 'px';
+  ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
+  ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
+  ring.style.setProperty('--wave-dur', dur + 'ms');
+  ring.style.borderColor = `rgba(${rgbStr || SILVER_RGB},.85)`;
+  labelsEl.appendChild(ring);
+  setTimeout(() => ring.remove(), dur + 80);
+}
+
+/* РАМКА-ПОДЧЁРКИВАНИЕ ПОД ГРУППОЙ (заход 9, «объединить АС»). Тонкая
+   светящаяся линия под всеми кубиками группы разом — тот же приём, что
+   подчёркивание/скобка окончания в морфологическом разборе (привычный
+   язык, не изобретённый). Держится, пока держится сама принадлежность к
+   группе (та же ringHoldDur, что и у сустейн-колец — один параметр, не
+   два рассинхронизированных). Только для настоящих групп (>1 кубика) —
+   подчёркивать одну букву незачем, там и так ясно, что происходит. Общая
+   утилита операции, не частность influence — как только появится другая
+   операция, работающая с группой, эта же функция подойдёт ей без правок. */
+export function updateGroupFrame(op, sources, elapsed, ctx) {
+  const { labelsEl } = ctx;
+  const holdEnd = op._frameHoldEnd;
+  if (sources.length < 2 || elapsed < op.start || elapsed > holdEnd) {
+    if (op._frameEl) { op._frameEl.remove(); op._frameEl = null; }
+    return;
+  }
+  if (!op._frameEl) {
+    const el = document.createElement('div');
+    el.className = 'slot-group-frame';
+    labelsEl.appendChild(el);
+    op._frameEl = el;
+  }
+  // РЕШЕНО (заход 10, «на всю протяжённость задействованных слотов»).
+  // Раньше границы брались от ЦЕНТРА крайних кубиков (frontAnchor без
+  // сдвига по X) — рамка не доходила до реальных краёв слотов, была уже
+  // самой группы. Теперь у крайнего левого и крайнего правого кубика
+  // берётся точка со сдвигом на пол-слота НАРУЖУ (±SLOT/2, через
+  // quaternion — как и остальные якоря, верно при любом повороте) — рамка
+  // покрывает слот целиком, а не только видимую ширину буквы на грани.
+  const sorted = sources.slice().sort((a, b) => a.mesh.position.x - b.mesh.position.x);
+  const leftCube = sorted[0], rightCube = sorted[sorted.length - 1];
+  const edgeAnchor = (mesh, xOff) => {
+    const local = new THREE.Vector3(xOff, -CUBE_SIZE * 0.56, CUBE_SIZE * 0.42).applyQuaternion(mesh.quaternion);
+    return mesh.position.clone().add(local);
+  };
+  const pLeft = project(edgeAnchor(leftCube.mesh, -SLOT / 2), ctx);
+  const pRight = project(edgeAnchor(rightCube.mesh, SLOT / 2), ctx);
+  // Y — по нижнему краю грани у всех кубиков группы (не только крайних),
+  // на случай если группа не строго горизонтальна на экране (наклон камеры/поворот)
+  const ys = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56), ctx).y);
+  const y = Math.max(pLeft.y, pRight.y, ...ys);
+  const left = Math.min(pLeft.x, pRight.x);
+  const right = Math.max(pLeft.x, pRight.x);
+  const el = op._frameEl;
+  el.style.left = left + 'px';
+  el.style.top = y + 'px';
+  el.style.width = Math.max(8, right - left) + 'px';
+  // мягкое появление/исчезание по краям окна — то же 400мс, что уже
+  // ощущается «плавно» у остальных рамп в движке, отдельного числа не вводим
+  const fadeT = Math.min(elapsed - op.start, holdEnd - elapsed) / 400;
+  el.style.opacity = clamp01(fadeT);
+}
+
+/* INFLUENCE — дальнодействие до самого превращения: несколько волн-
+   пульсов бегут от триггера к цели с задержкой между собой, и цель мелко
+   дрожит, пока волны идут.
+   { type:'influence', from, to, start, waveCount=3, waveGap=550, waveTravel=1400 }
+
+   ПРАВКА (по обратной связи после просмотра): цель БОЛЬШЕ НЕ меняет цвет на
+   сигнальный (золотой/оранжевый) — раньше делала это в момент signalAt, и
+   этот оранжевый потом «доживал» до самого начала transform. По прямой
+   формулировке пользователя «больше оранжевый не допустим» — оставлена
+   только дрожь, без смены цвета; единственный цветовой переход у цели — уже
+   сам transform.
+
+   «Нимитта» (то, что физически влияет) часто НЕ одна буква, а вся
+   грамматическая единица целиком (например всё окончание -as). `from`
+   принимает не только одно число, но и массив/ссылку на группу слов
+   ({word:2}, см. resolveSlotRef/computeWordGroups) — тогда волна идёт от
+   КАЖДОГО кубика группы одновременно, они синхронно подпрыгивают масштабом
+   в момент каждой волны — читаются как одно целое.
+
+   ЭТАЛОН ДЛЯ КОЛЕЦ (по прямой ссылке пользователя на examples/rule71-
+   vak-asti.js, redrawPulseFace): у самого источника-нимитты, помимо бегущих
+   волн к цели, ДОЛЖНЫ расходиться широкие размытые светлые кольца оттенка
+   СОБСТВЕННОГО цвета кубика, и держаться до конца связанной трансформации —
+   не только на время короткой фазы волн. Здесь — упрощённая DOM-версия
+   того же языка (не текстура на грани кубика, как в rule71-vak-asti.js —
+   та техника глубже, взята только цветовая формула ringColorFrom и сам
+   характер кольца), длительность управляется отдельно от `dur` через
+   `ringHoldDur` (по умолчанию = `dur`, но пример может продлить её до конца
+   transform). Это одновременно и ответ на «не вижу выделения АС как единой
+   группы» — сустейн-кольца на ОБОИХ кубиках группы одновременно и есть
+   видимое выделение.
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 59, Стадия 2, applyInfluence 3/10).
+   Единственные внешние зависимости — cubes и wordGroupsList — оба теперь
+   через ctx, тем же образом, что и остальные уже перенесённые apply*. */
+export function applyInfluence(op, elapsed, ctx) {
+  const { cubes, wordGroupsList } = ctx;
+  const target = cubes[op.to];
+  const sourceSlots = resolveSlotRef(op.from, wordGroupsList);
+  const sources = sourceSlots.map(s => cubes[s]).filter(Boolean);
+  if (!target || !sources.length) return;
+  const waveCount = op.waveCount ?? 3;
+  const waveGap = op.waveGap ?? 550; // было 440
+  const waveTravel = op.waveTravel ?? 1400; // было 1100
+  const dur = (waveCount - 1) * waveGap + waveTravel;
+
+  // Сустейн-«пульс» на источниках — независимо от фазы волн, до ringHoldDur.
+  const ringHoldDur = op.ringHoldDur ?? dur;
+  op._frameHoldEnd = op.start + ringHoldDur; // общее окно и для рамки, и для пульса
+  updateGroupFrame(op, sources, elapsed, ctx);
+  // Цвет пульса — ОДИН на всю группу (GROUP_COLOR), если источников больше
+  // одного (настоящая группа-нимитта, см. GROUP_COLOR выше); для одиночной
+  // буквы-источника прежнее поведение сохранено — тонировка в её
+  // собственный фонетический цвет (там нечего объединять, один кубик).
+  const ringRgb = sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr));
+  // ИСПРАВЛЕНО (заход 43, унификация по реестру эталонных эффектов —
+  // algoritm-agnayas-shablon.md). Было: отдельные DOM-вспышки через
+  // равные интервалы (spawnPulseRing по таймеру, ringGap=900) — та же
+  // техника, что уже заменена в śādhi (заходы 33/41) на непрерывную
+  // текстурную пульсацию. Теперь то же самое здесь: каждый источник
+  // группы пульсирует кольцом В СВОЕЙ ЖЕ ГРАНИ, синхронно — одна и та же
+  // формула cyclePos на всех сразу, не по отдельности, поэтому группа
+  // читается как единое дышащее целое (та же цель, что уже стояла у
+  // group-frame ниже), а не набор случайно моргающих вспышек. ringGap
+  // (интервал между разовыми вспышками) стал не нужен — заменён на
+  // ringPulsePeriod (длительность ОДНОГО цикла непрерывной пульсации);
+  // старые данные, не передающие ни то ни другое, получают дефолт 1400 —
+  // то же значение, что уже используется в śādhi.
+  if (elapsed >= op.start && elapsed <= op.start + ringHoldDur) {
+    const pulsePeriod = op.ringPulsePeriod ?? 1400;
+    const cyclePos = ((elapsed - op.start) % pulsePeriod) / pulsePeriod;
+    const radiusFrac = lerp(0.25, 1.0, cyclePos);
+    const envelope = Math.sin(cyclePos * Math.PI);
+    sources.forEach(src => setFacePulse(src, radiusFrac, 0.85 * envelope, ringRgb));
+  } else if (elapsed > op.start + ringHoldDur && !op._ringOff) {
+    op._ringOff = true;
+    sources.forEach(src => setFacePulse(src, null));
+  }
+
+  if (elapsed < op.start || elapsed > op.start + dur) {
+    if (elapsed > op.start + dur) {
+      target.mesh.scale.setScalar(1);
+      sources.forEach(src => src.mesh.scale.setScalar(1));
+    }
+    return;
+  }
+  for (let i = 0; i < waveCount; i++) {
+    const key = '_wave' + i;
+    if (!op[key] && elapsed >= op.start + i * waveGap) {
+      op[key] = true;
+      sources.forEach(src => spawnWave(
+        frontAnchor(src.mesh),
+        frontAnchor(target.mesh),
+        waveTravel,
+        undefined,
+        ctx
+      ));
+    }
+  }
+  // общий «пульс группы»: каждый источник синхронно подпрыгивает масштабом
+  // ровно в момент, когда от него уходит волна — источники из одной группы
+  // всегда бьются в одном и том же кадре (одна и та же формула по elapsed,
+  // не по индивидуальному состоянию кубика), поэтому визуально читаются как
+  // единое целое, даже если их несколько.
+  let srcPulse = 0;
+  for (let i = 0; i < waveCount; i++) {
+    const waveAt = op.start + i * waveGap;
+    const pt = (elapsed - waveAt) / 260;
+    if (pt >= 0 && pt <= 1) srcPulse = Math.max(srcPulse, Math.sin(pt * Math.PI) * 0.06);
+  }
+  sources.forEach(src => src.mesh.scale.setScalar(1 + srcPulse));
+
+  // ИСПРАВЛЕНО (заход 10, «Е слишком сильно трясётся, придумай другую
+  // иллюстрацию»). Раньше цель дрожала вращением (rotation.z, случайного
+  // вида синус-тряска, читалась как визуальный шум, а не как понятный
+  // сигнал). Заменено на масштабный «удар»-пульс — тот же язык, что уже
+  // используется у источников (см. srcPulse выше) и на паузе перед split:
+  // один согласованный приём «пульс = вот-вот изменится» по всему движку,
+  // а не отдельный жест для каждого случая. Пульс цели синхронизирован не
+  // с ОТПРАВКОЙ волны (как у источника), а с её ПРИХОДОМ (waveTravel
+  // спустя) — цель откликается именно когда волна её достигает, не раньше.
+  // Сила пульса растёт от волны к волне (последняя — самая заметная,
+  // прямо перед началом transform) — нарастающее напряжение, а не ровный
+  // шум на всём протяжении шага.
+  let targetPulse = 0;
+  for (let i = 0; i < waveCount; i++) {
+    const arriveAt = op.start + i * waveGap + waveTravel;
+    const pt = (elapsed - arriveAt) / 320;
+    if (pt >= 0 && pt <= 1) {
+      const grow = 0.045 + i * 0.02;
+      targetPulse = Math.max(targetPulse, Math.sin(pt * Math.PI) * grow);
+    }
+  }
+  target.mesh.scale.setScalar(1 + targetPulse);
+}
+
+/* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
+   кубик (mover) трогается с места и проходит часть расстояния до цели
+   (target), не долетая (distance — доля ширины ОДНОГО слота), задерживается
+   на пике, затем пружинисто отскакивает назад — не плавно, а с небольшим
+   перелётом за исходную позицию (easeOutBack), как от столкновения с
+   невидимой преградой. Подход к пику — плавный разгон/торможение
+   (easeInOutCubic, было easeOutCubic — убран рывок в самом начале хода).
+   { type:'approach', mover, target, start, approachDur=1150, holdDur=550,
+     retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16, retreat=true }
+
+   ПРАВКА (по обратной связи): цель БОЛЬШЕ НЕ перекрашивается в сигнальный
+   (оранжевый) цвет на пике — прямо названо ошибкой («Е становится
+   оранжевой на время»). Вместо смены цвета цели — один тёплый кольцевой
+   пульс оттенка ПОДХОДЯЩЕГО кубика (не цели) ровно на пике, той же техникой
+   ringColorFrom, что и у сустейн-колец influence — сигнал «момент
+   напряжения» остаётся, но летящий кубик не перекрашивает саму цель.
+
+   РЕШЕНО (заход 15, `retreat:false`) — та же самая механика подхода
+   годится и для ПРОТИВОПОЛОЖНОГО смысла: не несовместимость, а
+   совместимость («примагничивание», āsīt, ĪТ подъезжает к АС и остаётся,
+   а не отскакивает). distance:1.0 при зазоре ровно в один слот приводит
+   мувер точно встык с целью; retreat:false отключает фазу отскока
+   целиком (retreatDur обнуляется) — кубик остаётся у цели навсегда,
+   jitterAmp у вызывающего кода обычно ставится в 0 отдельно (дрожь —
+   язык именно несовместимости, не нужна тут по смыслу, но остаётся
+   доступной, если понадобится где-то ещё).
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 59, Стадия 2, applyApproach 4/10).
+   Внешние зависимости — cubes и wordGroupsList — через ctx, тем же
+   образом, что и у applyInfluence; spawnWave/spawnPulseRing/setFacePulse
+   уже принимали ctx как параметр (или не требуют его вовсе) с прошлых
+   переносов, тело функции не меняется, кроме самой сигнатуры. */
+export function applyApproach(op, elapsed, ctx) {
+  const { cubes, wordGroupsList } = ctx;
+  // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
+  // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
+  const slots = resolveSlotRef(op.movers ?? op.mover, wordGroupsList);
+  const movers = slots.map(s => cubes[s]).filter(Boolean);
+  if (!movers.length) return;
+  // ИСПРАВЛЕНО (заход 28, реальный баг — не мнимый, нашла именно чтением
+  // кода, не только симуляцией с упрощённой копией функции). Раньше
+  // строка ниже была `const target = cubes[op.target]; if (!movers.length
+  // || !target) return;` — то есть ЦЕЛЬ ДОЛЖНА была существовать на
+  // КАЖДОМ кадре, иначе approach обрывался целиком. Это ломается ровно в
+  // сценарии «приближение вызывает реакцию» (śādhi: DH приближается к S,
+  // а S по ходу приближения ИСЧЕЗАЕТ через elide) — как только цель
+  // исчезала, движение mover'ов замирало на полпути, а не доезжало до
+  // конца. Направление движения (dir) вычисляется по НОМЕРУ слота цели
+  // (slotX(op.target)) — цель как живой объект для этого не нужна
+  // вообще, нужна только для дрожи/пульса НА ней самой (см. ниже, оба
+  // теперь под `if (target)`).
+  const target = cubes[op.target]; // может быть undefined — это ОК
+  const approachDur = op.approachDur ?? 1150; // было 800
+  const holdDur = op.holdDur ?? 550; // было 400
+  const retreat = op.retreat !== false;
+  const retreatDur = retreat ? (op.retreatDur ?? 950) : 0; // было 700
+  const distance = op.distance ?? 0.5;
+  const jitterAmp = op.jitterAmp ?? 0.16;
+  const baseXs = slots.map(s => slotX(s));
+  const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
+
+  // РЕШЕНО (заход 29, «ДХИ просто въезжает — не читается взаимодействие»).
+  // Раньше единственный способ пройти путь — одна сплошная кривая от 0 до
+  // distance, без паузы. Если distance большая (закрыть исходный зазор И
+  // занять место исчезающей соседней буквы ОДНИМ движением) — это читается
+  // как «проехало насквозь», а не «подошло → произошла реакция → въехало
+  // в освободившееся место»: нет отдельного, заметного момента прибытия.
+  // midDistance (необязательный параметр) — путь идёт в ДВА отрезка с
+  // явной паузой между ними (midHoldDur), ровно там, где и должна
+  // произойти реакция (обычно — elide соседней буквы, синхронизировано
+  // данными примера снаружи, не встроено сюда). Без midDistance поведение
+  // не меняется ни на йоту — старые примеры (agnayas, āsīt) его не
+  // передают. Общая возможность движка, не разовый хак под один пример.
+  if (op.midDistance != null) {
+    const leg1Dur = approachDur;
+    const midHoldDur = op.midHoldDur ?? 0;
+    const leg2Dur = op.leg2Dur ?? approachDur;
+    const leg1End = op.start + leg1Dur;
+    const holdEnd = leg1End + midHoldDur;
+    const leg2End = holdEnd + leg2Dur;
+    if (elapsed < op.start) return;
+    let progress; // 0..distance, в тех же единицах, что и distance
+    if (elapsed <= leg1End) {
+      progress = op.midDistance * easeInOutCubic(clamp01((elapsed - op.start) / leg1Dur));
+    } else if (elapsed <= holdEnd) {
+      progress = op.midDistance; // пауза — здесь и должна случиться реакция (данные примера)
+      // РЕШЕНО (заход 33, доработано в заходе 41 — «визуально эти круги
+      // красивее», перенос техники из docs/effects/rule-assimilation-
+      // v2-via-elements.html / rule71-vak-asti.js). Раньше пульс на
+      // триггере был отдельными DOM-вспышками через равные интервалы
+      // (spawnPulseRing по таймеру) — теперь НЕПРЕРЫВНАЯ пульсация,
+      // нарисованная прямо в текстуру передней грани самого триггера
+      // (setFacePulse/redrawPulseFace) — радиус растёт по кругу с
+      // sin-конвертом на вход/выход каждого цикла, кольцо жёстко часть
+      // геометрии кубика, не отдельный слой поверх сцены. Волна к цели
+      // (spawnWave) остаётся ДИСКРЕТНЫМИ пакетами — это другое явление
+      // (конкретный сигнал долетает и что-то вызывает), не путать со
+      // сплошной пульсацией «я источник, я влияю».
+      if (op.holdPulse) {
+        const trigger = movers[0];
+        const pulsePeriod = op.holdPulsePeriod ?? 1400;
+        const cyclePos = ((elapsed - leg1End) % pulsePeriod) / pulsePeriod;
+        const radiusFrac = lerp(0.25, 1.0, cyclePos);
+        const envelope = Math.sin(cyclePos * Math.PI);
+        setFacePulse(trigger, radiusFrac, 0.85 * envelope, op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr)));
+        const waveGap = op.holdWaveGap ?? 500;
+        const waveIdx = Math.floor((elapsed - leg1End) / waveGap);
+        const waveKey = '_holdWave' + waveIdx;
+        if (!op[waveKey]) {
+          op[waveKey] = true;
+          const waveTravel = op.holdWaveTravel ?? 400;
+          spawnWave(
+            frontAnchor(trigger.mesh),
+            new THREE.Vector3(slotX(op.target), 0, 0),
+            waveTravel,
+            op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr)),
+            ctx
+          );
+        }
+      }
+    } else if (elapsed <= leg2End) {
+      // Пульсация выключается ровно один раз при выходе из паузы —
+      // возвращает триггеру его обычный, некольцевой набор материалов
+      // (см. setFacePulse: null означает «выключить», просто
+      // cube.mesh.material = cube.matsMain, matsMain никогда не
+      // мутировался, так что возврат мгновенный и чистый).
+      if (op.holdPulse && !op._pulseOff) {
+        op._pulseOff = true;
+        setFacePulse(movers[0], null);
+      }
+      progress = op.midDistance + (distance - op.midDistance) * easeInOutCubic(clamp01((elapsed - holdEnd) / leg2Dur));
+    } else {
+      progress = distance;
+    }
+    const shift = SLOT * progress * dir;
+    movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
+    return;
+  }
+
+  const shift = SLOT * distance * dir;
+  const peakStart = op.start + approachDur;
+  const peakEnd = peakStart + holdDur;
+  const retreatEnd = peakEnd + retreatDur;
+
+  if (elapsed < op.start || elapsed > retreatEnd) {
+    if (elapsed > retreatEnd) {
+      // retreat:false — остаёмся у цели (shift), а не возвращаемся домой (0)
+      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + (retreat ? 0 : shift); });
+      if (target) target.mesh.rotation.z = 0;
+    }
+    return;
+  }
+
+  if (elapsed <= peakStart) {
+    const t = clamp01((elapsed - op.start) / approachDur);
+    const te = easeInOutCubic(t); // было easeOutCubic — плавнее старт
+    movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * te; });
+  } else if (elapsed <= peakEnd) {
+    movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
+    if (target && op.pulse !== false && !op._pulsed) {
+      op._pulsed = true;
+      spawnPulseRing(
+        frontAnchor(target.mesh),
+        900,
+        ringColorFrom(colorFor(movers[0].tr)),
+        ctx
+      );
+    }
+  } else {
+    const t = clamp01((elapsed - peakEnd) / retreatDur);
+    const te = easeOutBack(t); // пружина остаётся — это осознанный характер отскока
+    movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * (1 - te); });
+  }
+
+  // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
+  // (только если цель ещё существует — см. комментарий выше)
+  if (target) {
+    if (elapsed <= peakEnd) {
+      const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
+      target.mesh.rotation.z = Math.sin(elapsed * 0.024) * jitterAmp * growT;
+    } else {
+      target.mesh.rotation.z = 0; // обрыв резкий, не спад
+    }
+  }
+}
+
+/* ОБЩИЙ ХЕЛПЕР ПРИЛЁТА (заход 12, вынесено при добавлении arrive/merge).
+   Раньше эта же математика (разгон/торможение + дуга по высоте) была
+   ЖЁСТКО зашита прямо внутри applySplit — единственное место, где кубик
+   материализуется за кадром и прилетает по дуге. Как только понадобилась
+   ровно та же самая механика ещё в двух местах (arrive — тихий приход
+   буквы без слияния; merge — приход буквы, которая исчезает в момент
+   касания цели), переписывать её заново означало бы повторить ту самую
+   ошибку, из-за которой начался весь этот заход («опять делается с
+   нуля, хотя уже есть готовое и проверенное»). Теперь одна функция,
+   три места вызова. Чистая функция — ctx не требует вообще. */
+export function flyArcPosition(from, toX, toY, toZ, t, arcHeight = 1.0) {
+  const te = easeInOutCubic(t);
+  const arc = Math.sin(t * Math.PI) * arcHeight;
+  return {
+    x: lerp(from.x, toX, te),
+    y: lerp(from.y, toY, te) + arc,
+    z: lerp(from.z, toZ, te),
+  };
+}
+
+/* РЕШЕНО (заход 10) и ИСПРАВЛЕНО (заход 11) — цвет паузы-осознания больше
+   НЕ меняется (было золото, потом по ошибке серебро — серебро однозначно
+   закреплено за гунацией в applyTransform, держать его ещё и здесь означало
+   бы два разных события одним и тем же сигналом). Пульс масштабом и два
+   кольца сами по себе достаточно ясно говорят «сейчас что-то произойдёт».
+
+   ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 59, Стадия 2, applySplit 5/10).
+   Новая внешняя зависимость помимо cubes — scene (нужна arrivals, чтобы
+   добавить новый кубик на сцену) — добавлена в ctx тем же образом, что
+   и wordGroupsList у applyInfluence/applyApproach. makeCube — уже
+   модульная приватная фабрика (см. начало файла), ctx ей не нужен. */
+export function applySplit(op, elapsed, ctx) {
+  const { cubes, scene } = ctx;
+  if (elapsed < op.start) return;
+  // Источник держим под ОТДЕЛЬНЫМ временным ключом на время отстойника —
+  // иначе прилетающий результат с тем же номером слота перезаписывает
+  // cubes[op.at] ПОКА источник ещё висит и тает.
+  if (!op._srcKey) {
+    op._srcKey = '_hold_' + op.at + '_' + Math.random().toString(36).slice(2, 7);
+    cubes[op._srcKey] = cubes[op.at];
+    delete cubes[op.at];
+  }
+  const src = cubes[op._srcKey];
+  if (!src) return;
+  const riseDur = op.riseDur ?? 1300; // было 1000
+  const holdOpacity = op.holdOpacity ?? 0.55;
+  // ИСПРАВЛЕНО (заход 10, «ненужная пауза, когда Е исчезает в воздухе, мы
+  // смотрим на экран без событий»). 2400мс — почти два с половиной
+  // секунды ПОСЛЕ того, как E уже зависла на месте (riseDur кончился) И
+  // результаты (А+Й) уже прилетели и легли в ряд — то есть чистое время
+  // без единого нового события на экране. Смысл паузы («дать сравнить
+  // старое и новое рядом») остаётся, но 2400мс для этого избыточны;
+  // сокращено до 1000 — сравнение всё ещё читается, воздуха меньше.
+  const holdDur = op.holdDur ?? 1000; // было 2400 (до этого — 2000)
+  const fadeDur = op.fadeDur ?? 1100; // было 900
+  const holdOffset = op.holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 };
+  const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
+  const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
+
+  // фаза 0: ПАУЗА-ОСОЗНАНИЕ. Раньше распад начинался фактически сразу же
+  // после approach (кубик тут же трогался с места) — по живой обратной
+  // связи это читалось «слишком быстро», зритель не успевал понять, ЧТО
+  // сейчас произойдёт (Е уходит, А+Й приходят), прежде чем это уже
+  // произошло. Явная пауза перед подъёмом: кубик НЕ двигается, но заметно
+  // сигналит «вот-вот» — мягко пульсирует масштабом (2 удара, как
+  // вдох-вдох), плюс два кольца-пульса расходятся вокруг него на сцене.
+  const anticipateDur = op.anticipateDur ?? 900;
+  const activeStart = op.start + anticipateDur; // отсюда начинается реальное движение
+  if (elapsed < activeStart) {
+    const t = clamp01((elapsed - op.start) / anticipateDur);
+    // два «удара»: |sin| за один период даёт два симметричных горба
+    // (пик на четверти и на трёх четвертях, ноль на старте/середине/конце)
+    const beat = Math.abs(Math.sin(t * Math.PI * 2)) * 0.06;
+    const scale = 1 + beat;
+    src.mesh.scale.setScalar(scale);
+    src.mesh.position.copy(basePos);
+    // два кольца-пульса, разнесённые по паузе — не одновременно со стартом
+    // и не в самом конце, а примерно на четверти и на трёх четвертях
+    if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
+    if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
+    return; // пока идёт пауза — больше в этом кадре по этой операции ничего не делаем
+  }
+  if (!op._anticipateDone) {
+    op._anticipateDone = true;
+    src.mesh.scale.setScalar(1);
+    src.mesh.material = src.matsMain; // возвращаемся к обычному виду e перед самим подъёмом
+  }
+
+  // фаза 1: исходный поднимается в сторону и бледнеет — плавный разгон/
+  // торможение (easeInOutCubic, было easeOutCubic — убран рывок в начале).
+  const riseEnd = activeStart + riseDur;
+  if (elapsed <= riseEnd) {
+    const t = clamp01((elapsed - activeStart) / riseDur);
+    const te = easeInOutCubic(t);
+    src.mesh.position.lerpVectors(basePos, holdPos, te);
+    setOpacity(src.mesh, lerp(1, holdOpacity, te));
+  } else {
+    // фаза 2: покачивание, пока висит
+    const idle = (elapsed - riseEnd) * 0.0022;
+    src.mesh.position.copy(holdPos);
+    src.mesh.position.y += Math.sin(idle) * 0.06;
+  }
+
+  // прилёт результатов — каждый по своим параметрам, отсчёт от activeStart
+  // (не от op.start — пока идёт пауза-осознание, ничего ещё не прилетает).
+  // Разгон/торможение — easeInOutCubic, тот же мотив «без рывка».
+  (op.arrivals || []).forEach(arr => {
+    if (elapsed < activeStart + arr.delay) return;
+    let nc = op._arrived?.[arr.newSlot];
+    if (!nc) {
+      nc = makeCube(arr.into, arr.newSlot * 97 + 31);
+      nc._fallDone = true; // прилетает через отстойник, не через обычное падение
+      nc.mesh.visible = false;
+      scene.add(nc.mesh);
+      scene.add(nc.shadow);
+      cubes[arr.newSlot] = nc;
+      op._arrived = op._arrived || {};
+      op._arrived[arr.newSlot] = nc;
+    }
+    nc.mesh.visible = true;
+    const t = clamp01((elapsed - (activeStart + arr.delay)) / arr.dur);
+    const p = flyArcPosition(arr.from, slotX(arr.newSlot), 0, 0, t, arr.arcHeight ?? 1.0);
+    nc.mesh.position.set(p.x, p.y, p.z);
+  });
+
+  // фаза 3: после паузы для сравнения — исходный растворяется совсем.
+  // Момент старта угасания зависит от того, что случится ПОЗЖЕ — источник
+  // поднялся в отстойник, ИЛИ все результаты долетели и сели.
+  const arrivals = op.arrivals || [];
+  const lastArrivalEnd = arrivals.length
+    ? Math.max(...arrivals.map(a => a.delay + a.dur))
+    : 0;
+  const compareReadyAt = Math.max(riseEnd, activeStart + lastArrivalEnd);
+  const fadeStart = compareReadyAt + holdDur; // holdDur = пауза ПОСЛЕ того, как всё уже видно вместе
+  if (elapsed >= fadeStart) {
+    const t = clamp01((elapsed - fadeStart) / fadeDur);
+    setOpacity(src.mesh, lerp(holdOpacity, 0, t));
+    if (t >= 1) {
+      src.mesh.visible = false;
+      delete cubes[op._srcKey]; // источник совсем ушёл — временный ключ больше не нужен
+    }
+  }
+}
+
 export function mountSlotExample(container, data, opts = {}) {
   injectStylesOnce();
 
@@ -1035,164 +1646,14 @@ export function mountSlotExample(container, data, opts = {}) {
   // внутри mountSlotExample, вызываются как project(vec, ctx),
   // frontAnchor(mesh) как обычно (она чистая, ctx не требует).
 
-  /* ОБЩИЙ ХЕЛПЕР ПРИЛЁТА (заход 12, вынесено при добавлении arrive/merge).
-     Раньше эта же математика (разгон/торможение + дуга по высоте) была
-     ЖЁСТКО зашита прямо внутри applySplit — единственное место, где кубик
-     материализуется за кадром и прилетает по дуге. Как только понадобилась
-     ровно та же самая механика ещё в двух местах (arrive — тихий приход
-     буквы без слияния; merge — приход буквы, которая исчезает в момент
-     касания цели), переписывать её заново означало бы повторить ту самую
-     ошибку, из-за которой начался весь этот заход («опять делается с
-     нуля, хотя уже есть готовое и проверенное»). Теперь одна функция,
-     три места вызова. */
-  function flyArcPosition(from, toX, toY, toZ, t, arcHeight = 1.0) {
-    const te = easeInOutCubic(t);
-    const arc = Math.sin(t * Math.PI) * arcHeight;
-    return {
-      x: lerp(from.x, toX, te),
-      y: lerp(from.y, toY, te) + arc,
-      z: lerp(from.z, toZ, te),
-    };
-  }
+  // flyArcPosition теперь на уровне модуля (заход 59, вместе с applySplit) —
+  // см. блок сразу после applyApproach.
 
-  /* РАМКА-ПОДЧЁРКИВАНИЕ ПОД ГРУППОЙ (заход 9, «объединить АС»). Тонкая
-     светящаяся линия под всеми кубиками группы разом — тот же приём, что
-     подчёркивание/скобка окончания в морфологическом разборе (привычный
-     язык, не изобретённый). Держится, пока держится сама принадлежность к
-     группе (та же ringHoldDur, что и у сустейн-колец — один параметр, не
-     два рассинхронизированных). Только для настоящих групп (>1 кубика) —
-     подчёркивать одну букву незачем, там и так ясно, что происходит. Общая
-     утилита операции, не частность influence — как только появится другая
-     операция, работающая с группой, эта же функция подойдёт ей без правок. */
-  function updateGroupFrame(op, sources, elapsed) {
-    const holdEnd = op._frameHoldEnd;
-    if (sources.length < 2 || elapsed < op.start || elapsed > holdEnd) {
-      if (op._frameEl) { op._frameEl.remove(); op._frameEl = null; }
-      return;
-    }
-    if (!op._frameEl) {
-      const el = document.createElement('div');
-      el.className = 'slot-group-frame';
-      labelsEl.appendChild(el);
-      op._frameEl = el;
-    }
-    // РЕШЕНО (заход 10, «на всю протяжённость задействованных слотов»).
-    // Раньше границы брались от ЦЕНТРА крайних кубиков (frontAnchor без
-    // сдвига по X) — рамка не доходила до реальных краёв слотов, была уже
-    // самой группы. Теперь у крайнего левого и крайнего правого кубика
-    // берётся точка со сдвигом на пол-слота НАРУЖУ (±SLOT/2, через
-    // quaternion — как и остальные якоря, верно при любом повороте) — рамка
-    // покрывает слот целиком, а не только видимую ширину буквы на грани.
-    const sorted = sources.slice().sort((a, b) => a.mesh.position.x - b.mesh.position.x);
-    const leftCube = sorted[0], rightCube = sorted[sorted.length - 1];
-    const edgeAnchor = (mesh, xOff) => {
-      const local = new THREE.Vector3(xOff, -CUBE_SIZE * 0.56, CUBE_SIZE * 0.42).applyQuaternion(mesh.quaternion);
-      return mesh.position.clone().add(local);
-    };
-    const pLeft = project(edgeAnchor(leftCube.mesh, -SLOT / 2), ctx);
-    const pRight = project(edgeAnchor(rightCube.mesh, SLOT / 2), ctx);
-    // Y — по нижнему краю грани у всех кубиков группы (не только крайних),
-    // на случай если группа не строго горизонтальна на экране (наклон камеры/поворот)
-    const ys = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56), ctx).y);
-    const y = Math.max(pLeft.y, pRight.y, ...ys);
-    const left = Math.min(pLeft.x, pRight.x);
-    const right = Math.max(pLeft.x, pRight.x);
-    const el = op._frameEl;
-    el.style.left = left + 'px';
-    el.style.top = y + 'px';
-    el.style.width = Math.max(8, right - left) + 'px';
-    // мягкое появление/исчезание по краям окна — то же 400мс, что уже
-    // ощущается «плавно» у остальных рамп в движке, отдельного числа не вводим
-    const fadeT = Math.min(elapsed - op.start, holdEnd - elapsed) / 400;
-    el.style.opacity = clamp01(fadeT);
-  }
-
-  function spawnWave(fromVec3, toVec3, dur, rgbStr) {
-    const pA = project(fromVec3, ctx), pB = project(toVec3, ctx);
-    const ring = document.createElement('div');
-    ring.className = 'slot-wave-ring';
-    ring.style.left = pA.x + 'px';
-    ring.style.top = pA.y + 'px';
-    ring.style.setProperty('--dx', (pB.x - pA.x) + 'px');
-    ring.style.setProperty('--dy', (pB.y - pA.y) + 'px');
-    ring.style.setProperty('--wave-dur', dur + 'ms');
-    ring.style.borderColor = `rgba(${rgbStr || SILVER_RGB},.85)`;
-    labelsEl.appendChild(ring);
-    setTimeout(() => ring.remove(), dur + 80);
-  }
-
-  // spawnPulseRing теперь на уровне модуля (заход 57) — вызывается здесь
-  // как spawnPulseRing(atVec3, dur, rgbStr, ctx).
-
-  /* ПУЛЬС В ТЕКСТУРЕ ГРАНИ (заход 41, перенесено из docs/effects/
-     rule-assimilation-varga-t-d.html через rule71-vak-asti.js — там это и
-     называлось «эталон»). Отличие от spawnPulseRing выше: тот — отдельный
-     DOM-слой поверх сцены, позиционируется проекцией 3D→экран каждый
-     кадр; этот — кольцо нарисовано ПРЯМО в canvas передней грани кубика,
-     жёстко часть самой геометрии, поворачивается/масштабируется вместе с
-     кубиком без всякой проекционной математики. Две функции: build —
-     один раз при первой необходимости (готовит холст-эталон без кольца,
-     чтобы каждый кадр рисовать поверх чистой копии, не поверх предыдущего
-     кольца), redraw — каждый кадр с текущим радиусом/прозрачностью.
-     Использование: buildPulseFace на кубике один раз (лениво, кешируется
-     в cube._pulseFace), на время пульсации — cube.mesh.material меняется
-     на КОПИЮ matsMain с подменённым индексом 4 (не мутирует сам matsMain
-     — иначе после возврата к обычному виду грань осталась бы с кольцом
-     навсегда), после — возвращается обычный matsMain как есть. */
-  function buildPulseFace(hex, glyph) {
-    const SZ = 256;
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = SZ;
-    const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
-    ctx.fillRect(0, 0, SZ, SZ);
-    const baseCv = document.createElement('canvas');
-    baseCv.width = baseCv.height = SZ;
-    baseCv.getContext('2d').drawImage(cv, 0, 0); // чистая заливка — эталон для перерисовки каждый кадр
-    if (glyph) paintGlyph(cv, glyph);
-    const tex = new THREE.CanvasTexture(cv);
-    tex.encoding = THREE.sRGBEncoding;
-    const material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false });
-    return { material, canvas: cv, baseCanvas: baseCv, glyph };
-  }
-  // radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца
-  function redrawPulseFace(pf, radiusFrac, alpha, ringRgb) {
-    const sz = pf.canvas.width;
-    const ctx = pf.canvas.getContext('2d');
-    ctx.clearRect(0, 0, sz, sz);
-    ctx.drawImage(pf.baseCanvas, 0, 0);
-    if (radiusFrac !== null) {
-      const cx = sz / 2, cy = sz / 2, r = Math.max(1, radiusFrac * (sz / 2));
-      ctx.save();
-      ctx.filter = `blur(${sz * 0.024}px)`;
-      ctx.strokeStyle = `rgba(${ringRgb},${alpha})`;
-      ctx.lineWidth = sz * 0.05;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-    }
-    if (pf.glyph) paintGlyph(pf.canvas, pf.glyph);
-    pf.material.map.needsUpdate = true;
-  }
-  /* Включить/выключить пульсирующую грань у конкретного кубика. Строит
-     pulseFace лениво (один раз на кубик, кешируется), подменяет ТОЛЬКО
-     индекс 4 (передняя грань) в СВЕЖЕЙ копии текущего набора материалов —
-     сам matsMain не трогается ни разу, поэтому «выключить» — это просто
-     вернуть cube.mesh.material = cube.matsMain как было. */
-  function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
-    if (!cube._pulseFace) {
-      cube._pulseFace = buildPulseFace(colorFor(cube.tr), cube.tr);
-    }
-    if (radiusFrac === null) {
-      cube.mesh.material = cube.matsMain;
-      return;
-    }
-    if (cube.mesh.material !== cube._pulsingMats) {
-      cube._pulsingMats = [...cube.matsMain];
-      cube._pulsingMats[4] = cube._pulseFace.material;
-      cube.mesh.material = cube._pulsingMats;
-    }
-    redrawPulseFace(cube._pulseFace, radiusFrac, alpha, ringRgb);
-  }
+  // updateGroupFrame/spawnWave/buildPulseFace/redrawPulseFace/setFacePulse
+  // теперь на уровне модуля (заход 59, Стадия 2 продолжается) — см. блок
+  // сразу после applyElide. Вызываются здесь как раньше, спереди добавлен
+  // явный ctx там, где раньше был захват через замыкание (project внутри
+  // spawnWave/updateGroupFrame нуждается в camera/labelsEl).
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -1208,7 +1669,7 @@ export function mountSlotExample(container, data, opts = {}) {
   // Стадия 2 профессионализации) — тот же самый объект передаётся во все,
   // расширяется по мере переноса следующих apply*-функций (camera, stageEl,
   // labelsEl, scene и т.д.), не создаётся заново под каждую.
-  const ctx = { cubes, camera, stageEl, labelsEl };
+  const ctx = { cubes, camera, stageEl, labelsEl, wordGroupsList, scene };
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
@@ -1254,437 +1715,16 @@ export function mountSlotExample(container, data, opts = {}) {
   const t0 = performance.now() - (opts.startAt ?? 0);
   let rafId = null;
 
-  /* 0. INFLUENCE — дальнодействие до самого превращения: несколько волн-
-     пульсов бегут от триггера к цели с задержкой между собой, и цель мелко
-     дрожит, пока волны идут.
-     { type:'influence', from, to, start, waveCount=3, waveGap=550, waveTravel=1400 }
+  // applyInfluence теперь на уровне модуля (заход 59) — см. блок сразу
+  // после applyElide. Вызывается здесь как applyInfluence(op, elapsed, ctx).
 
-     ПРАВКА (по обратной связи после просмотра): цель БОЛЬШЕ НЕ меняет цвет на
-     сигнальный (золотой/оранжевый) — раньше делала это в момент signalAt, и
-     этот оранжевый потом «доживал» до самого начала transform. По прямой
-     формулировке пользователя «больше оранжевый не допустим» — оставлена
-     только дрожь, без смены цвета; единственный цветовой переход у цели — уже
-     сам transform.
+  // applyApproach теперь на уровне модуля (заход 59, Стадия 2, 4/10) — см.
+  // блок сразу после applyInfluence. Вызывается здесь как
+  // applyApproach(op, elapsed, ctx).
 
-     «Нимитта» (то, что физически влияет) часто НЕ одна буква, а вся
-     грамматическая единица целиком (например всё окончание -as). `from`
-     принимает не только одно число, но и массив/ссылку на группу слов
-     ({word:2}, см. resolveSlotRef/computeWordGroups) — тогда волна идёт от
-     КАЖДОГО кубика группы одновременно, они синхронно подпрыгивают масштабом
-     в момент каждой волны — читаются как одно целое.
-
-     ЭТАЛОН ДЛЯ КОЛЕЦ (по прямой ссылке пользователя на examples/rule71-
-     vak-asti.js, redrawPulseFace): у самого источника-нимитты, помимо бегущих
-     волн к цели, ДОЛЖНЫ расходиться широкие размытые светлые кольца оттенка
-     СОБСТВЕННОГО цвета кубика, и держаться до конца связанной трансформации —
-     не только на время короткой фазы волн. Здесь — упрощённая DOM-версия
-     того же языка (не текстура на грани кубика, как в rule71-vak-asti.js —
-     та техника глубже, взята только цветовая формула ringColorFrom и сам
-     характер кольца), длительность управляется отдельно от `dur` через
-     `ringHoldDur` (по умолчанию = `dur`, но пример может продлить её до конца
-     transform). Это одновременно и ответ на «не вижу выделения АС как единой
-     группы» — сустейн-кольца на ОБОИХ кубиках группы одновременно и есть
-     видимое выделение. */
-  function applyInfluence(op, elapsed) {
-    const target = cubes[op.to];
-    const sourceSlots = resolveSlotRef(op.from, wordGroupsList);
-    const sources = sourceSlots.map(s => cubes[s]).filter(Boolean);
-    if (!target || !sources.length) return;
-    const waveCount = op.waveCount ?? 3;
-    const waveGap = op.waveGap ?? 550; // было 440
-    const waveTravel = op.waveTravel ?? 1400; // было 1100
-    const dur = (waveCount - 1) * waveGap + waveTravel;
-
-    // Сустейн-«пульс» на источниках — независимо от фазы волн, до ringHoldDur.
-    const ringHoldDur = op.ringHoldDur ?? dur;
-    op._frameHoldEnd = op.start + ringHoldDur; // общее окно и для рамки, и для пульса
-    updateGroupFrame(op, sources, elapsed);
-    // Цвет пульса — ОДИН на всю группу (GROUP_COLOR), если источников больше
-    // одного (настоящая группа-нимитта, см. GROUP_COLOR выше); для одиночной
-    // буквы-источника прежнее поведение сохранено — тонировка в её
-    // собственный фонетический цвет (там нечего объединять, один кубик).
-    const ringRgb = sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr));
-    // ИСПРАВЛЕНО (заход 43, унификация по реестру эталонных эффектов —
-    // algoritm-agnayas-shablon.md). Было: отдельные DOM-вспышки через
-    // равные интервалы (spawnPulseRing по таймеру, ringGap=900) — та же
-    // техника, что уже заменена в śādhi (заходы 33/41) на непрерывную
-    // текстурную пульсацию. Теперь то же самое здесь: каждый источник
-    // группы пульсирует кольцом В СВОЕЙ ЖЕ ГРАНИ, синхронно — одна и та же
-    // формула cyclePos на всех сразу, не по отдельности, поэтому группа
-    // читается как единое дышащее целое (та же цель, что уже стояла у
-    // group-frame ниже), а не набор случайно моргающих вспышек. ringGap
-    // (интервал между разовыми вспышками) стал не нужен — заменён на
-    // ringPulsePeriod (длительность ОДНОГО цикла непрерывной пульсации);
-    // старые данные, не передающие ни то ни другое, получают дефолт 1400 —
-    // то же значение, что уже используется в śādhi.
-    if (elapsed >= op.start && elapsed <= op.start + ringHoldDur) {
-      const pulsePeriod = op.ringPulsePeriod ?? 1400;
-      const cyclePos = ((elapsed - op.start) % pulsePeriod) / pulsePeriod;
-      const radiusFrac = lerp(0.25, 1.0, cyclePos);
-      const envelope = Math.sin(cyclePos * Math.PI);
-      sources.forEach(src => setFacePulse(src, radiusFrac, 0.85 * envelope, ringRgb));
-    } else if (elapsed > op.start + ringHoldDur && !op._ringOff) {
-      op._ringOff = true;
-      sources.forEach(src => setFacePulse(src, null));
-    }
-
-    if (elapsed < op.start || elapsed > op.start + dur) {
-      if (elapsed > op.start + dur) {
-        target.mesh.scale.setScalar(1);
-        sources.forEach(src => src.mesh.scale.setScalar(1));
-      }
-      return;
-    }
-    for (let i = 0; i < waveCount; i++) {
-      const key = '_wave' + i;
-      if (!op[key] && elapsed >= op.start + i * waveGap) {
-        op[key] = true;
-        sources.forEach(src => spawnWave(
-          frontAnchor(src.mesh),
-          frontAnchor(target.mesh),
-          waveTravel
-        ));
-      }
-    }
-    // общий «пульс группы»: каждый источник синхронно подпрыгивает масштабом
-    // ровно в момент, когда от него уходит волна — источники из одной группы
-    // всегда бьются в одном и том же кадре (одна и та же формула по elapsed,
-    // не по индивидуальному состоянию кубика), поэтому визуально читаются как
-    // единое целое, даже если их несколько.
-    let srcPulse = 0;
-    for (let i = 0; i < waveCount; i++) {
-      const waveAt = op.start + i * waveGap;
-      const pt = (elapsed - waveAt) / 260;
-      if (pt >= 0 && pt <= 1) srcPulse = Math.max(srcPulse, Math.sin(pt * Math.PI) * 0.06);
-    }
-    sources.forEach(src => src.mesh.scale.setScalar(1 + srcPulse));
-
-    // ИСПРАВЛЕНО (заход 10, «Е слишком сильно трясётся, придумай другую
-    // иллюстрацию»). Раньше цель дрожала вращением (rotation.z, случайного
-    // вида синус-тряска, читалась как визуальный шум, а не как понятный
-    // сигнал). Заменено на масштабный «удар»-пульс — тот же язык, что уже
-    // используется у источников (см. srcPulse выше) и на паузе перед split:
-    // один согласованный приём «пульс = вот-вот изменится» по всему движку,
-    // а не отдельный жест для каждого случая. Пульс цели синхронизирован не
-    // с ОТПРАВКОЙ волны (как у источника), а с её ПРИХОДОМ (waveTravel
-    // спустя) — цель откликается именно когда волна её достигает, не раньше.
-    // Сила пульса растёт от волны к волне (последняя — самая заметная,
-    // прямо перед началом transform) — нарастающее напряжение, а не ровный
-    // шум на всём протяжении шага.
-    let targetPulse = 0;
-    for (let i = 0; i < waveCount; i++) {
-      const arriveAt = op.start + i * waveGap + waveTravel;
-      const pt = (elapsed - arriveAt) / 320;
-      if (pt >= 0 && pt <= 1) {
-        const grow = 0.045 + i * 0.02;
-        targetPulse = Math.max(targetPulse, Math.sin(pt * Math.PI) * grow);
-      }
-    }
-    target.mesh.scale.setScalar(1 + targetPulse);
-  }
-
-  /* APPROACH — иллюстрация несовместимости/невозможности стыка: подвижный
-     кубик (mover) трогается с места и проходит часть расстояния до цели
-     (target), не долетая (distance — доля ширины ОДНОГО слота), задерживается
-     на пике, затем пружинисто отскакивает назад — не плавно, а с небольшим
-     перелётом за исходную позицию (easeOutBack), как от столкновения с
-     невидимой преградой. Подход к пику — плавный разгон/торможение
-     (easeInOutCubic, было easeOutCubic — убран рывок в самом начале хода).
-     { type:'approach', mover, target, start, approachDur=1150, holdDur=550,
-       retreatDur=950, distance=0.5, pulse=true, jitterAmp=0.16, retreat=true }
-
-     ПРАВКА (по обратной связи): цель БОЛЬШЕ НЕ перекрашивается в сигнальный
-     (оранжевый) цвет на пике — прямо названо ошибкой («Е становится
-     оранжевой на время»). Вместо смены цвета цели — один тёплый кольцевой
-     пульс оттенка ПОДХОДЯЩЕГО кубика (не цели) ровно на пике, той же техникой
-     ringColorFrom, что и у сустейн-колец influence — сигнал «момент
-     напряжения» остаётся, но летящий кубик не перекрашивает саму цель.
-
-     РЕШЕНО (заход 15, `retreat:false`) — та же самая механика подхода
-     годится и для ПРОТИВОПОЛОЖНОГО смысла: не несовместимость, а
-     совместимость («примагничивание», āsīt, ĪТ подъезжает к АС и остаётся,
-     а не отскакивает). distance:1.0 при зазоре ровно в один слот приводит
-     мувер точно встык с целью; retreat:false отключает фазу отскока
-     целиком (retreatDur обнуляется) — кубик остаётся у цели навсегда,
-     jitterAmp у вызывающего кода обычно ставится в 0 отдельно (дрожь —
-     язык именно несовместимости, не нужна тут по смыслу, но остаётся
-     доступной, если понадобится где-то ещё). */
-  function applyApproach(op, elapsed) {
-    // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
-    // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
-    const slots = resolveSlotRef(op.movers ?? op.mover, wordGroupsList);
-    const movers = slots.map(s => cubes[s]).filter(Boolean);
-    if (!movers.length) return;
-    // ИСПРАВЛЕНО (заход 28, реальный баг — не мнимый, нашла именно чтением
-    // кода, не только симуляцией с упрощённой копией функции). Раньше
-    // строка ниже была `const target = cubes[op.target]; if (!movers.length
-    // || !target) return;` — то есть ЦЕЛЬ ДОЛЖНА была существовать на
-    // КАЖДОМ кадре, иначе approach обрывался целиком. Это ломается ровно в
-    // сценарии «приближение вызывает реакцию» (śādhi: DH приближается к S,
-    // а S по ходу приближения ИСЧЕЗАЕТ через elide) — как только цель
-    // исчезала, движение mover'ов замирало на полпути, а не доезжало до
-    // конца. Направление движения (dir) вычисляется по НОМЕРУ слота цели
-    // (slotX(op.target)) — цель как живой объект для этого не нужна
-    // вообще, нужна только для дрожи/пульса НА ней самой (см. ниже, оба
-    // теперь под `if (target)`).
-    const target = cubes[op.target]; // может быть undefined — это ОК
-    const approachDur = op.approachDur ?? 1150; // было 800
-    const holdDur = op.holdDur ?? 550; // было 400
-    const retreat = op.retreat !== false;
-    const retreatDur = retreat ? (op.retreatDur ?? 950) : 0; // было 700
-    const distance = op.distance ?? 0.5;
-    const jitterAmp = op.jitterAmp ?? 0.16;
-    const baseXs = slots.map(s => slotX(s));
-    const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
-
-    // РЕШЕНО (заход 29, «ДХИ просто въезжает — не читается взаимодействие»).
-    // Раньше единственный способ пройти путь — одна сплошная кривая от 0 до
-    // distance, без паузы. Если distance большая (закрыть исходный зазор И
-    // занять место исчезающей соседней буквы ОДНИМ движением) — это читается
-    // как «проехало насквозь», а не «подошло → произошла реакция → въехало
-    // в освободившееся место»: нет отдельного, заметного момента прибытия.
-    // midDistance (необязательный параметр) — путь идёт в ДВА отрезка с
-    // явной паузой между ними (midHoldDur), ровно там, где и должна
-    // произойти реакция (обычно — elide соседней буквы, синхронизировано
-    // данными примера снаружи, не встроено сюда). Без midDistance поведение
-    // не меняется ни на йоту — старые примеры (agnayas, āsīt) его не
-    // передают. Общая возможность движка, не разовый хак под один пример.
-    if (op.midDistance != null) {
-      const leg1Dur = approachDur;
-      const midHoldDur = op.midHoldDur ?? 0;
-      const leg2Dur = op.leg2Dur ?? approachDur;
-      const leg1End = op.start + leg1Dur;
-      const holdEnd = leg1End + midHoldDur;
-      const leg2End = holdEnd + leg2Dur;
-      if (elapsed < op.start) return;
-      let progress; // 0..distance, в тех же единицах, что и distance
-      if (elapsed <= leg1End) {
-        progress = op.midDistance * easeInOutCubic(clamp01((elapsed - op.start) / leg1Dur));
-      } else if (elapsed <= holdEnd) {
-        progress = op.midDistance; // пауза — здесь и должна случиться реакция (данные примера)
-        // РЕШЕНО (заход 33, доработано в заходе 41 — «визуально эти круги
-        // красивее», перенос техники из docs/effects/rule-assimilation-
-        // v2-via-elements.html / rule71-vak-asti.js). Раньше пульс на
-        // триггере был отдельными DOM-вспышками через равные интервалы
-        // (spawnPulseRing по таймеру) — теперь НЕПРЕРЫВНАЯ пульсация,
-        // нарисованная прямо в текстуру передней грани самого триггера
-        // (setFacePulse/redrawPulseFace) — радиус растёт по кругу с
-        // sin-конвертом на вход/выход каждого цикла, кольцо жёстко часть
-        // геометрии кубика, не отдельный слой поверх сцены. Волна к цели
-        // (spawnWave) остаётся ДИСКРЕТНЫМИ пакетами — это другое явление
-        // (конкретный сигнал долетает и что-то вызывает), не путать со
-        // сплошной пульсацией «я источник, я влияю».
-        if (op.holdPulse) {
-          const trigger = movers[0];
-          const pulsePeriod = op.holdPulsePeriod ?? 1400;
-          const cyclePos = ((elapsed - leg1End) % pulsePeriod) / pulsePeriod;
-          const radiusFrac = lerp(0.25, 1.0, cyclePos);
-          const envelope = Math.sin(cyclePos * Math.PI);
-          setFacePulse(trigger, radiusFrac, 0.85 * envelope, op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr)));
-          const waveGap = op.holdWaveGap ?? 500;
-          const waveIdx = Math.floor((elapsed - leg1End) / waveGap);
-          const waveKey = '_holdWave' + waveIdx;
-          if (!op[waveKey]) {
-            op[waveKey] = true;
-            const waveTravel = op.holdWaveTravel ?? 400;
-            spawnWave(
-              frontAnchor(trigger.mesh),
-              new THREE.Vector3(slotX(op.target), 0, 0),
-              waveTravel,
-              op.holdPulseColor ?? ringColorFrom(colorFor(trigger.tr))
-            );
-          }
-        }
-      } else if (elapsed <= leg2End) {
-        // Пульсация выключается ровно один раз при выходе из паузы —
-        // возвращает триггеру его обычный, некольцевой набор материалов
-        // (см. setFacePulse: null означает «выключить», просто
-        // cube.mesh.material = cube.matsMain, matsMain никогда не
-        // мутировался, так что возврат мгновенный и чистый).
-        if (op.holdPulse && !op._pulseOff) {
-          op._pulseOff = true;
-          setFacePulse(movers[0], null);
-        }
-        progress = op.midDistance + (distance - op.midDistance) * easeInOutCubic(clamp01((elapsed - holdEnd) / leg2Dur));
-      } else {
-        progress = distance;
-      }
-      const shift = SLOT * progress * dir;
-      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
-      return;
-    }
-
-    const shift = SLOT * distance * dir;
-    const peakStart = op.start + approachDur;
-    const peakEnd = peakStart + holdDur;
-    const retreatEnd = peakEnd + retreatDur;
-
-    if (elapsed < op.start || elapsed > retreatEnd) {
-      if (elapsed > retreatEnd) {
-        // retreat:false — остаёмся у цели (shift), а не возвращаемся домой (0)
-        movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + (retreat ? 0 : shift); });
-        if (target) target.mesh.rotation.z = 0;
-      }
-      return;
-    }
-
-    if (elapsed <= peakStart) {
-      const t = clamp01((elapsed - op.start) / approachDur);
-      const te = easeInOutCubic(t); // было easeOutCubic — плавнее старт
-      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * te; });
-    } else if (elapsed <= peakEnd) {
-      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift; });
-      if (target && op.pulse !== false && !op._pulsed) {
-        op._pulsed = true;
-        spawnPulseRing(
-          frontAnchor(target.mesh),
-          900,
-          ringColorFrom(colorFor(movers[0].tr)),
-          ctx
-        );
-      }
-    } else {
-      const t = clamp01((elapsed - peakEnd) / retreatDur);
-      const te = easeOutBack(t); // пружина остаётся — это осознанный характер отскока
-      movers.forEach((m, i) => { m.mesh.position.x = baseXs[i] + shift * (1 - te); });
-    }
-
-    // дрожь цели: амплитуда растёт до пика, обрывается резко в момент отскока
-    // (только если цель ещё существует — см. комментарий выше)
-    if (target) {
-      if (elapsed <= peakEnd) {
-        const growT = clamp01((elapsed - op.start) / (approachDur + holdDur));
-        target.mesh.rotation.z = Math.sin(elapsed * 0.024) * jitterAmp * growT;
-      } else {
-        target.mesh.rotation.z = 0; // обрыв резкий, не спад
-      }
-    }
-  }
-
-  /* РЕШЕНО (заход 10) и ИСПРАВЛЕНО (заход 11) — оба комментария теперь
-     живут у перенесённой на уровень модуля версии этой функции (заход 56,
-     см. export function applyTransform в начале файла). Здесь остался
-     только вызов в кадровом цикле, см. ниже. */
-  function applySplit(op, elapsed) {
-    if (elapsed < op.start) return;
-    // Источник держим под ОТДЕЛЬНЫМ временным ключом на время отстойника —
-    // иначе прилетающий результат с тем же номером слота перезаписывает
-    // cubes[op.at] ПОКА источник ещё висит и тает.
-    if (!op._srcKey) {
-      op._srcKey = '_hold_' + op.at + '_' + Math.random().toString(36).slice(2, 7);
-      cubes[op._srcKey] = cubes[op.at];
-      delete cubes[op.at];
-    }
-    const src = cubes[op._srcKey];
-    if (!src) return;
-    const riseDur = op.riseDur ?? 1300; // было 1000
-    const holdOpacity = op.holdOpacity ?? 0.55;
-    // ИСПРАВЛЕНО (заход 10, «ненужная пауза, когда Е исчезает в воздухе, мы
-    // смотрим на экран без событий»). 2400мс — почти два с половиной
-    // секунды ПОСЛЕ того, как E уже зависла на месте (riseDur кончился) И
-    // результаты (А+Й) уже прилетели и легли в ряд — то есть чистое время
-    // без единого нового события на экране. Смысл паузы («дать сравнить
-    // старое и новое рядом») остаётся, но 2400мс для этого избыточны;
-    // сокращено до 1000 — сравнение всё ещё читается, воздуха меньше.
-    const holdDur = op.holdDur ?? 1000; // было 2400 (до этого — 2000)
-    const fadeDur = op.fadeDur ?? 1100; // было 900
-    const holdOffset = op.holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 };
-    const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
-    const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
-
-    // фаза 0: ПАУЗА-ОСОЗНАНИЕ. Раньше распад начинался фактически сразу же
-    // после approach (кубик тут же трогался с места) — по живой обратной
-    // связи это читалось «слишком быстро», зритель не успевал понять, ЧТО
-    // сейчас произойдёт (Е уходит, А+Й приходят), прежде чем это уже
-    // произошло. Явная пауза перед подъёмом: кубик НЕ двигается, но заметно
-    // сигналит «вот-вот» — мягко пульсирует масштабом (2 удара, как
-    // вдох-вдох), плюс два кольца-пульса расходятся вокруг него на сцене.
-    // ИСПРАВЛЕНО (заход 10, доведено до конца): цвет здесь БОЛЬШЕ НЕ
-    // меняется — раньше это было золото (жалоба «Е оранжевая»), потом по
-    // ошибке серебро (заход 8) — но серебро теперь однозначно закреплено
-    // за трансформацией гуны (см. applyTransform), а не за паузой перед
-    // split; держать его ЕЩЁ и здесь означало бы два разных события одним
-    // и тем же цветом — путаница, а не сигнал. Пульс масштабом и кольца
-    // сами по себе уже достаточно ясно говорят «сейчас что-то произойдёт»,
-    // без перекраски кубика. Общий приём для ЛЮБОГО split, не частность
-    // agnayas.
-    const anticipateDur = op.anticipateDur ?? 900;
-    const activeStart = op.start + anticipateDur; // отсюда начинается реальное движение
-    if (elapsed < activeStart) {
-      const t = clamp01((elapsed - op.start) / anticipateDur);
-      // два «удара»: |sin| за один период даёт два симметричных горба
-      // (пик на четверти и на трёх четвертях, ноль на старте/середине/конце)
-      const beat = Math.abs(Math.sin(t * Math.PI * 2)) * 0.06;
-      const scale = 1 + beat;
-      src.mesh.scale.setScalar(scale);
-      src.mesh.position.copy(basePos);
-      // два кольца-пульса, разнесённые по паузе — не одновременно со стартом
-      // и не в самом конце, а примерно на четверти и на трёх четвертях
-      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
-      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
-      return; // пока идёт пауза — больше в этом кадре по этой операции ничего не делаем
-    }
-    if (!op._anticipateDone) {
-      op._anticipateDone = true;
-      src.mesh.scale.setScalar(1);
-      src.mesh.material = src.matsMain; // возвращаемся к обычному виду e перед самим подъёмом
-    }
-
-    // фаза 1: исходный поднимается в сторону и бледнеет — плавный разгон/
-    // торможение (easeInOutCubic, было easeOutCubic — убран рывок в начале).
-    const riseEnd = activeStart + riseDur;
-    if (elapsed <= riseEnd) {
-      const t = clamp01((elapsed - activeStart) / riseDur);
-      const te = easeInOutCubic(t);
-      src.mesh.position.lerpVectors(basePos, holdPos, te);
-      setOpacity(src.mesh, lerp(1, holdOpacity, te));
-    } else {
-      // фаза 2: покачивание, пока висит
-      const idle = (elapsed - riseEnd) * 0.0022;
-      src.mesh.position.copy(holdPos);
-      src.mesh.position.y += Math.sin(idle) * 0.06;
-    }
-
-    // прилёт результатов — каждый по своим параметрам, отсчёт от activeStart
-    // (не от op.start — пока идёт пауза-осознание, ничего ещё не прилетает).
-    // Разгон/торможение — easeInOutCubic, тот же мотив «без рывка».
-    (op.arrivals || []).forEach(arr => {
-      if (elapsed < activeStart + arr.delay) return;
-      let nc = op._arrived?.[arr.newSlot];
-      if (!nc) {
-        nc = makeCube(arr.into, arr.newSlot * 97 + 31);
-        nc._fallDone = true; // прилетает через отстойник, не через обычное падение
-        nc.mesh.visible = false;
-        scene.add(nc.mesh);
-        scene.add(nc.shadow);
-        cubes[arr.newSlot] = nc;
-        op._arrived = op._arrived || {};
-        op._arrived[arr.newSlot] = nc;
-      }
-      nc.mesh.visible = true;
-      const t = clamp01((elapsed - (activeStart + arr.delay)) / arr.dur);
-      const p = flyArcPosition(arr.from, slotX(arr.newSlot), 0, 0, t, arr.arcHeight ?? 1.0);
-      nc.mesh.position.set(p.x, p.y, p.z);
-    });
-
-    // фаза 3: после паузы для сравнения — исходный растворяется совсем.
-    // Момент старта угасания зависит от того, что случится ПОЗЖЕ — источник
-    // поднялся в отстойник, ИЛИ все результаты долетели и сели.
-    const arrivals = op.arrivals || [];
-    const lastArrivalEnd = arrivals.length
-      ? Math.max(...arrivals.map(a => a.delay + a.dur))
-      : 0;
-    const compareReadyAt = Math.max(riseEnd, activeStart + lastArrivalEnd);
-    const fadeStart = compareReadyAt + holdDur; // holdDur = пауза ПОСЛЕ того, как всё уже видно вместе
-    if (elapsed >= fadeStart) {
-      const t = clamp01((elapsed - fadeStart) / fadeDur);
-      setOpacity(src.mesh, lerp(holdOpacity, 0, t));
-      if (t >= 1) {
-        src.mesh.visible = false;
-        delete cubes[op._srcKey]; // источник совсем ушёл — временный ключ больше не нужен
-      }
-    }
-  }
+  // applySplit теперь на уровне модуля (заход 59, Стадия 2, 5/10) — см.
+  // блок сразу после applyApproach. Вызывается здесь как
+  // applySplit(op, elapsed, ctx).
 
   /* ARRIVE (заход 12, шаг «грам.» в āsīt: окончание -īt тихо присоединяется
      к основе, без единого события сандхи). Кубик(и) материализуются ЗА
@@ -1892,10 +1932,10 @@ export function mountSlotExample(container, data, opts = {}) {
       }
     });
     ops.forEach(op => {
-      if (op.type === 'influence') applyInfluence(op, elapsed);
-      else if (op.type === 'approach') applyApproach(op, elapsed);
+      if (op.type === 'influence') applyInfluence(op, elapsed, ctx);
+      else if (op.type === 'approach') applyApproach(op, elapsed, ctx);
       else if (op.type === 'transform') applyTransform(op, elapsed, ctx);
-      else if (op.type === 'split') applySplit(op, elapsed);
+      else if (op.type === 'split') applySplit(op, elapsed, ctx);
       else if (op.type === 'arrive') applyArrive(op, elapsed);
       else if (op.type === 'merge') applyMerge(op, elapsed);
       else if (op.type === 'elide') applyElide(op, elapsed, ctx);

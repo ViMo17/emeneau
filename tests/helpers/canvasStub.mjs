@@ -10,9 +10,17 @@
 // подгонки шрифта в заходе 48 — коэффициент 0.62 от размера шрифта на
 // символ) — этого достаточно, чтобы цикл авто-подгонки в paintGlyph
 // реально сходился, а не зависал/пропускался.
+// ДОПОЛНЕНО (заход 59, перенос applyInfluence): redrawPulseFace рисует
+// кольцо пульса прямо в canvas грани — нужны ещё clearRect/drawImage
+// (перерисовка поверх чистой копии) и beginPath/arc/stroke (само кольцо).
+// Та же логика, что и раньше: реальная отрисовка не нужна, только чтобы
+// код прошёл путь до конца и не упал.
 function makeStubContext() {
   return {
     fillStyle: '#000000',
+    strokeStyle: '#000000',
+    lineWidth: 1,
+    filter: 'none',
     font: '',
     textAlign: '',
     textBaseline: '',
@@ -20,6 +28,12 @@ function makeStubContext() {
     restore() {},
     fillRect() {},
     fillText() {},
+    clearRect() {},
+    drawImage() {},
+    beginPath() {},
+    arc() {},
+    stroke() {},
+    createRadialGradient() { return { addColorStop() {} }; }, // makeShadowBlobTexture (chalk-module.js)
     measureText(str) {
       const m = /(\d+)px/.exec(this.font);
       const fontSize = m ? Number(m[1]) : 16;
