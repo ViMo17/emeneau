@@ -5,13 +5,13 @@
 
 import * as THREE from 'three';
 import { slotX, clamp01, easeFall } from './slot-engine-core.js';
-import { makeCube, updateShadow } from './slot-engine-cube.js';
+import { makeCube, updateShadow, isSharedResource } from './slot-engine-cube.js';
 import { computeWordGroups, resolveSlotRef } from './slot-engine-words.js';
 import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
 import { validateExampleData } from './slot-engine-validate.js';
 import {
   applyInfluence, applyApproach, applyTransform, applySplit, applyArrive,
-  applyMerge, applyElide, applySettle, applyDim, applyStepDim,
+  applyMerge, applyElide, applySettle, applyDim, applyStepDim, disposePulseFace,
 } from './slot-engine-ops.js';
 
 export function mountSlotExample(container, data, opts = {}) {
@@ -233,6 +233,11 @@ export function mountSlotExample(container, data, opts = {}) {
   // выше) — тот же самый объект передаётся во все, не создаётся заново под
   // каждую.
   const ctx = { cubes, camera, stageEl, labelsEl, wordGroupsList, scene, runtimeSteps, data };
+  // ВРЕМЕННЫЙ диагностический люк (заход 65) — открывает состояние движка
+  // из консоли браузера (window.__slotDebug), чтобы проверять РЕАЛЬНЫЕ
+  // числа на работающей странице, не строить гипотезы по коду вслепую.
+  // Убрать, когда причина асимметричной прозрачности найдена и исправлена.
+  if (typeof window !== 'undefined') window.__slotDebug = ctx;
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
@@ -303,16 +308,28 @@ export function mountSlotExample(container, data, opts = {}) {
   }
   rafId = requestAnimationFrame(frame);
 
+  // Форма кубика/тени и текстура тени — ОБЩИЕ на все примеры (см.
+  // slot-engine-cube.js), принадлежат странице целиком, не одному показу —
+  // unmount() их обходит, иначе следующий mount() (клик по шагу, replay,
+  // переключение примера) получил бы уже уничтоженный ресурс. Всё
+  // остальное, что реально нашлось в сцене (уникальные материалы/текстуры
+  // букв каждого кубика), уничтожается как раньше. Плюс _pulseFace —
+  // отдельная per-cube текстура, которую traverse не находит (она не
+  // висит в сцене напрямую, только в cube._pulseFace), уничтожается явно.
   function unmount() {
     resizeObserver.disconnect();
     if (rafId !== null) cancelAnimationFrame(rafId);
     scene.traverse(obj => {
-      if (obj.geometry) obj.geometry.dispose();
+      if (obj.geometry && !isSharedResource(obj.geometry)) obj.geometry.dispose();
       if (obj.material) {
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        mats.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+        mats.forEach(m => {
+          if (m.map && !isSharedResource(m.map)) m.map.dispose();
+          m.dispose();
+        });
       }
     });
+    Object.values(cubes).forEach(disposePulseFace);
     renderer.dispose();
   }
 

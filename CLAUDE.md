@@ -141,7 +141,14 @@ Exercises*, 2nd rev. ed., University of California Press, 1968. Легитимн
   - `slot-engine-core.js` — константы, токенизатор, цвета, плавность
     (easing-функции), `setOpacity`. Ничего не импортирует.
   - `slot-engine-cube.js` — фабрика кубика (`makeCube`/`regenMats`/
-    `updateShadow`), геометрия/материалы/тень.
+    `updateShadow`), геометрия/материалы/тень. **Заход 64, унификация
+    кубика:** геометрия кубика и тени — ОБЩАЯ на все показы (лениво
+    строится один раз, `isSharedResource` защищает её от `unmount()`);
+    `matsBlank`/`matsReady`/`matsSignal` — ленивые (строятся только при
+    первом реальном обращении через `defineMatsSlot`, не все сразу).
+    Новый вариант внешности кубика добавлять ТОЛЬКО через `defineMatsSlot`
+    (не голым полем) — иначе он не будет уничтожаться при замене и снова
+    потечёт память при каждом превращении буквы.
   - `slot-engine-words.js` — группы слов («вся единица, не одна буква»,
     `computeWordGroups`/`resolveSlotRef`).
   - `slot-engine-steps.js` — шаги (грамматика/правило N), runtime-таймлайн.

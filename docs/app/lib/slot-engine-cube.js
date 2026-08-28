@@ -8,20 +8,41 @@ import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chal
 import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, colorFor } from './slot-engine-core.js';
 
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
+
+// Форма кубика и форма плоскости тени ОДИНАКОВЫ у всех кубиков (размер
+// фиксированный, CUBE_SIZE один на весь движок) — общая геометрия строится
+// ЛЕНИВО один раз при первом обращении и переиспользуется всеми кубиками
+// всех примеров, а не пересчитывается заново под каждый. Общие ресурсы —
+// НЕ уничтожаются при unmount() отдельного примера (см. isSharedResource
+// ниже, используется в slot-engine-mount.js), они принадлежат странице
+// целиком, не одному показу.
+let _cubeGeo = null;
+let _shadowGeo = null;
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
 
-/* ═══════════════════ КУБИК ═══════════════════
-   Каждый кубик хранит НЕСКОЛЬКО готовых наборов материалов (не перерисовывает
-   текстуру на лету) — тот же приём, что в rule3-agnayas.js: заранее собранный
-   «пустой» вариант (без буквы, для момента вращения) и «ready»-вариант
-   (READY_COLOR, для финальной волны), плюс «сигнальный» (SIGNAL_COLOR, для
-   влияния/подхода). Все четыре набора ПЕРЕСОБИРАЮТСЯ заново в момент, когда
-   кубик реально меняет букву (см. applyTransform) — иначе они держат глиф,
-   с которым кубик родился, даже после того как он стал другой буквой. */
+function getCubeGeo() {
+  if (!_cubeGeo) _cubeGeo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+  return _cubeGeo;
+}
+function getShadowGeo() {
+  if (!_shadowGeo) _shadowGeo = new THREE.PlaneGeometry(CUBE_SIZE * 1.6, CUBE_SIZE * 1.6);
+  return _shadowGeo;
+}
+
+// Проверка «это один из общих, разделяемых между ВСЕМИ показами ресурсов»
+// — вызывающий код (unmount в slot-engine-mount.js) обходит сцену и
+// уничтожает всё найденное, но общие геометрию/текстуру уничтожать нельзя:
+// они нужны следующему показу примера, а модульный кеш (_cubeGeo и т.д.)
+// не узнáет, что его содержимое стало нерабочим, и продолжит отдавать уже
+// уничтоженный объект.
+export function isSharedResource(obj) {
+  return obj === _cubeGeo || obj === _shadowGeo || obj === _shadowTex;
+}
+
 function makeShadow() {
   if (!_shadowTex) _shadowTex = makeShadowBlobTexture();
   const shadow = new THREE.Mesh(
-    new THREE.PlaneGeometry(CUBE_SIZE * 1.6, CUBE_SIZE * 1.6),
+    getShadowGeo(),
     new THREE.MeshBasicMaterial({ map: _shadowTex, transparent: true, depthWrite: false, fog: false })
   );
   shadow.rotation.x = -Math.PI / 2;
@@ -29,36 +50,81 @@ function makeShadow() {
   return shadow;
 }
 
-function buildMatSet(tr, color, seed) {
-  const matsMain   = buildChalkMaterials(color, seed, tr);
-  const matsBlank  = buildChalkMaterials(color, seed + 1, null);
-  const matsReady  = buildChalkMaterials(READY_COLOR, seed + 2, tr);
-  const matsSignal = buildChalkMaterials(SILVER_COLOR, seed + 3, tr);
-  [matsMain, matsBlank, matsReady, matsSignal].forEach(mats => mats.forEach(m => { m.transparent = true; }));
-  return { matsMain, matsBlank, matsReady, matsSignal };
+// Уничтожает один набор материалов (6 граней) — безопасно для чего угодно:
+// пропускает элементы без настоящего .dispose (например заглушки в тестах,
+// которые подсовывают простые строки/объекты вместо реальных материалов).
+function disposeMatSet(mats) {
+  if (!Array.isArray(mats)) return;
+  mats.forEach(m => {
+    if (m && typeof m.dispose === 'function') {
+      if (m.map && typeof m.map.dispose === 'function') m.map.dispose();
+      m.dispose();
+    }
+  });
+}
+
+function buildOneMatSet(color, seed, glyph) {
+  const mats = buildChalkMaterials(color, seed, glyph);
+  mats.forEach(m => { m.transparent = true; });
+  return mats;
+}
+
+/* Свойство-«слот» набора материалов на кубике (matsMain/matsBlank/matsReady/
+   matsSignal) — геттер/сеттер, не голое поле:
+     - ЧТЕНИЕ без lazyBuilder — просто возвращает уже сохранённое значение
+       (matsMain, всегда собран заранее, лениво строить нечего).
+     - ЧТЕНИЕ с lazyBuilder (matsBlank/matsReady/matsSignal) — строит набор
+       ТОЛЬКО при первом реальном обращении, не заранее «про запас». Кубик,
+       который ни разу за пример не показывает этот вариант (не участвует
+       в transform/settle), никогда не платит за его постройку.
+     - ЗАПИСЬ — уничтожает предыдущий набор (текстуры+материалы) ПЕРЕД тем,
+       как сохранить новый: раньше regenMats просто перезаписывал поля
+       новыми массивами, оставляя старые текстуры висеть в памяти без
+       единой ссылки на них при каждом превращении буквы — реальная утечка,
+       не гипотетическая (найдена и исправлена в этом же заходе). */
+function defineMatsSlot(cube, key, lazyBuilder) {
+  const backing = '_' + key;
+  Object.defineProperty(cube, key, {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (this[backing] === undefined && lazyBuilder) this[backing] = lazyBuilder(this);
+      return this[backing];
+    },
+    set(value) {
+      if (this[backing] !== undefined && this[backing] !== value) disposeMatSet(this[backing]);
+      this[backing] = value;
+    },
+  });
 }
 
 export function makeCube(tr, seed) {
-  const geo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, seed);
   const color = colorFor(tr);
-  const { matsMain, matsBlank, matsReady, matsSignal } = buildMatSet(tr, color, seed);
-  const mesh = new THREE.Mesh(geo, matsMain);
-  const shadow = makeShadow();
-  return { tr, mesh, shadow, seed, matsMain, matsBlank, matsReady, matsSignal, _settled: false };
+  const cube = { tr, color, seed, _settled: false };
+  defineMatsSlot(cube, 'matsMain', null); // всегда эагерно — нужен сразу, как только кубик падает
+  defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
+  defineMatsSlot(cube, 'matsReady', c => buildOneMatSet(READY_COLOR, c.seed + 2, c.tr));
+  defineMatsSlot(cube, 'matsSignal', c => buildOneMatSet(SILVER_COLOR, c.seed + 3, c.tr));
+  cube.matsMain = buildOneMatSet(color, seed, tr);
+  cube.mesh = new THREE.Mesh(getCubeGeo(), cube.matsMain);
+  cube.shadow = makeShadow();
+  return cube;
 }
 
-/* Пересобрать все наборы материалов кубика под НОВУЮ букву/цвет — вызывать
-   в момент, когда кубик реально становится другой буквой (transform), чтобы
-   matsSignal/matsReady/matsBlank не оставались с исходным, уже неактуальным
-   глифом. Общая утилита, не частность конкретной операции. */
+/* Кубик становится НОВОЙ буквой/цветом (transform/merge) — matsMain
+   пересобирается сразу (нужен немедленно, буква уже видна на грани),
+   matsBlank/matsReady/matsSignal просто СБРАСЫВАЮТСЯ (через сеттер выше —
+   старые при этом уничтожаются) и лениво пересоберутся под НОВУЮ букву
+   при следующем реальном обращении, не раньше. */
 export function regenMats(cube, newTr, newColor) {
   const color = newColor ?? colorFor(newTr);
-  const { matsMain, matsBlank, matsReady, matsSignal } = buildMatSet(newTr, color, cube.seed + 10);
-  cube.matsMain = matsMain;
-  cube.matsBlank = matsBlank;
-  cube.matsReady = matsReady;
-  cube.matsSignal = matsSignal;
+  cube.seed += 10;
   cube.tr = newTr;
+  cube.color = color;
+  cube.matsMain = buildOneMatSet(color, cube.seed, newTr);
+  cube.matsBlank = undefined;
+  cube.matsReady = undefined;
+  cube.matsSignal = undefined;
 }
 
 /* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —

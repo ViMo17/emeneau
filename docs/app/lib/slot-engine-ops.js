@@ -337,6 +337,19 @@ export function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
   redrawPulseFace(cube._pulseFace, radiusFrac, alpha, ringRgb);
 }
 
+// Уничтожает текстуру пульса на грани, если она вообще строилась (не
+// каждый кубик за пример хоть раз пульсирует) — не часть обычных наборов
+// материалов (matsMain и т.п., см. slot-engine-cube.js), поэтому не
+// уничтожается автоматически вместе с ними; отдельная утечка, найденная
+// и исправленная попутно с ленивыми материалами (тот же класс проблемы:
+// per-cube текстура без единого места, где её уничтожают).
+export function disposePulseFace(cube) {
+  if (!cube._pulseFace) return;
+  if (cube._pulseFace.material?.map) cube._pulseFace.material.map.dispose();
+  cube._pulseFace.material?.dispose();
+  cube._pulseFace = null;
+}
+
 // Как и spawnPulseRing — DOM-кольцо, координаты через project(vec3, ctx),
 // поэтому берёт ctx явным параметром вместо захвата через замыкание.
 export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
