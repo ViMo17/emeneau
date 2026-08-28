@@ -20,7 +20,7 @@
 //      Цвет вспомогательных шагов стандартизирован отдельно (заход 51,
 //      slot-engine.js) — переиспользует уже существующий охровый тон
 //      грамматики, не новый цвет.
-import { mountSlotExample } from '../lib/slot-engine.js';
+import { mountSlotExample, TRANSFORM_KIND } from '../lib/slot-engine.js';
 
 // tat «то» (указат. местоим. ср.р.) + hiraṇyam «золото» (сущ. ср.р.) →
 // taddhiraṇyam «то золото». Внешние сандхи — граница между словами не
@@ -64,14 +64,14 @@ export const data = {
     // нейтральная грань (не серебро — не гунация). clearance:-0.35 — влево,
     // к пустому зазору слева (справа — занятая I).
     { type: 'influence', from: 2, to: 4, start: 3680, ringHoldDur: 4000 },
-    { type: 'transform', at: 4, toGlyph: 'dh', start: 6280, spinTurns: 1, signal: 'blank', clearance: -0.35 },
+    { type: 'transform', at: 4, toGlyph: 'dh', start: 6280, ...TRANSFORM_KIND.assimToNeighbor, clearance: -0.35 },
 
     // ШАГ 2 (правило 71): t→d, вызвано уже готовым dh. Та же механика, что
     // уже отлажена на vāk asti — парная замена внутри варги, 180°,
     // нейтральная грань. clearance не переопределён — дефолт (вправо, к
     // пустому зазору) уже безопасен для этой позиции.
     { type: 'influence', from: 4, to: 2, start: 8080, ringHoldDur: 3300 },
-    { type: 'transform', at: 2, toGlyph: 'd', start: 10680, spinTurns: 0.5, signal: 'blank' },
+    { type: 'transform', at: 2, toGlyph: 'd', start: 10680, ...TRANSFORM_KIND.vargaPair },
 
     // settle не прописан — считается автоматически (см. заход 8):
     // 1с после того, как последняя буква вернёт истинный цвет.
