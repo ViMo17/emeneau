@@ -682,6 +682,83 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   setTimeout(() => ring.remove(), dur + 80);
 }
 
+// ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 58, Стадия 2 продолжается). Самый
+// чистый перенос из всех пока сделанных — единственная внешняя зависимость
+// через ctx это cubes, все остальные опоры (spawnPulseRing, frontAnchor,
+// GROUP_RGB, setOpacity, easing-функции) уже сами на уровне модуля,
+// доступны напрямую как соседние объявления, без ctx вообще.
+export function applyElide(op, elapsed, ctx) {
+    const { cubes } = ctx;
+    if (elapsed < op.start) return;
+    const cube = cubes[op.at];
+    if (!cube || op._done) return;
+    // ИСПРАВЛЕНО (заход 39, «до сих пор не видим взаимодействие ДХ и С» —
+    // третий заход подряд на эту же жалобу, и на этот раз нашла настоящую
+    // причину, не подправила число). Раньше в applyElide НЕ БЫЛО НИКАКОГО
+    // визуального сигнала ровно в момент op.start — реакция начиналась
+    // сразу с плавного easeInOutCubic-движения, у которого производная в
+    // t=0 равна нулю: первые кадры движения визуально неразличимы на глаз,
+    // сигнала «вот сейчас, именно в эту секунду случился отклик» не было
+    // вообще. Волна от DH (заход 35) долетала — и дальше просто ничего не
+    // происходило заметного. Теперь ровно в момент op.start — вспышка
+    // (spawnPulseRing) и мгновенный скачок масштаба на самой S, тот же
+    // язык, что уже использует merge в момент слияния (заход 20). Скачок
+    // считается КАЖДЫЙ кадр отдельно от fig ветвления ниже (rise/hold/fade)
+    // — тот самый класс бага «спад заблокирован общим guard'ом», что уже
+    // трижды чинили в этой сессии (applyTransform заход 11, applyMerge
+    // заходы 15/18) — здесь заранее вынесен за пределы веток, не внутрь них.
+    if (!op._impactAt) {
+      op._impactAt = elapsed;
+      spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB, ctx);
+    }
+    const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
+    const holdOpacity = op.holdOpacity ?? 0.5;
+    const holdDur = op.holdDur ?? 800;
+    const fadeDur = op.fadeDur ?? 1100;
+    // ИСПРАВЛЕНО (заход 40, принцип зафиксирован по прямой инструкции):
+    // «отстойник внизу должен располагаться под основными слотами — на
+    // расстоянии половины высоты кубика (отступ от верхнего края нижнего
+    // отстойника до нижнего края слотов)». Раньше глубина подбиралась
+    // эмпирически под запас камеры (-1.8, потом -1.4) — теперь считается
+    // по формуле, не подбором: FLOOR_Y (нижний край слотов, -0.55) минус
+    // CUBE_SIZE/2 (сам отступ, 0.55) даёт верхний край отстойника (-1.1);
+    // минус ещё CUBE_SIZE/2 (половина высоты самого кубика в отстойнике)
+    // даёт его центр: -1.65. Проверила — с ЭТИМ точным числом текущая
+    // камера всё ещё даёт комфортный запас (0.247 в NDC) — даже больше,
+    // чем у подъёма E (0.075) при том же lookAt — камеру трогать не
+    // потребовалось для этой конкретной правки.
+    const holdOffset = op.holdOffset ?? { x: -0.2, y: -1.65, z: -0.4 };
+    const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
+    const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
+    const riseEnd = op.start + riseDur;
+    if (elapsed <= riseEnd) {
+      const t = clamp01((elapsed - op.start) / riseDur);
+      const te = easeInOutCubic(t);
+      cube.mesh.position.lerpVectors(basePos, holdPos, te);
+      setOpacity(cube.mesh, lerp(1, holdOpacity, te));
+    } else if (elapsed <= riseEnd + holdDur) {
+      cube.mesh.position.copy(holdPos);
+      const idle = (elapsed - riseEnd) * 0.0022;
+      cube.mesh.position.y += Math.sin(idle) * 0.06; // то же лёгкое покачивание, что у split
+    } else {
+      const t = clamp01((elapsed - (riseEnd + holdDur)) / fadeDur);
+      setOpacity(cube.mesh, lerp(holdOpacity, 0, t));
+      if (t >= 1) {
+        op._done = true;
+        cube.mesh.visible = false;
+        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB, ctx);
+        delete cubes[op.at];
+      }
+    }
+    // Скачок масштаба в момент удара, спадающий за 350мс — ВНЕ веток
+    // rise/hold/fade выше, идёт каждый кадр независимо от того, в какой
+    // из них мы сейчас находимся (см. комментарий про класс бага вверху).
+    if (op._impactAt != null && !op._done) {
+      const pt = clamp01((elapsed - op._impactAt) / 350);
+      cube.mesh.scale.setScalar(lerp(1.25, 1, easeOutCubic(pt)));
+    }
+}
+
 export function mountSlotExample(container, data, opts = {}) {
   injectStylesOnce();
 
@@ -1750,76 +1827,6 @@ export function mountSlotExample(container, data, opts = {}) {
      менять числа, не на глаз.
      { type:'elide', at, start, riseDur=1300, holdOpacity=0.5, holdDur=800,
        fadeDur=1100, holdOffset={x:0,y:-2.4,z:-0.4} } */
-  function applyElide(op, elapsed) {
-    if (elapsed < op.start) return;
-    const cube = cubes[op.at];
-    if (!cube || op._done) return;
-    // ИСПРАВЛЕНО (заход 39, «до сих пор не видим взаимодействие ДХ и С» —
-    // третий заход подряд на эту же жалобу, и на этот раз нашла настоящую
-    // причину, не подправила число). Раньше в applyElide НЕ БЫЛО НИКАКОГО
-    // визуального сигнала ровно в момент op.start — реакция начиналась
-    // сразу с плавного easeInOutCubic-движения, у которого производная в
-    // t=0 равна нулю: первые кадры движения визуально неразличимы на глаз,
-    // сигнала «вот сейчас, именно в эту секунду случился отклик» не было
-    // вообще. Волна от DH (заход 35) долетала — и дальше просто ничего не
-    // происходило заметного. Теперь ровно в момент op.start — вспышка
-    // (spawnPulseRing) и мгновенный скачок масштаба на самой S, тот же
-    // язык, что уже использует merge в момент слияния (заход 20). Скачок
-    // считается КАЖДЫЙ кадр отдельно от fig ветвления ниже (rise/hold/fade)
-    // — тот самый класс бага «спад заблокирован общим guard'ом», что уже
-    // трижды чинили в этой сессии (applyTransform заход 11, applyMerge
-    // заходы 15/18) — здесь заранее вынесен за пределы веток, не внутрь них.
-    if (!op._impactAt) {
-      op._impactAt = elapsed;
-      spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB, ctx);
-    }
-    const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
-    const holdOpacity = op.holdOpacity ?? 0.5;
-    const holdDur = op.holdDur ?? 800;
-    const fadeDur = op.fadeDur ?? 1100;
-    // ИСПРАВЛЕНО (заход 40, принцип зафиксирован по прямой инструкции):
-    // «отстойник внизу должен располагаться под основными слотами — на
-    // расстоянии половины высоты кубика (отступ от верхнего края нижнего
-    // отстойника до нижнего края слотов)». Раньше глубина подбиралась
-    // эмпирически под запас камеры (-1.8, потом -1.4) — теперь считается
-    // по формуле, не подбором: FLOOR_Y (нижний край слотов, -0.55) минус
-    // CUBE_SIZE/2 (сам отступ, 0.55) даёт верхний край отстойника (-1.1);
-    // минус ещё CUBE_SIZE/2 (половина высоты самого кубика в отстойнике)
-    // даёт его центр: -1.65. Проверила — с ЭТИМ точным числом текущая
-    // камера всё ещё даёт комфортный запас (0.247 в NDC) — даже больше,
-    // чем у подъёма E (0.075) при том же lookAt — камеру трогать не
-    // потребовалось для этой конкретной правки.
-    const holdOffset = op.holdOffset ?? { x: -0.2, y: -1.65, z: -0.4 };
-    const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
-    const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
-    const riseEnd = op.start + riseDur;
-    if (elapsed <= riseEnd) {
-      const t = clamp01((elapsed - op.start) / riseDur);
-      const te = easeInOutCubic(t);
-      cube.mesh.position.lerpVectors(basePos, holdPos, te);
-      setOpacity(cube.mesh, lerp(1, holdOpacity, te));
-    } else if (elapsed <= riseEnd + holdDur) {
-      cube.mesh.position.copy(holdPos);
-      const idle = (elapsed - riseEnd) * 0.0022;
-      cube.mesh.position.y += Math.sin(idle) * 0.06; // то же лёгкое покачивание, что у split
-    } else {
-      const t = clamp01((elapsed - (riseEnd + holdDur)) / fadeDur);
-      setOpacity(cube.mesh, lerp(holdOpacity, 0, t));
-      if (t >= 1) {
-        op._done = true;
-        cube.mesh.visible = false;
-        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB, ctx);
-        delete cubes[op.at];
-      }
-    }
-    // Скачок масштаба в момент удара, спадающий за 350мс — ВНЕ веток
-    // rise/hold/fade выше, идёт каждый кадр независимо от того, в какой
-    // из них мы сейчас находимся (см. комментарий про класс бага вверху).
-    if (op._impactAt != null && !op._done) {
-      const pt = clamp01((elapsed - op._impactAt) / 350);
-      cube.mesh.scale.setScalar(lerp(1.25, 1, easeOutCubic(pt)));
-    }
-  }
 
   // stepDelay слегка увеличен (было 150) — по обратной связи финал должен
   // идти ПЛАВНО, не спеша; цвет меняется РОВНО на вершине волны (t=0.5).
@@ -1891,7 +1898,7 @@ export function mountSlotExample(container, data, opts = {}) {
       else if (op.type === 'split') applySplit(op, elapsed);
       else if (op.type === 'arrive') applyArrive(op, elapsed);
       else if (op.type === 'merge') applyMerge(op, elapsed);
-      else if (op.type === 'elide') applyElide(op, elapsed);
+      else if (op.type === 'elide') applyElide(op, elapsed, ctx);
       else if (op.type === 'settle') applySettle(op, elapsed);
       else if (op.type === 'dim') applyDim(op, elapsed);
     });
