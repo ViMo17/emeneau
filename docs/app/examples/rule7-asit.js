@@ -2,7 +2,7 @@
 // rule3-agnayas-slots.js (заход 13). Данные вынесены СЮДА, а не хранятся
 // дублем в test-slot-engine-rule7.html и в основном приложении — оба места
 // импортируют этот файл, меняется только то, ЧТО вызывает mount().
-import { mountSlotExample, slotX } from '../lib/slot-engine.js';
+import { mountSlotExample } from '../lib/slot-engine.js';
 
 // āsīt: a(аугмент) + as(корень: a+s) + īt(окончание) → āsīt
 // Слоты — с зазором в один слот между тремя морфологическими частями

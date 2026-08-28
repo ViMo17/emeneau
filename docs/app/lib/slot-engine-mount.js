@@ -153,7 +153,7 @@ export function mountSlotExample(container, data, opts = {}) {
     if (!runtimeSteps) return;
     const idx = stepIndexAt(elapsed, runtimeSteps);
     const curStep = runtimeSteps[idx];
-    authoredSteps.forEach((step, i) => {
+    authoredSteps.forEach(step => {
       step._chipEl.classList.toggle('active', step === curStep);
     });
     if (!curStep._virtual && !curStep._reveal && idx !== _lastStepIdx) {
@@ -233,10 +233,11 @@ export function mountSlotExample(container, data, opts = {}) {
   // выше) — тот же самый объект передаётся во все, не создаётся заново под
   // каждую.
   const ctx = { cubes, camera, stageEl, labelsEl, wordGroupsList, scene, runtimeSteps, data };
-  // ВРЕМЕННЫЙ диагностический люк (заход 65) — открывает состояние движка
-  // из консоли браузера (window.__slotDebug), чтобы проверять РЕАЛЬНЫЕ
-  // числа на работающей странице, не строить гипотезы по коду вслепую.
-  // Убрать, когда причина асимметричной прозрачности найдена и исправлена.
+  // ВРЕМЕННЫЙ диагностический люк, оставлен по прямой просьбе пользователя —
+  // открывает состояние движка из консоли браузера (window.__slotDebug),
+  // чтобы проверять РЕАЛЬНЫЕ числа на работающей странице, не строить
+  // гипотезы по коду вслепую. Не убирать, пока не закрыто расследование
+  // асимметричной прозрачности (см. CLAUDE.md, Часть 6, пункт 0).
   if (typeof window !== 'undefined') window.__slotDebug = ctx;
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {

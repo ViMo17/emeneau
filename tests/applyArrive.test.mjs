@@ -4,7 +4,6 @@
 // applySplit.arrivals — canvasStub уже расширен под неё.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import * as THREE from 'three';
 import { installCanvasStub } from './helpers/canvasStub.mjs';
 
 installCanvasStub();
