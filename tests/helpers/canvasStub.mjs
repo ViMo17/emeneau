@@ -37,16 +37,27 @@ function makeStubCanvas() {
   };
 }
 
+function makeStubDiv() {
+  return {
+    className: '',
+    style: { setProperty() {} }, // обычные присваивания (style.left=...) и так работают на плейн-объекте; setProperty — отдельный метод, добавлен явно
+    appendChild() {},
+    remove() {},
+  };
+}
+
 // Устанавливает глобальный document (если ещё не установлен реальным DOM)
-// с единственным методом, который реально используется — createElement для
-// canvas. Идемпотентно — повторный вызов из нескольких тестовых файлов не
-// перезаписывает уже работающий document.
+// с двумя методами createElement реально использует движок — canvas
+// (текстуры кубиков) и div (DOM-кольца spawnPulseRing/spawnWave). Идемпо-
+// тентно — повторный вызов из нескольких тестовых файлов не перезаписывает
+// уже работающий document.
 export function installCanvasStub() {
   if (typeof globalThis.document !== 'undefined') return;
   globalThis.document = {
     createElement(tag) {
       if (tag === 'canvas') return makeStubCanvas();
-      throw new Error(`installCanvasStub: document.createElement('${tag}') не замокан — нужен только 'canvas'`);
+      if (tag === 'div') return makeStubDiv();
+      throw new Error(`installCanvasStub: document.createElement('${tag}') не замокан — нужны только 'canvas' и 'div'`);
     },
   };
 }

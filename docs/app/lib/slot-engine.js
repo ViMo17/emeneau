@@ -543,6 +543,39 @@ export function applyTransform(op, elapsed, ctx) {
     const dur = Math.abs(spinTurns) * MS_PER_360;
     const bounceH = op.bounceH ?? 0.3;
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
+
+    // ДОБАВЛЕНО (заход 57, по прямому решению пользователя — три открытых
+    // методологических вопроса из хендовера, все решены разом):
+    // «1 и 3. Да, пауза-фиксация нужна почти на каждом значимом шаге для
+    // осознания результата» — transform получает ТУ ЖЕ симметричную пару
+    // пауз, что уже есть у split (anticipateDur до, holdDur после), не
+    // изобретается заново — те же имена параметров, тот же характер
+    // сигнала. «2. Для гунации — не невозможность соседства, а
+    // подчёркиваем влияющие кубики, даём импульс, начинаем гунирование» —
+    // это уже и есть существующая последовательность influence→transform
+    // (agnayas), никакой approach-стадии «столкновение» здесь НЕ
+    // добавляется — только пауза-осознание, как и у любого другого
+    // transform, без исключения для грамматических шагов.
+    const anticipateDur = op.anticipateDur ?? 900; // тот же дефолт, что у split — единообразие, не случайное число
+    const activeStart = op.start + anticipateDur;
+    if (elapsed < activeStart) {
+      // Пауза-осознание: пульс масштабом (два удара, как у split), два
+      // кольца — БЕЗ смены цвета (серебро/нейтраль включается только в
+      // активной фазе, не здесь — тот же принцип, что у split: «держать
+      // сигнальный цвет ещё и на паузе означало бы два разных события
+      // одним и тем же сигналом»).
+      const t = clamp01((elapsed - op.start) / anticipateDur);
+      const beat = Math.abs(Math.sin(t * Math.PI * 2)) * 0.06;
+      cube.mesh.scale.setScalar(1 + beat);
+      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(cube.mesh), anticipateDur * 0.6, undefined, ctx); }
+      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(cube.mesh), anticipateDur * 0.6, undefined, ctx); }
+      return;
+    }
+    if (!op._anticipateDone) {
+      op._anticipateDone = true;
+      cube.mesh.scale.setScalar(1);
+    }
+
     // ИСПРАВЛЕНО (заход 45, «К сереет при переходе в Г — серебро
     // зарезервировано за гунацией, а тут парная звонкая замена внутри
     // варги, совсем другая категория»). Раньше matsSignal (серебро) был
@@ -560,7 +593,7 @@ export function applyTransform(op, elapsed, ctx) {
       op._began = true;
       cube.mesh.material = cube[signalMats];
     }
-    const t = clamp01((elapsed - op.start) / dur);
+    const t = clamp01((elapsed - activeStart) / dur);
     cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
     cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
     cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
@@ -578,13 +611,75 @@ export function applyTransform(op, elapsed, ctx) {
       regenMats(cube, op.toGlyph, newColor);
       cube.mesh.material = cube[signalMats];
     }
-    if (t >= 1) {
-      op._done = true;
+    if (t >= 1 && !op._landed) {
+      op._landed = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
       cube.mesh.position.x = slotX(op.at);
       cube.mesh.material = cube.matsMain; // возвращает себе истинный цвет столбца
+      op._rotationEnd = elapsed;
     }
+    // Пауза-фиксация: кубик уже полностью финализирован (см. выше), просто
+    // держится в этом состоянии ещё holdDur — op._done откладывается на
+    // это время, не срабатывает мгновенно в момент посадки. Даёт зрителю
+    // время увидеть результат, прежде чем следующий шаг/операция начнёт
+    // что-то ещё менять — тот же смысл, что у holdDur в split, просто без
+    // отдельной активности во время паузы (кубик и так уже в покое, не
+    // висит в отстойнике — покачивать нечего).
+    if (op._landed) {
+      const holdDur = op.holdDur ?? 700;
+      if (elapsed - op._rotationEnd >= holdDur) op._done = true;
+    }
+}
+
+// ПЕРЕНЕСЕНО НА УРОВЕНЬ МОДУЛЯ (заход 57, попутно с добавлением пауз у
+// transform — ей понадобился spawnPulseRing, который сам требовал project,
+// который требует camera/stageEl). ctx теперь несёт и их тоже, не только
+// cubes.
+export function project(vec3, ctx) {
+  const { stageEl, camera } = ctx;
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  const v = vec3.clone().project(camera);
+  return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
+}
+
+// rgbStr необязателен: по умолчанию серебряный (см. SILVER_COLOR/SILVER_RGB
+// выше) — раньше цвет волны был жёстко зашит золотым прямо в CSS вызывающей
+// страницы (test-slot-engine.html), это и был тот «оранжевый для гуны»,
+// на который прямо указали. Золотой остаётся доступен через явный override,
+// когда понадобится (вриддхи).
+/* РЕШЕНО (заход 7, «кольца не центрированы, смещены влево-вверх грани»).
+   Раньше кольца анкорились на mesh.position — это ГЕОМЕТРИЧЕСКИЙ ЦЕНТР
+   кубика, не видимая грань с буквой (+Z, глиф). При низкой, почти анфас
+   камере rule3-agnayas.js (camBase y=1.5) разница была незаметна — но
+   камера движка стоит заметно выше (camBase y=3.2, см. ниже), и та же
+   логика колец, скопированная без пересчёта под новый ракурс, проецируется
+   заметно выше и в сторону от видимой грани. Общий фикс — не под конкретную
+   камеру: берём точку не в центре, а со сдвигом по ЛОКАЛЬНОЙ +Z (к камере,
+   туда же, где рисуется буква), провёрнутым через текущий поворот кубика
+   (mesh.quaternion) — верно даже пока кубик дрожит/крутится. */
+export function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
+  const local = new THREE.Vector3(0, yOff, zOff).applyQuaternion(mesh.quaternion);
+  return mesh.position.clone().add(local);
+}
+
+/* Кольцо-пульс НА МЕСТЕ (не бежит от точки к точке, а расходится вокруг
+   одной) — сигнал «вот-вот изменится» (пауза-осознание перед split) ИЛИ
+   «я источник, я влияю» (сустейн-кольца у нимитты в influence, см. ниже).
+   rgbStr — необязательный: без него кольцо золотое (CSS по умолчанию,
+   как раньше), с ним — оттенок СОБСТВЕННОГО цвета конкретного кубика
+   (см. ringColorFrom) — общая утилита, не частность agnayas. */
+export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
+  const { labelsEl } = ctx;
+  const p = project(atVec3, ctx);
+  const ring = document.createElement('div');
+  ring.className = 'slot-pulse-ring';
+  ring.style.left = p.x + 'px';
+  ring.style.top = p.y + 'px';
+  ring.style.setProperty('--pulse-dur', dur + 'ms');
+  if (rgbStr) ring.style.borderColor = `rgba(${rgbStr},.55)`;
+  labelsEl.appendChild(ring);
+  setTimeout(() => ring.remove(), dur + 80);
 }
 
 export function mountSlotExample(container, data, opts = {}) {
@@ -859,31 +954,9 @@ export function mountSlotExample(container, data, opts = {}) {
   // частность agnayas — тот же отстойник у любого будущего split.
   camera.lookAt(0, 0.4, 0);
 
-  function project(vec3) {
-    const w = stageEl.clientWidth, h = stageEl.clientHeight;
-    const v = vec3.clone().project(camera);
-    return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
-  }
-
-  // rgbStr необязателен: по умолчанию серебряный (см. SILVER_COLOR/SILVER_RGB
-  // выше) — раньше цвет волны был жёстко зашит золотым прямо в CSS вызывающей
-  // страницы (test-slot-engine.html), это и был тот «оранжевый для гуны»,
-  // на который прямо указали. Золотой остаётся доступен через явный override,
-  // когда понадобится (вриддхи).
-  /* РЕШЕНО (заход 7, «кольца не центрированы, смещены влево-вверх грани»).
-     Раньше кольца анкорились на mesh.position — это ГЕОМЕТРИЧЕСКИЙ ЦЕНТР
-     кубика, не видимая грань с буквой (+Z, глиф). При низкой, почти анфас
-     камере rule3-agnayas.js (camBase y=1.5) разница была незаметна — но
-     камера движка стоит заметно выше (camBase y=3.2, см. ниже), и та же
-     логика колец, скопированная без пересчёта под новый ракурс, проецируется
-     заметно выше и в сторону от видимой грани. Общий фикс — не под конкретную
-     камеру: берём точку не в центре, а со сдвигом по ЛОКАЛЬНОЙ +Z (к камере,
-     туда же, где рисуется буква), провёрнутым через текущий поворот кубика
-     (mesh.quaternion) — верно даже пока кубик дрожит/крутится. */
-  function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
-    const local = new THREE.Vector3(0, yOff, zOff).applyQuaternion(mesh.quaternion);
-    return mesh.position.clone().add(local);
-  }
+  // project/frontAnchor теперь на уровне модуля (заход 57) — здесь,
+  // внутри mountSlotExample, вызываются как project(vec, ctx),
+  // frontAnchor(mesh) как обычно (она чистая, ctx не требует).
 
   /* ОБЩИЙ ХЕЛПЕР ПРИЛЁТА (заход 12, вынесено при добавлении arrive/merge).
      Раньше эта же математика (разгон/торможение + дуга по высоте) была
@@ -939,11 +1012,11 @@ export function mountSlotExample(container, data, opts = {}) {
       const local = new THREE.Vector3(xOff, -CUBE_SIZE * 0.56, CUBE_SIZE * 0.42).applyQuaternion(mesh.quaternion);
       return mesh.position.clone().add(local);
     };
-    const pLeft = project(edgeAnchor(leftCube.mesh, -SLOT / 2));
-    const pRight = project(edgeAnchor(rightCube.mesh, SLOT / 2));
+    const pLeft = project(edgeAnchor(leftCube.mesh, -SLOT / 2), ctx);
+    const pRight = project(edgeAnchor(rightCube.mesh, SLOT / 2), ctx);
     // Y — по нижнему краю грани у всех кубиков группы (не только крайних),
     // на случай если группа не строго горизонтальна на экране (наклон камеры/поворот)
-    const ys = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56)).y);
+    const ys = sources.map(s => project(frontAnchor(s.mesh, CUBE_SIZE * 0.42, -CUBE_SIZE * 0.56), ctx).y);
     const y = Math.max(pLeft.y, pRight.y, ...ys);
     const left = Math.min(pLeft.x, pRight.x);
     const right = Math.max(pLeft.x, pRight.x);
@@ -958,7 +1031,7 @@ export function mountSlotExample(container, data, opts = {}) {
   }
 
   function spawnWave(fromVec3, toVec3, dur, rgbStr) {
-    const pA = project(fromVec3), pB = project(toVec3);
+    const pA = project(fromVec3, ctx), pB = project(toVec3, ctx);
     const ring = document.createElement('div');
     ring.className = 'slot-wave-ring';
     ring.style.left = pA.x + 'px';
@@ -971,23 +1044,8 @@ export function mountSlotExample(container, data, opts = {}) {
     setTimeout(() => ring.remove(), dur + 80);
   }
 
-  /* Кольцо-пульс НА МЕСТЕ (не бежит от точки к точке, а расходится вокруг
-     одной) — сигнал «вот-вот изменится» (пауза-осознание перед split) ИЛИ
-     «я источник, я влияю» (сустейн-кольца у нимитты в influence, см. ниже).
-     rgbStr — необязательный: без него кольцо золотое (CSS по умолчанию,
-     как раньше), с ним — оттенок СОБСТВЕННОГО цвета конкретного кубика
-     (см. ringColorFrom) — общая утилита, не частность agnayas. */
-  function spawnPulseRing(atVec3, dur, rgbStr) {
-    const p = project(atVec3);
-    const ring = document.createElement('div');
-    ring.className = 'slot-pulse-ring';
-    ring.style.left = p.x + 'px';
-    ring.style.top = p.y + 'px';
-    ring.style.setProperty('--pulse-dur', dur + 'ms');
-    if (rgbStr) ring.style.borderColor = `rgba(${rgbStr},.55)`;
-    labelsEl.appendChild(ring);
-    setTimeout(() => ring.remove(), dur + 80);
-  }
+  // spawnPulseRing теперь на уровне модуля (заход 57) — вызывается здесь
+  // как spawnPulseRing(atVec3, dur, rgbStr, ctx).
 
   /* ПУЛЬС В ТЕКСТУРЕ ГРАНИ (заход 41, перенесено из docs/effects/
      rule-assimilation-varga-t-d.html через rule71-vak-asti.js — там это и
@@ -1073,7 +1131,7 @@ export function mountSlotExample(container, data, opts = {}) {
   // Стадия 2 профессионализации) — тот же самый объект передаётся во все,
   // расширяется по мере переноса следующих apply*-функций (camera, stageEl,
   // labelsEl, scene и т.д.), не создаётся заново под каждую.
-  const ctx = { cubes };
+  const ctx = { cubes, camera, stageEl, labelsEl };
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
@@ -1404,7 +1462,8 @@ export function mountSlotExample(container, data, opts = {}) {
         spawnPulseRing(
           frontAnchor(target.mesh),
           900,
-          ringColorFrom(colorFor(movers[0].tr))
+          ringColorFrom(colorFor(movers[0].tr)),
+          ctx
         );
       }
     } else {
@@ -1484,8 +1543,8 @@ export function mountSlotExample(container, data, opts = {}) {
       src.mesh.position.copy(basePos);
       // два кольца-пульса, разнесённые по паузе — не одновременно со стартом
       // и не в самом конце, а примерно на четверти и на трёх четвертях
-      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6); }
-      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6); }
+      if (!op._pulse0 && t >= 0.15) { op._pulse0 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
+      if (!op._pulse1 && t >= 0.6) { op._pulse1 = true; spawnPulseRing(frontAnchor(src.mesh), anticipateDur * 0.6, undefined, ctx); }
       return; // пока идёт пауза — больше в этом кадре по этой операции ничего не делаем
     }
     if (!op._anticipateDone) {
@@ -1632,7 +1691,7 @@ export function mountSlotExample(container, data, opts = {}) {
         const newColor = op.toColor ?? colorFor(op.toGlyph);
         regenMats(target, op.toGlyph, newColor);
         target.mesh.material = target.matsMain; // категория звука не меняется — сигнального цвета не нужно
-        spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB);
+        spawnPulseRing(frontAnchor(target.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB, ctx);
         // РЕШЕНО (заход 20, «сейчас нет никакого эффекта — может кубик
         // разбухнет со вспышкой?»). Была права: +9% масштаба без ничего
         // больше — на практике незаметно, не читается как событие. Теперь
@@ -1712,7 +1771,7 @@ export function mountSlotExample(container, data, opts = {}) {
     // заходы 15/18) — здесь заранее вынесен за пределы веток, не внутрь них.
     if (!op._impactAt) {
       op._impactAt = elapsed;
-      spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB);
+      spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB, ctx);
     }
     const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
     const holdOpacity = op.holdOpacity ?? 0.5;
@@ -1749,7 +1808,7 @@ export function mountSlotExample(container, data, opts = {}) {
       if (t >= 1) {
         op._done = true;
         cube.mesh.visible = false;
-        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB);
+        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB, ctx);
         delete cubes[op.at];
       }
     }
