@@ -42,12 +42,25 @@ function paintGlyph(cv, ch) {
 // buildChalkMaterials — имя сохранено ради совместимости с вызывающим кодом (16 мест
 // в rule3-agnayas.js), реализация теперь простая гладкая заливка без процедурного шума:
 // быстрее в разы, цвет предсказуем (что задано, то и на кубике, без компенсаций).
+//
+// Буква красится на ОБЕИХ торцевых гранях (idx 4 И 5), не только на idx4 —
+// решение уже было найдено и явно задокументировано в старом эталонном
+// модуле (examples/rule71-vak-asti.js, buildDualFaceMaterials): при повороте
+// РОВНО на 180° (TRANSFORM_KIND.vargaPair, spinTurns:0.5 — парная замена
+// внутри варги, k↔g/t↔d и т.п.) к зрителю после разворота оказывается
+// ПРОТИВОПОЛОЖНАЯ грань (idx5), а не та, что была видна вначале (idx4) —
+// если новую букву красить только на idx4 (как раньше), после разворота
+// на 180° зритель видит пустую, без буквы, грань idx5 — кубик выглядит
+// «пропавшим», хотя реальные данные (буква/цвет) верны. Для поворотов на
+// целое число оборотов (360°/720° — гуна/вриддхи/ассимиляция) idx5 всё
+// равно никогда не виден напрямую — красить его тоже безвредно, лишняя
+// подстраховка на будущее (custom spinTurns), не только фикс для 0.5.
 function buildChalkMaterials(baseColor, seed, glyph) {
   const SZ = 256;
   const faces = [0,1,2,3,4,5]; // порядок BoxGeometry: +X -X +Y -Y +Z(перёд, глиф) -Z
   return faces.map((idx)=>{
     const cv = paintFlatFace(SZ, baseColor);
-    if (idx === 4 && glyph) paintGlyph(cv, glyph);
+    if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     return new THREE.MeshStandardMaterial({
@@ -130,10 +143,16 @@ function makeGroundTexture() {
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const ctx = cv.getContext('2d');
+  // ВРЕМЕННО ярче обычного (0.95 вместо 0.55) — диагностика: пользователь
+  // подтвердил, что при прежних, приглушённых значениях пол не был виден
+  // ВООБЩЕ даже после пересчёта позиции камеры — нужно сначала убедиться,
+  // что сам элемент физически рендерится и виден хоть как-то, прежде чем
+  // подбирать тонкую, малозаметную яркость. Вернуть приглушённые значения
+  // после подтверждения, что позиция верна.
   const g = ctx.createRadialGradient(S / 2, S * 0.34, 0, S / 2, S * 0.34, S * 0.62);
-  g.addColorStop(0, 'rgba(80,84,98,0.55)');
-  g.addColorStop(0.55, 'rgba(60,64,78,0.28)');
-  g.addColorStop(1, 'rgba(54,58,68,0)');
+  g.addColorStop(0, 'rgba(120,60,60,0.95)');
+  g.addColorStop(0.55, 'rgba(100,50,50,0.6)');
+  g.addColorStop(1, 'rgba(80,40,40,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, S, S);
   const tx = new THREE.CanvasTexture(cv);
