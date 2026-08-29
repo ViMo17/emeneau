@@ -72,11 +72,13 @@ export function attachPauseDebug(handle) {
       const opac = mats.map(m => m.opacity.toFixed(2));
       const trans = mats.map(m => (m.transparent ? '1' : '0'));
       const sh = cube.shadow;
+      const front = mats[4]; // грань 4 — лицевая, с глифом, самая важная для вопроса «видно ли сквозь неё»
       lines.push(
-        `слот ${String(slot).padStart(2)}  "${cube.tr}"  материал: ${matsLabel(cube)}  x=${cube.mesh.position.x.toFixed(2)}`,
+        `слот ${String(slot).padStart(2)}  "${cube.tr}"  материал: ${matsLabel(cube)}  x=${cube.mesh.position.x.toFixed(2)} z=${cube.mesh.position.z.toFixed(2)} renderOrder=${cube.mesh.renderOrder} visible=${cube.mesh.visible}`,
         `          opacity по граням [0..5]: ${opac.join(', ')}`,
         `          transparent по граням:    ${trans.join(', ')}`,
         `          тень: opacity=${sh.material.opacity.toFixed(2)}  visible=${sh.visible}`,
+        `          грань 4 (лицевая) — side=${front.side} blending=${front.blending} depthWrite=${front.depthWrite} depthTest=${front.depthTest} alphaTest=${front.alphaTest} colorHex=#${front.color.getHexString()} map.premultiplyAlpha=${front.map ? front.map.premultiplyAlpha : 'нет map'} needsUpdate=${front.needsUpdate}`,
       );
     }
     dumpEl.textContent = lines.join('\n');
