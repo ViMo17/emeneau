@@ -817,45 +817,6 @@
   .c4 .card-num { color: rgba(92,60,16, 0.50); }
   .c4.hovered .card-num, .c4.pinned .card-num { color: rgba(76,49,10, 0.95); }
 
-  /* ══ Поле цитаты ══ */
-  #quote-box {
-    flex-shrink: 0;
-    background: rgba(230,225,210, 0.10);
-    border: 1px solid rgba(230,225,210, 0.14);
-    border-radius: 8px;
-    padding: 9px 11px;
-    min-height: 44px;
-    max-height: 72px;
-    overflow-y: auto;
-  }
-  #quote-box::-webkit-scrollbar { width: 3px; }
-  #quote-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-
-  #quote-num {
-    font-size: 9px;
-    font-family: 'Helvetica Neue', sans-serif;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 3px;
-  }
-  #quote-text {
-    font-size: 13px;
-    font-family: 'Georgia', serif;
-    color: #bbb;
-    line-height: 1.5;
-    white-space: pre-wrap;
-  }
-  #quote-empty {
-    font-size: 10px;
-    font-family: 'Helvetica Neue', sans-serif;
-    color: #555;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-align: center;
-    padding-top: 6px;
-  }
-
   /* ══ Гуна / Вриддхи (переехала к алфавиту, справа) ══ */
   #guna-box {
     flex: 0 0 auto;
