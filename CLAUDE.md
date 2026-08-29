@@ -186,6 +186,10 @@ Exercises*, 2nd rev. ed., University of California Press, 1968. Легитимн
     ~1000 строк. Новую `apply*`-функцию добавлять сюда.
   - `slot-engine-mount.js` — `mountSlotExample`, кадровый цикл, лента
     шагов, инъекция стилей.
+  - `slot-engine-types.js` — JSDoc-типы (`Ctx`, все 9 `SlotOp`, `Cube`,
+    `ExampleData`, `Step`/`RuntimeStep`), проверяются `tsc --checkJs`
+    (`npm run typecheck`, `tsconfig.json`) — не в барреле выше (ноль
+    рантайм-экспортов, нечего реэкспортировать через `export *`).
 - `docs/app/lib/chalk-module.js` — материалы/текстуры кубиков (`paintGlyph`
   с авто-подгонкой шрифта, `buildChalkMaterials`).
 - `docs/app/examples/ruleN-name-slots.js` — данные каждого примера
@@ -423,7 +427,7 @@ ESLint (`eslint.config.js`, только «рекомендованные» пр
 
 Из трёх пунктов критики: «главный файл приложения не тронут» — закрыт
 (разбиение заходами 67-72, см. описание файла выше — практически
-завершено). «Нет интеграционных тестов» — **частично закрыт заходом 73**:
+завершено). «Нет интеграционных тестов» — **частично закрыт заходом 74**:
 UI-слой (`alpha-panel.js`/`rule-panel.js`/`role-demo.js` — панель
 алфавита, карточки правил, 2D-подсветка) теперь покрыт через jsdom
 (`tests/alphaPanel.test.mjs`/`roleDemo.test.mjs`/`rulePanel.test.mjs`,
@@ -431,6 +435,46 @@ UI-слой (`alpha-panel.js`/`rule-panel.js`/`role-demo.js` — панель
 и монтирование 3D-сцены (THREE.js/canvas/WebGL) — по-прежнему НЕ
 покрыты и вряд ли будут: jsdom не даёт WebGL-контекст, это отдельная,
 более тяжёлая история (нужен headless-браузер вроде Playwright, не jsdom).
+
+**Заход 77 — типизация (JSDoc + `tsc --checkJs`), по итогам критической
+оценки кодовой базы «глазами стороннего программиста».** Ноль типов было
+во всём проекте — не «maximal typing» (TypeScript потребовал бы сборки,
+которой у проекта осознанно нет), а лёгкая проверка без транспиляции:
+`tsconfig.json` (`checkJs`+`allowJs`+`noEmit`, только `docs/app/lib/**`),
+`npm run typecheck` (в CI тоже), новый файл `docs/app/lib/slot-engine-types.js`
+— ТОЛЬКО JSDoc `@typedef`, ноль рантайм-кода (`export {}` в конце нужен
+только чтобы файл считался ES-модулем для `import(...).Тип`). Описаны:
+`Ctx`, все 9 типов `SlotOp` (источник правды по полям —
+`slot-engine-validate.js`, плюс реально прочитанные `??`-поля в
+`slot-engine-ops.js`, которых validate НЕ проверяет), `Cube`, `PulseFace`,
+`ExampleData`, `Step`/`RuntimeStep`. Аннотированы `@param`/`@returns` на
+публичном API всех 7 модулей `docs/app/lib` (не только `apply*`, как
+звучало в исходной рекомендации — по факту разумно расширилось на прямые
+помощники и утилиты того же файла).
+
+Реальные находки, не гипотетические (типизация нашла их, не выдумала):
+- **7 полей верхнего уровня `ExampleData`, нигде не собранных в одном
+  месте** (`dimOpacity`/`stepRamp`/`revealStagger`/`revealRamp`/
+  `settleDelay`/`fallStagger`/`fallDur`) — не проверяются
+  `validateExampleData` вообще (та проверяет только `initial`/`steps`/
+  `ops`), знание о них было рассеяно по инлайновым комментариям в
+  `slot-engine-mount.js` и `slot-engine-ops.js` по отдельности.
+- **`impactColor` (ElideOp) и `holdPulseColor` (ApproachOp) — строки
+  "R,G,B"** (см. `GROUP_RGB`/`ringColorFrom`), не hex-числа, как у
+  `toColor`/`bounceH` в других операциях — типизация поймала это как
+  ошибку несоответствия типов при первой попытке описать оба поля
+  единообразно как `number`.
+- Барабан-файл `slot-engine.js` (`export * from` каждого модуля) не
+  терпит одинаковых локальных `@typedef`-алиасов в двух разных
+  барелящихся модулях (`Cube`, объявленный и в `slot-engine-cube.js`, и
+  в `slot-engine-ops.js`, дал «already exported» — типы, в отличие от
+  рантайм-экспортов, `export *` подхватывает тоже) — держать общий алиас
+  только в ОДНОМ модуле, в остальных — полный `import('./slot-engine-types.js').X`.
+
+Не нашла и не могла найти: ничего в `docs/app/data.js`,
+`alpha-panel.js`, `rule-panel.js`, `role-demo.js` — типизация сознательно
+ограничена `docs/app/lib` (сам движок), как и звучала исходная
+рекомендация; остальное — отдельная, не начатая работа при желании.
 
 **Стадия 1 — ГОТОВА.** `package.json` (тип модуля, `npm test` через
 встроенный `node:test`, без внешних тест-фреймворков — тот же минимализм,

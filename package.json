@@ -8,14 +8,17 @@
     "test": "node --test",
     "lint": "eslint .",
     "check-conventions": "node scripts/check-no-zahod.mjs",
-    "audit": "npm audit --audit-level=high"
+    "audit": "npm audit --audit-level=high",
+    "typecheck": "tsc"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.1",
     "jsdom": "^27.0.0",
-    "three": "0.128.0"
+    "three": "0.128.0",
+    "typescript": "^7.0.2"
   },
   "_comment_three": "Реальная версия three.js в браузере — r128, ВЕНДОРЕНА локально (docs/app/vendor/three.module.js), НЕ через npm/node_modules. Версия здесь ЗАФИКСИРОВАНА (0.128.0, без ^) РОВНО на неё — раньше стояло ^0.185.1 (57 версий расхождения), безвредно только потому, что протестированные здесь функции (colorFor, buildRuntimeSteps и т.п.) чистые и THREE.* не вызывают вообще; если код, реально использующий THREE (сцена, геометрия), когда-нибудь окажется на уровне модуля и получит тесты — расхождение версий стало бы реальным риском. Подробности — tests/README.md, «Про версию three в devDependencies».",
-  "_comment_jsdom": "Нужен только для тестов UI-слоя (alpha-panel.js/rule-panel.js/role-demo.js) — getElementById/querySelectorAll/SVG/MutationObserver, которых нет в самодельном стабе tests/helpers/canvasStub.mjs. Не попадает в продакшн — движок в браузере работает с настоящим DOM."
+  "_comment_jsdom": "Нужен только для тестов UI-слоя (alpha-panel.js/rule-panel.js/role-demo.js) — getElementById/querySelectorAll/SVG/MutationObserver, которых нет в самодельном стабе tests/helpers/canvasStub.mjs. Не попадает в продакшн — движок в браузере работает с настоящим DOM.",
+  "_comment_typescript": "Только CLI `tsc` для проверки типов JSDoc-аннотаций (`npm run typecheck`, см. tsconfig.json) — noEmit, ничего не транспилируется и не собирается, principle «без сборки» не нарушается. Типы — только для docs/app/lib (слот-движок), не для всего приложения."
 }

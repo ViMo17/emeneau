@@ -34,6 +34,7 @@
    `approach.movers`/`mover`, `steps[].activeSlots`. Не меняет уже написанные данные с
    голыми числами — старые примеры продолжают работать как есть; формула — это
    ДОПОЛНИТЕЛЬНАЯ возможность, не обязательная замена. */
+/** @param {import('./slot-engine-types.js').InitialItem[]} initial @returns {number[][]} */
 export function computeWordGroups(initial) {
   const slots = (initial || []).map(x => x.slot).sort((a, b) => a - b);
   const groups = [];
@@ -45,6 +46,7 @@ export function computeWordGroups(initial) {
   if (cur.length) groups.push(cur);
   return groups;
 }
+/** @param {import('./slot-engine-types.js').SlotRef} ref @param {number[][]} groups @returns {number[]} */
 export function resolveSlotRef(ref, groups) {
   if (ref == null) return [];
   if (typeof ref === 'number') return [ref];

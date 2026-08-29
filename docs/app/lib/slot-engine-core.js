@@ -65,6 +65,7 @@ const TWO_CHAR = new Set([
 ]);
 const ONE_CHAR = new Set('āīūṛṝḷaeiou' + 'kgṅcjñṭḍṇtdnpbmyrlvśṣsh' + 'ṃḥ');
 
+/** @param {string} word @returns {string[]} */
 export function tokenize(word) {
   const clean = word.replace(/[-']/g, '');
   const cubes = [];
@@ -80,10 +81,12 @@ export function tokenize(word) {
 }
 
 /* ═══════════════════ ГЕОМЕТРИЯ РЯДА ═══════════════════ */
+/** @param {number} i @returns {number} */
 export function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
 
 /* Утилита для автора данных — считает, с какого слота центрировать N букв,
    ПЕРЕД тем как вручную прописывать initial. Не используется в рантайме. */
+/** @param {string[]} letters @param {number|null} [startAt] @returns {import('./slot-engine-types.js').InitialItem[]} */
 export function centerSlots(letters, startAt = null) {
   const n = letters.length;
   const start = startAt !== null ? startAt : Math.floor((N_SLOTS - n) / 2);
@@ -102,6 +105,7 @@ export const COL_VEL = 0xA8D878, COL_PAL = 0x7DCFCA, COL_RET = 0xC5B0D8,
 // фонема, записанная двумя символами, неразличимы формально.
 const MULTI_CHAR_PHONEMES = new Set(['kh','gh','ch','jh','ṭh','ḍh','th','dh','ph','bh','ai','au']);
 
+/** @param {string} tr @returns {number} */
 export function colorFor(tr) {
   // «Сжатый многобуквенный блок → нейтральный цвет» нельзя проверять по
   // tr.length>1 — это ловит и однофонемные многобуквенные записи (см.
@@ -152,22 +156,30 @@ function hslToRgbStr(h, s, l) {
   }
   return `${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)}`;
 }
+/** @param {number} hex @returns {string} строка "R,G,B" — тот же тон, заметно светлее */
 export function ringColorFrom(hex) {
   const [h, s, l] = hexToHsl(hex);
   return hslToRgbStr(h, Math.min(1, s + 0.25), Math.min(0.86, l + 0.22)); // тот же тон, заметно светлее
 }
 
+/** @param {number} t @returns {number} t, ограниченный диапазоном [0,1] */
 export function clamp01(t) { return Math.max(0, Math.min(1, t)); }
+/** @param {number} a @param {number} b @param {number} t @returns {number} */
 export function lerp(a, b, t) { return a + (b - a) * t; }
+/** @param {number} t @returns {number} */
 export function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 // добавлено (плавность): мягкий разгон И торможение — там, где раньше
 // движение стартовало сразу на полной скорости (easeOutCubic в t=0 имеет
 // не нулевую производную, отсюда «рывок» в начале хода).
+/** @param {number} t @returns {number} */
 export function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
 // медленный старт, ускоряющееся исчезновение — читается как растворение
 // (elide), не механическое схлопывание.
+/** @param {number} t @returns {number} */
 export function easeInCubic(t) { return t * t * t; }
+/** @param {number} t @returns {number} */
 export function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
+/** @param {number} t @returns {number} */
 export function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;
   if (t < 1/d1) return n1*t*t;
@@ -178,11 +190,13 @@ export function easeOutBounce(t) {
 // Падение использует easeOutBounce напрямую, без подмеси easeOutCubic —
 // та же формула, что и в rule3-agnayas.js, с полноценным отскоком при
 // приземлении. Не заменять на смесь с easeOutCubic — это глушит отскок.
+/** @param {number} t @returns {number} */
 export function easeFall(t) { return easeOutBounce(t); }
 
 // setOpacity — общая THREE-утилита (duck-typed, THREE сама не импортируется):
 // mesh.material бывает как одним материалом, так и массивом (BoxGeometry,
 // 6 граней) — единое место, не дублируется в каждой apply*-функции.
+/** @param {import('three').Mesh} mesh @param {number} val */
 export function setOpacity(mesh, val) {
   const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   mats.forEach(m => { m.opacity = val; });

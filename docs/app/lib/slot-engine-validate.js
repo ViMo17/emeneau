@@ -36,6 +36,7 @@ function isSlotRef(ref) {
 }
 const KNOWN_OP_TYPES = new Set(['influence', 'approach', 'transform', 'split', 'arrive', 'merge', 'elide', 'settle', 'dim']);
 
+/** @param {import('./slot-engine-types.js').ExampleData} data @returns {string[]} список проблем, пустой массив если данные корректны */
 export function validateExampleData(data) {
   const problems = [];
   if (!data || typeof data !== 'object') return ['data должен быть объектом'];

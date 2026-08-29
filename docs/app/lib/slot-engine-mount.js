@@ -14,6 +14,12 @@ import {
   applyMerge, applyElide, applySettle, applyDim, applyStepDim, disposePulseFace,
 } from './slot-engine-ops.js';
 
+/**
+ * @param {HTMLElement} container
+ * @param {import('./slot-engine-types.js').ExampleData} data
+ * @param {Object} [opts]
+ * @returns {{unmount: () => void, replay: () => {unmount: () => void, replay: Function}}}
+ */
 export function mountSlotExample(container, data, opts = {}) {
   const problems = validateExampleData(data);
   if (problems.length) {
@@ -32,8 +38,8 @@ export function mountSlotExample(container, data, opts = {}) {
     </div>
     <div class="slot-steps"></div>
   </div>`;
-  const stageEl = container.querySelector('.slot-canvas-wrap');
-  const labelsEl = container.querySelector('.slot-labels');
+  const stageEl = /** @type {HTMLElement} */ (container.querySelector('.slot-canvas-wrap'));
+  const labelsEl = /** @type {HTMLElement} */ (container.querySelector('.slot-labels'));
   const stepsEl = container.querySelector('.slot-steps');
 
   // группы слов (по зазорам в data.initial) — общая формула вместо ручных номеров
@@ -53,18 +59,21 @@ export function mountSlotExample(container, data, opts = {}) {
   // флаг уже true от чужого прогона. Поэтому ops клонируются заново на
   // каждый mount(), без унаследованных «_»-полей ни от какого предыдущего
   // прогона — data.ops остаётся нетронутым модульным экспортом.
-  const ops = (data.ops || []).map(op => {
+  const ops = /** @type {import('./slot-engine-types.js').SlotOp[]} */ ((data.ops || []).map(op => {
     const clean = {};
     for (const k in op) if (!k.startsWith('_')) clean[k] = op[k];
     return clean;
-  });
+  }));
 
   // лента шагов — чипы строятся один раз из data.steps (если есть); activeSlots
   // каждого шага прогоняется через resolveSlotRef — ссылки вида {word:2} становятся
   // плоским списком номеров слотов ДО того, как в дело вступит buildRuntimeSteps
   // (та функция как была «глухой» к словам-группам, так и остаётся — проще).
+  /** @type {import('./slot-engine-types.js').RuntimeStep[]} */
   const resolvedAuthoredSteps = (data.steps || []).map(step => {
-    if (!step.activeSlots || step.activeSlots === 'ALL') return step;
+    // В этой ветке activeSlots всегда 'ALL' или отсутствует — уже совместимо
+    // с RuntimeStep без реального resolveSlotRef, приведение типа честное.
+    if (!step.activeSlots || step.activeSlots === 'ALL') return /** @type {import('./slot-engine-types.js').RuntimeStep} */ (step);
     return { ...step, activeSlots: [...new Set(resolveSlotRef(step.activeSlots, wordGroupsList))] };
   });
   const runtimeSteps = buildRuntimeSteps(resolvedAuthoredSteps);
@@ -239,6 +248,7 @@ export function mountSlotExample(container, data, opts = {}) {
   // чтобы проверять РЕАЛЬНЫЕ числа на работающей странице, не строить
   // гипотезы по коду вслепую. Не убирать, пока не закрыто расследование
   // асимметричной прозрачности (см. CLAUDE.md, Часть 6, пункт 0).
+  // @ts-ignore — __slotDebug не часть типа Window, диагностический люк намеренно ad-hoc
   if (typeof window !== 'undefined') window.__slotDebug = ctx;
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {

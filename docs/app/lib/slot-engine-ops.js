@@ -14,6 +14,20 @@ import { makeCube, regenMats } from './slot-engine-cube.js';
 import { resolveSlotRef } from './slot-engine-words.js';
 import { stepIndexAt, stepTargetOpacity } from './slot-engine-steps.js';
 
+/**
+ * @typedef {import('./slot-engine-types.js').Ctx} Ctx
+ * @typedef {import('./slot-engine-types.js').PulseFace} PulseFace
+ * @typedef {import('./slot-engine-types.js').TransformOp} TransformOp
+ * @typedef {import('./slot-engine-types.js').ElideOp} ElideOp
+ * @typedef {import('./slot-engine-types.js').InfluenceOp} InfluenceOp
+ * @typedef {import('./slot-engine-types.js').ApproachOp} ApproachOp
+ * @typedef {import('./slot-engine-types.js').SplitOp} SplitOp
+ * @typedef {import('./slot-engine-types.js').ArriveOp} ArriveOp
+ * @typedef {import('./slot-engine-types.js').MergeOp} MergeOp
+ * @typedef {import('./slot-engine-types.js').SettleOp} SettleOp
+ * @typedef {import('./slot-engine-types.js').DimOp} DimOp
+ */
+
 /* ═══════════════════ ОПЕРАЦИИ ═══════════════════
 
    Каждый обработчик — функция уровня модуля с единой сигнатурой
@@ -71,6 +85,7 @@ import { stepIndexAt, stepTargetOpacity } from './slot-engine-steps.js';
 // и сброс поворота/позиции — не отдельная пауза) — переключение на
 // matsMain, истинный цвет столбца. Серебро закреплено ИМЕННО за гунацией,
 // не за самим фактом трансформации — см. op.signal ниже.
+/** @param {TransformOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyTransform(op, elapsed, ctx) {
     const { cubes } = ctx;
     const cube = cubes[op.at];
@@ -164,6 +179,7 @@ export function applyTransform(op, elapsed, ctx) {
     }
 }
 
+/** @param {import('three').Vector3} vec3 @param {Ctx} ctx @returns {{x: number, y: number}} */
 export function project(vec3, ctx) {
   const { stageEl, camera } = ctx;
   const w = stageEl.clientWidth, h = stageEl.clientHeight;
@@ -182,6 +198,7 @@ export function project(vec3, ctx) {
    более высокой камере (camBase y=3.2, не низкая почти-анфас, как в
    rule3-agnayas.js) кольца проецируются заметно выше и в сторону от
    видимой грани. Формула верна даже пока кубик дрожит/крутится. */
+/** @param {import('three').Mesh} mesh @param {number} [zOff] @param {number} [yOff] @returns {import('three').Vector3} */
 export function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
   const local = new THREE.Vector3(0, yOff, zOff).applyQuaternion(mesh.quaternion);
   return mesh.position.clone().add(local);
@@ -193,6 +210,7 @@ export function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
    rgbStr — необязательный: без него кольцо золотое (CSS по умолчанию,
    как раньше), с ним — оттенок СОБСТВЕННОГО цвета конкретного кубика
    (см. ringColorFrom) — общая утилита, не частность agnayas. */
+/** @param {import('three').Vector3} atVec3 @param {number} dur @param {string|undefined} rgbStr @param {Ctx} ctx */
 export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   const { labelsEl } = ctx;
   const p = project(atVec3, ctx);
@@ -206,6 +224,7 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   setTimeout(() => ring.remove(), dur + 80);
 }
 
+/** @param {ElideOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyElide(op, elapsed, ctx) {
     const { cubes } = ctx;
     if (elapsed < op.start) return;
@@ -282,6 +301,7 @@ export function applyElide(op, elapsed, ctx) {
    подменённым индексом 4 (не мутирует сам matsMain — иначе после возврата
    к обычному виду грань осталась бы с кольцом навсегда), после —
    возвращается обычный matsMain как есть. */
+/** @param {number} hex @param {string} glyph @returns {PulseFace} */
 export function buildPulseFace(hex, glyph) {
   const SZ = 256;
   const cv = document.createElement('canvas');
@@ -299,6 +319,7 @@ export function buildPulseFace(hex, glyph) {
   return { material, canvas: cv, baseCanvas: baseCv, glyph };
 }
 // radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца
+/** @param {PulseFace} pf @param {number|null} radiusFrac @param {number} [alpha] @param {string} [ringRgb] */
 export function redrawPulseFace(pf, radiusFrac, alpha, ringRgb) {
   const sz = pf.canvas.width;
   const pfCtx = pf.canvas.getContext('2d');
@@ -321,6 +342,7 @@ export function redrawPulseFace(pf, radiusFrac, alpha, ringRgb) {
    индекс 4 (передняя грань) в СВЕЖЕЙ копии текущего набора материалов —
    сам matsMain не трогается ни разу, поэтому «выключить» — это просто
    вернуть cube.mesh.material = cube.matsMain как было. */
+/** @param {import('./slot-engine-types.js').Cube} cube @param {number|null} radiusFrac @param {number} [alpha] @param {string} [ringRgb] */
 export function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
   if (!cube._pulseFace) {
     cube._pulseFace = buildPulseFace(colorFor(cube.tr), cube.tr);
@@ -343,6 +365,7 @@ export function setFacePulse(cube, radiusFrac, alpha, ringRgb) {
 // уничтожается автоматически вместе с ними; отдельная утечка, найденная
 // и исправленная попутно с ленивыми материалами (тот же класс проблемы:
 // per-cube текстура без единого места, где её уничтожают).
+/** @param {import('./slot-engine-types.js').Cube} cube */
 export function disposePulseFace(cube) {
   if (!cube._pulseFace) return;
   if (cube._pulseFace.material?.map) cube._pulseFace.material.map.dispose();
@@ -352,6 +375,7 @@ export function disposePulseFace(cube) {
 
 // Как и spawnPulseRing — DOM-кольцо, координаты через project(vec3, ctx),
 // поэтому берёт ctx явным параметром вместо захвата через замыкание.
+/** @param {import('three').Vector3} fromVec3 @param {import('three').Vector3} toVec3 @param {number} dur @param {string|undefined} rgbStr @param {Ctx} ctx */
 export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
   const { labelsEl } = ctx;
   const pA = project(fromVec3, ctx), pB = project(toVec3, ctx);
@@ -376,6 +400,7 @@ export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
    подчёркивать одну букву незачем, там и так ясно, что происходит. Общая
    утилита операции, не частность influence — как только появится другая
    операция, работающая с группой, эта же функция подойдёт ей без правок. */
+/** @param {InfluenceOp} op @param {import('./slot-engine-types.js').Cube[]} sources @param {number} elapsed @param {Ctx} ctx */
 export function updateGroupFrame(op, sources, elapsed, ctx) {
   const { labelsEl } = ctx;
   const holdEnd = op._frameHoldEnd;
@@ -414,7 +439,7 @@ export function updateGroupFrame(op, sources, elapsed, ctx) {
   // мягкое появление/исчезание по краям окна — то же 400мс, что уже
   // ощущается «плавно» у остальных рамп в движке, отдельного числа не вводим
   const fadeT = Math.min(elapsed - op.start, holdEnd - elapsed) / 400;
-  el.style.opacity = clamp01(fadeT);
+  el.style.opacity = String(clamp01(fadeT)); // CSSOM-свойство — строка, значение не меняется
 }
 
 /* INFLUENCE — дальнодействие до самого превращения: несколько волн-
@@ -448,6 +473,7 @@ export function updateGroupFrame(op, sources, elapsed, ctx) {
    transform). Это одновременно и ответ на «не вижу выделения АС как единой
    группы» — сустейн-кольца на ОБОИХ кубиках группы одновременно и есть
    видимое выделение. */
+/** @param {InfluenceOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyInfluence(op, elapsed, ctx) {
   const { cubes, wordGroupsList } = ctx;
   const target = cubes[op.to];
@@ -567,6 +593,7 @@ export function applyInfluence(op, elapsed, ctx) {
    кода обычно ставится в 0 отдельно (дрожь — язык именно несовместимости,
    не нужна тут по смыслу, но остаётся доступной, если понадобится
    где-то ещё). */
+/** @param {ApproachOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyApproach(op, elapsed, ctx) {
   const { cubes, wordGroupsList } = ctx;
   // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
@@ -718,6 +745,7 @@ export function applyApproach(op, elapsed, ctx) {
    где кубик материализуется за кадром и прилетает по дуге), не
    дублируется под каждую операцию отдельно. Чистая функция — ctx не
    требует вообще. */
+/** @param {{x: number, y: number, z: number}} from @param {number} toX @param {number} toY @param {number} toZ @param {number} t @param {number} [arcHeight] @returns {{x: number, y: number, z: number}} */
 export function flyArcPosition(from, toX, toY, toZ, t, arcHeight = 1.0) {
   const te = easeInOutCubic(t);
   const arc = Math.sin(t * Math.PI) * arcHeight;
@@ -732,6 +760,7 @@ export function flyArcPosition(from, toX, toY, toZ, t, arcHeight = 1.0) {
    гунацией в applyTransform, держать его ещё и здесь означало бы два
    разных события одним и тем же сигналом. Пульс масштабом и два кольца
    сами по себе достаточно ясно говорят «сейчас что-то произойдёт». */
+/** @param {SplitOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applySplit(op, elapsed, ctx) {
   const { cubes, scene } = ctx;
   if (elapsed < op.start) return;
@@ -851,6 +880,7 @@ export function applySplit(op, elapsed, ctx) {
    правило. Несколько элементов сразу — items[], каждый со своим
    delay/dur/from/arcHeight, как у split.arrivals.
    { type:'arrive', items:[{into,newSlot,from,delay,dur,arcHeight}], start } */
+/** @param {ArriveOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyArrive(op, elapsed, ctx) {
   const { cubes, scene } = ctx;
   (op.items || []).forEach(item => {
@@ -887,6 +917,7 @@ export function applyArrive(op, elapsed, ctx) {
    для порядка/подсчёта это неважно, важна только сортировка номеров, а
    не их непрерывность.
    { type:'merge', from, at, toGlyph, toColor, start, dur=1400, pulseHoldMs } */
+/** @param {MergeOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyMerge(op, elapsed, ctx) {
   const { cubes } = ctx;
   if (elapsed < op.start) return;
@@ -947,6 +978,7 @@ export function applyMerge(op, elapsed, ctx) {
 // используется в паузе перед split. Обе половины стыкуются без разрыва
 // (обе синусоиды дают 0 на границе t=0.6). Цвет меняется РОВНО на
 // вершине волны (t=0.5).
+/** @param {SettleOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applySettle(op, elapsed, ctx) {
   const { cubes } = ctx;
   const stepDelay = op.stepDelay ?? 180;
@@ -975,6 +1007,7 @@ export function applySettle(op, elapsed, ctx) {
    он сам считает пересечения и снимает притенение к концу; ручной 'dim'
    по-прежнему полезен для локальных, не связанных с шагами эффектов.
    { type:'dim', slots:[...], start, end, dimOpacity=0.22, ramp=700 } */
+/** @param {DimOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyDim(op, elapsed, ctx) {
   const { cubes } = ctx;
   if (elapsed < op.start || elapsed > op.end) return;
@@ -1003,6 +1036,7 @@ export function applyDim(op, elapsed, ctx) {
    двух концов), не просто лишним. Не op-based (сигнатура отличается от
    всех остальных apply* — вызывается раз в кадр без привязки к конкретной
    операции), но по той же схеме: внешние зависимости через ctx. */
+/** @param {number} elapsed @param {Ctx} ctx */
 export function applyStepDim(elapsed, ctx) {
   const { cubes, runtimeSteps, data } = ctx;
   if (!runtimeSteps) return;

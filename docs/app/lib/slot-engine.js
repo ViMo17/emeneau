@@ -43,6 +43,8 @@
 //   slot-engine-validate.js — валидация data перед первым кадром.
 //   slot-engine-ops.js      — обработчики операций (apply*) и их помощники.
 //   slot-engine-mount.js    — mountSlotExample: сцена, кадровый цикл, стили.
+//   slot-engine-types.js    — JSDoc-типы (tsc --checkJs), не в барреле: ноль
+//                             рантайм-экспортов, нечего реэкспортировать.
 
 export * from './slot-engine-core.js';
 export * from './slot-engine-cube.js';

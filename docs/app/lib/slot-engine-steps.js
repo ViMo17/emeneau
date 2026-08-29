@@ -24,6 +24,12 @@
    не трогаем, ими управляет сама операция split): если слот входит в
    activeSlots текущего шага — полная непрозрачность, если нет — притенён.
    У границ шагов — плавный переход (RAMP мс), не рывок. */
+/**
+ * @param {import('./slot-engine-types.js').RuntimeStep | null} step
+ * @param {number} slot
+ * @param {number} dimOpacity
+ * @returns {number}
+ */
 export function stepTargetOpacity(step, slot, dimOpacity) {
   if (!step) return 1;
   if (step.activeSlots === 'ALL') return 1;
@@ -48,12 +54,26 @@ export function stepTargetOpacity(step, slot, dimOpacity) {
 // время — обрывается на полпути и откатывается назад, левая и правая
 // половина ряда оказываются на разной стадии прерванной волны. Поэтому
 // одинаковый состав активных слотов — зазор пропускается без проявления.
+/**
+ * a/b — уже РАЗРЕШЁННЫЕ activeSlots соседних runtime-шагов (см. resolveSlotRef
+ * в slot-engine-mount.js), не сырой SlotRef автора.
+ * @param {'ALL' | number[]} a
+ * @param {'ALL' | number[]} b
+ * @returns {boolean}
+ */
 export function sameActiveSlots(a, b) {
   if (a === 'ALL' || b === 'ALL') return a === b;
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
   const sa = [...a].sort((x, y) => x - y), sb = [...b].sort((x, y) => x - y);
   return sa.every((v, i) => v === sb[i]);
 }
+/**
+ * steps — авторские шаги ПОСЛЕ разрешения activeSlots в плоский массив
+ * (см. resolveSlotRef в slot-engine-mount.js) — вот почему тип параметра
+ * RuntimeStep (уже разрешённая форма), а не сырой Step.
+ * @param {import('./slot-engine-types.js').RuntimeStep[] | undefined} steps
+ * @returns {import('./slot-engine-types.js').RuntimeStep[] | null}
+ */
 export function buildRuntimeSteps(steps) {
   if (!steps || !steps.length) return null;
   const list = [];
@@ -78,6 +98,7 @@ export function buildRuntimeSteps(steps) {
   return list;
 }
 
+/** @param {number} elapsed @param {import('./slot-engine-types.js').RuntimeStep[]} runtimeSteps @returns {number} */
 export function stepIndexAt(elapsed, runtimeSteps) {
   for (let i = 0; i < runtimeSteps.length; i++) {
     if (elapsed < runtimeSteps[i].end) return i;

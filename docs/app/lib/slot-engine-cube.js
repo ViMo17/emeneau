@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
 import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, colorFor } from './slot-engine-core.js';
 
+/** @typedef {import('./slot-engine-types.js').Cube} Cube */
+
 const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где нижняя грань кубика касается земли в покое
 
 // Форма кубика и форма плоскости тени ОДИНАКОВЫ у всех кубиков (размер
@@ -98,9 +100,16 @@ function defineMatsSlot(cube, key, lazyBuilder) {
   });
 }
 
+/** @param {string} tr @param {number} seed @returns {Cube} */
 export function makeCube(tr, seed) {
   const color = colorFor(tr);
-  const cube = { tr, color, seed, _settled: false };
+  // Приведение типа, не рантайм-присваивание: mesh/shadow/matsMain
+  // реально появляются на cube несколькими строками ниже (через прямое
+  // присваивание и defineMatsSlot/Object.defineProperty) — здесь только
+  // объявляем итоговую форму заранее, чтобы tsc проверял ЭТИ присваивания
+  // на совместимость с Cube, не выводил тип из одного неполного литерала.
+  /** @type {Cube} */
+  const cube = /** @type {any} */ ({ tr, color, seed, _settled: false });
   defineMatsSlot(cube, 'matsMain', null); // всегда эагерно — нужен сразу, как только кубик падает
   defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
   defineMatsSlot(cube, 'matsReady', c => buildOneMatSet(READY_COLOR, c.seed + 2, c.tr));
@@ -116,6 +125,7 @@ export function makeCube(tr, seed) {
    matsBlank/matsReady/matsSignal просто СБРАСЫВАЮТСЯ (через сеттер выше —
    старые при этом уничтожаются) и лениво пересоберутся под НОВУЮ букву
    при следующем реальном обращении, не раньше. */
+/** @param {Cube} cube @param {string} newTr @param {number} [newColor] */
 export function regenMats(cube, newTr, newColor) {
   const color = newColor ?? colorFor(newTr);
   cube.seed += 10;
@@ -137,6 +147,7 @@ export function regenMats(cube, newTr, newColor) {
    тень оставалась бы в полный размер, зависшей на месте, пока кубик
    реально уходит вниз). Тень пропадает полностью ещё до того, как кубик
    успевает уйти далеко вниз. */
+/** @param {Cube} cube */
 export function updateShadow(cube) {
   cube.shadow.position.x = cube.mesh.position.x + 0.08;
   cube.shadow.position.z = cube.mesh.position.z + 0.05;
