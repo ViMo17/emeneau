@@ -73,7 +73,7 @@ export function attachPauseDebug(handle) {
       const trans = mats.map(m => (m.transparent ? '1' : '0'));
       const sh = cube.shadow;
       lines.push(
-        `слот ${String(slot).padStart(2)}  "${cube.tr}"  материал: ${matsLabel(cube)}`,
+        `слот ${String(slot).padStart(2)}  "${cube.tr}"  материал: ${matsLabel(cube)}  x=${cube.mesh.position.x.toFixed(2)}`,
         `          opacity по граням [0..5]: ${opac.join(', ')}`,
         `          transparent по граням:    ${trans.join(', ')}`,
         `          тень: opacity=${sh.material.opacity.toFixed(2)}  visible=${sh.visible}`,
