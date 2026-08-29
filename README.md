@@ -49,7 +49,7 @@ docs/                                ← публикуется через GitHu
 
 ```bash
 npm install         # тесты используют three как dev-зависимость (см. tests/README.md)
-npm test            # 112 тестов, встроенный тестраннер Node, без Jest/Vitest
+npm test            # 132 теста, встроенный тестраннер Node, без Jest/Vitest
 npm run lint        # ESLint, только "рекомендованные" правила
 npm run check-conventions   # автоматическая проверка, что в docs/app не завелись
                             # комментарии с историей рабочих сессий («заход N»)

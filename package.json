@@ -12,7 +12,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.9.1",
+    "jsdom": "^27.0.0",
     "three": "^0.185.1"
   },
-  "_comment_three": "Реальная версия three.js в браузере — r128, ВЕНДОРЕНА локально (docs/app/vendor/three.module.js), НЕ через npm/node_modules. Эта devDependency нужна ТОЛЬКО чтобы `import * as THREE from 'three'` резолвился при запуске тестов в Node — сами протестированные здесь функции (colorFor, buildRuntimeSteps и т.п.) чистые, THREE.* не вызывают вообще, поэтому расхождение версий тестам не мешает. Для тестирования кода, который РЕАЛЬНО использует THREE (сцена, геометрия) — версия имела бы значение, но такой код пока не вынесен на уровень модуля (см. README.md, «Известные ограничения»)."
+  "_comment_three": "Реальная версия three.js в браузере — r128, ВЕНДОРЕНА локально (docs/app/vendor/three.module.js), НЕ через npm/node_modules. Эта devDependency нужна ТОЛЬКО чтобы `import * as THREE from 'three'` резолвился при запуске тестов в Node — сами протестированные здесь функции (colorFor, buildRuntimeSteps и т.п.) чистые, THREE.* не вызывают вообще, поэтому расхождение версий тестам не мешает. Подробности — tests/README.md, «Про версию three в devDependencies».",
+  "_comment_jsdom": "Нужен только для тестов UI-слоя (alpha-panel.js/rule-panel.js/role-demo.js) — getElementById/querySelectorAll/SVG/MutationObserver, которых нет в самодельном стабе tests/helpers/canvasStub.mjs. Не попадает в продакшн — движок в браузере работает с настоящим DOM."
 }
