@@ -115,4 +115,30 @@ function makeShadowBlobTexture() {
   return tx;
 }
 
-export { CW, paintGlyph, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture };
+// Мягкая радиальная подсветка «пола» позади ряда кубиков — портировано
+// дословно из старого рукописного эталона (examples/rule71-vak-asti.js,
+// makeGroundTexture) при расследовании CLAUDE.md, Часть 6, п.0. У самого
+// слот-движка такого элемента не было вообще (только маленькие тени под
+// каждым кубиком, см. makeShadowBlobTexture выше) — из-за этого
+// притенённому (opacity:0.22) кубику визуально было НЕЧЕГО «показывать
+// сквозь себя», кроме плоского цвета страницы, и притенение читалось как
+// «просто тёмный цвет», а не как настоящая прозрачность. С этим полом
+// проверка на реальном экране (эталонный rule71-vak-asti.js) показывает
+// однозначную прозрачность — пол темнеет, соседний кубик проглядывает.
+function makeGroundTexture() {
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(S / 2, S * 0.34, 0, S / 2, S * 0.34, S * 0.62);
+  g.addColorStop(0, 'rgba(80,84,98,0.55)');
+  g.addColorStop(0.55, 'rgba(60,64,78,0.28)');
+  g.addColorStop(1, 'rgba(54,58,68,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+  const tx = new THREE.CanvasTexture(cv);
+  tx.encoding = THREE.sRGBEncoding;
+  return tx;
+}
+
+export { CW, paintGlyph, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture, makeGroundTexture };

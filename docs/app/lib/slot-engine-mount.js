@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { slotX, clamp01, easeFall } from './slot-engine-core.js';
-import { makeCube, updateShadow, isSharedResource } from './slot-engine-cube.js';
+import { makeCube, updateShadow, isSharedResource, makeGround } from './slot-engine-cube.js';
 import { computeWordGroups, resolveSlotRef } from './slot-engine-words.js';
 import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
 import { validateExampleData } from './slot-engine-validate.js';
@@ -237,6 +237,7 @@ export function mountSlotExample(container, data, opts = {}) {
   const key = new THREE.DirectionalLight(0xffffff, 0.6);
   key.position.set(3, 6, 4);
   scene.add(key);
+  scene.add(makeGround());
 
   const cubes = {}; // slot-index → кубик
   // ctx — единый объект контекста для всех apply*-функций (см. ═ ОПЕРАЦИИ ═
