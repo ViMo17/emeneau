@@ -18,7 +18,7 @@ import {
  * @param {HTMLElement} container
  * @param {import('./slot-engine-types.js').ExampleData} data
  * @param {Object} [opts]
- * @returns {{unmount: () => void, replay: () => {unmount: () => void, replay: Function}}}
+ * @returns {import('./slot-engine-types.js').MountHandle}
  */
 export function mountSlotExample(container, data, opts = {}) {
   const problems = validateExampleData(data);
@@ -289,11 +289,20 @@ export function mountSlotExample(container, data, opts = {}) {
   // все более ранние фазы за один кадр — те же свежие флаги на каждый
   // вызов, что и у ops при обычном mount(), просто здесь elapsed сразу
   // большой, а не растёт с нуля.
-  const t0 = performance.now() - (opts.startAt ?? 0);
+  let t0 = performance.now() - (opts.startAt ?? 0);
   let rafId = null;
+  // ПАУЗА — диагностический инструмент (см. CLAUDE.md, Часть 6, пункт 0,
+  // расследование асимметричной прозрачности притенённых кубиков): рендер
+  // нужно уметь заморозить на произвольном elapsed и сдвигать вручную по
+  // мс, чтобы снимать точный кадр (скриншот + реальные числа из
+  // window.__slotDebug) ровно в момент проблемы, а не ловить его на лету
+  // между кадрами requestAnimationFrame. Не влияет на обычный проигрыш —
+  // пока pause()/stepBy() не вызваны, поведение то же, что и раньше.
+  let paused = false;
+  let pausedElapsed = 0; // валиден только пока paused===true
 
-  function frame(now) {
-    const elapsed = now - t0;
+  /** @param {number} elapsed */
+  function renderAtElapsed(elapsed) {
     Object.values(cubes).forEach(cube => {
       if (!cube._fallDone) {
         cube.mesh.position.y = fallY(elapsed, cube);
@@ -316,9 +325,47 @@ export function mountSlotExample(container, data, opts = {}) {
     Object.values(cubes).forEach(updateShadow);
     camera.position.copy(camBase);
     renderer.render(scene, camera);
+  }
+
+  function frame(now) {
+    renderAtElapsed(now - t0);
     rafId = requestAnimationFrame(frame);
   }
   rafId = requestAnimationFrame(frame);
+
+  /* pause/resume/stepBy — только для тестовых полигонов (test-slot-engine-
+     ruleN.html), не используются самим приложением. t0 при resume()
+     сдвигается на длительность паузы, чтобы прогон продолжился с того же
+     elapsed, а не прыгнул вперёд на реальное время простоя. */
+  function pause() {
+    if (paused || rafId === null) return;
+    paused = true;
+    pausedElapsed = performance.now() - t0;
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  function resume() {
+    if (!paused) return;
+    paused = false;
+    t0 = performance.now() - pausedElapsed;
+    rafId = requestAnimationFrame(frame);
+  }
+  // Шаг назад корректен для НЕПРЕРЫВНЫХ эффектов (падение, притенение
+  // applyStepDim, approach/split — всё, что каждый кадр пересчитывается
+  // заново из elapsed без внутреннего флага) — именно то, что нужно для
+  // расследования прозрачности. Одноразовые события (transform меняет
+  // букву, split/merge/elide удаляют кубик) помечают себя флагом `_done`/
+  // `_began` на op — уменьшение elapsed НЕ отменяет уже случившееся
+  // превращение, кубик не «вернётся» к прежней букве.
+  /** @param {number} deltaMs — может быть отрицательным (шаг назад) */
+  function stepBy(deltaMs) {
+    if (!paused) return;
+    pausedElapsed = Math.max(0, pausedElapsed + deltaMs);
+    renderAtElapsed(pausedElapsed);
+  }
+  function getElapsed() {
+    return paused ? pausedElapsed : performance.now() - t0;
+  }
 
   // Форма кубика/тени и текстура тени — ОБЩИЕ на все примеры (см.
   // slot-engine-cube.js), принадлежат странице целиком, не одному показу —
@@ -345,7 +392,11 @@ export function mountSlotExample(container, data, opts = {}) {
     renderer.dispose();
   }
 
-  return { unmount, replay: () => mountSlotExample(container, data) };
+  return {
+    unmount, replay: () => mountSlotExample(container, data),
+    pause, resume, stepBy, getElapsed,
+    get paused() { return paused; },
+  };
 }
 
 let _stylesInjected = false; // общий <style> движка — вставляется в <head> один раз на документ

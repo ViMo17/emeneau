@@ -315,7 +315,17 @@ export function buildPulseFace(hex, glyph) {
   if (glyph) paintGlyph(cv, glyph);
   const tex = new THREE.CanvasTexture(cv);
   tex.encoding = THREE.sRGBEncoding;
-  const material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false });
+  // transparent:true ОБЯЗАТЕЛЕН — без него THREE.js молча игнорирует
+  // .opacity на этом материале (рендерит как полностью непрозрачный,
+  // какое бы число ни было записано в .opacity). Все ОСТАЛЬНЫЕ наборы
+  // материалов кубика получают transparent:true через buildOneMatSet
+  // (slot-engine-cube.js) — эта грань строится отдельно, тем же свойством
+  // раньше не была снабжена. Найдено при расследовании CLAUDE.md, Часть 6,
+  // п.0 (асимметричная прозрачность): пока кубик пульсирует (setFacePulse,
+  // грань [4] — эта самая), applyStepDim пишет тому же материалу .opacity
+  // как обычно, но без transparent:true эффекта не видно — кубик выглядит
+  // полностью непрозрачным, хотя реальное значение opacity корректно.
+  const material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false, transparent: true });
   return { material, canvas: cv, baseCanvas: baseCv, glyph };
 }
 // radiusFrac — доля от полуширины грани (0..1); null — чистое состояние без кольца

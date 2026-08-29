@@ -276,4 +276,17 @@
  * @property {ExampleData} data
  */
 
+/** Возврат mountSlotExample. pause/resume/stepBy/getElapsed — только для
+ * тестовых полигонов (test-slot-engine-ruleN.html), не используются самим
+ * приложением; добавлены для расследования CLAUDE.md, Часть 6, п.0.
+ * @typedef {Object} MountHandle
+ * @property {() => void} unmount
+ * @property {() => MountHandle} replay
+ * @property {() => void} pause
+ * @property {() => void} resume
+ * @property {(deltaMs: number) => void} stepBy
+ * @property {() => number} getElapsed
+ * @property {boolean} paused
+ */
+
 export {};
