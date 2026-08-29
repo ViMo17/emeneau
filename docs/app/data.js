@@ -257,7 +257,7 @@ EXAMPLES[14] = [{
   ] }
 }];
 EXAMPLES[15] = [{
-  desc: 'śās- «повелевать, учить» + dhi (импер. 2 л. ед. ч.) → śādhi «повелевай!»',
+  desc: 'śās- «учить» + dhi → śādhi «учи»',
   // ДОБАВЛЕНО (заход 53): подключение к слот-движку, тот же путь, что
   // agnayas/āsīt — module + roleDemo, синхронизировано через slotstep.
   // roleDemo БЕЗ type/source/result/trigger — правило 15 уже раньше
