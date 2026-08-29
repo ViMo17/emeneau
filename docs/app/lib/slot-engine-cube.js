@@ -35,7 +35,11 @@ function getShadowGeo() {
 function getGroundGeo() {
   // Ширина — с запасом на самый широкий пример (N_SLOTS=10 слотов по
   // SLOT=1.2 ≈ 12 единиц) плюс поля по краям, не только на текущий ряд.
-  if (!_groundGeo) _groundGeo = new THREE.PlaneGeometry(24, 10);
+  // Глубина (12) — с запасом относительно рассчитанного Z≈-3.16, где луч
+  // взгляда через верхний край кубика достигает высоты пола (см.
+  // makeGround) — при центре плоскости в Z=-3 дальний край уходит до -9,
+  // ближний — до +3, за некоторым запасом в обе стороны.
+  if (!_groundGeo) _groundGeo = new THREE.PlaneGeometry(24, 12);
   return _groundGeo;
 }
 
@@ -56,6 +60,18 @@ export function isSharedResource(obj) {
 // конкретной scene, уничтожается вместе с ней). Без него притенённому
 // кубику визуально нечего показать сквозь себя, кроме плоского фона
 // страницы — см. makeGroundTexture в chalk-module.js.
+//
+// Позиция ПЕРЕСЧИТАНА под конкретную камеру движка (camBase=(0,3.2,9.5),
+// lookAt(0,0.4,0) — см. slot-engine-mount.js), а не скопирована из старого
+// эталонного модуля напрямую: та же ОТНОСИТЕЛЬНАЯ позиция от FLOOR_Y при
+// заметно более высокой и более наклонной камере физически не попадала в
+// луч взгляда сквозь грань кубика — первая попытка оказалась невидима,
+// проверено пользователем. Реальная геометрия: луч из камеры
+// через ВЕРХНИЙ край лицевой грани кубика (0, +CUBE_SIZE/2, +CUBE_SIZE/2)
+// пересекает плоскость Y=FLOOR_Y примерно на Z≈-3.16 (при CUBE_SIZE=1.1) —
+// значит, чтобы пол был виден именно СКВОЗЬ грань (а не только у самого
+// основания), он должен физически залегать на высоте пола, а не ниже, и
+// простираться минимум настолько же в глубину, с запасом.
 /** @returns {import('three').Mesh} */
 export function makeGround() {
   if (!_groundTex) _groundTex = makeGroundTexture();
@@ -64,7 +80,7 @@ export function makeGround() {
     new THREE.MeshBasicMaterial({ map: _groundTex, transparent: true, depthWrite: false, fog: false })
   );
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(0, FLOOR_Y - CUBE_SIZE * 0.57, -CUBE_SIZE * 0.55);
+  mesh.position.set(0, FLOOR_Y - 0.02, -3);
   return mesh;
 }
 
