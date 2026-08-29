@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture, makeGroundTexture } from './chalk-module.js';
+import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
 import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, colorFor } from './slot-engine-core.js';
 
 /** @typedef {import('./slot-engine-types.js').Cube} Cube */
@@ -21,8 +21,6 @@ const FLOOR_Y = -CUBE_SIZE / 2; // уровень пола — там, где н
 let _cubeGeo = null;
 let _shadowGeo = null;
 let _shadowTex = null; // общая на все кубики, создаётся один раз при первом использовании
-let _groundGeo = null;
-let _groundTex = null;
 
 function getCubeGeo() {
   if (!_cubeGeo) _cubeGeo = makeChalkGeo(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
@@ -32,16 +30,6 @@ function getShadowGeo() {
   if (!_shadowGeo) _shadowGeo = new THREE.PlaneGeometry(CUBE_SIZE * 1.6, CUBE_SIZE * 1.6);
   return _shadowGeo;
 }
-function getGroundGeo() {
-  // Ширина — с запасом на самый широкий пример (N_SLOTS=10 слотов по
-  // SLOT=1.2 ≈ 12 единиц) плюс поля по краям, не только на текущий ряд.
-  // Глубина (12) — с запасом относительно рассчитанного Z≈-3.16, где луч
-  // взгляда через верхний край кубика достигает высоты пола (см.
-  // makeGround) — при центре плоскости в Z=-3 дальний край уходит до -9,
-  // ближний — до +3, за некоторым запасом в обе стороны.
-  if (!_groundGeo) _groundGeo = new THREE.PlaneGeometry(24, 12);
-  return _groundGeo;
-}
 
 // Проверка «это один из общих, разделяемых между ВСЕМИ показами ресурсов»
 // — вызывающий код (unmount в slot-engine-mount.js) обходит сцену и
@@ -50,38 +38,7 @@ function getGroundGeo() {
 // не узнáет, что его содержимое стало нерабочим, и продолжит отдавать уже
 // уничтоженный объект.
 export function isSharedResource(obj) {
-  return obj === _cubeGeo || obj === _shadowGeo || obj === _shadowTex
-    || obj === _groundGeo || obj === _groundTex;
-}
-
-// Мягкий «пол» позади ряда — один на mountSlotExample (не на кубик, в
-// отличие от тени), геометрия/текстура общие на все показы (см.
-// isSharedResource выше), сама Mesh — новая на каждый mount (принадлежит
-// конкретной scene, уничтожается вместе с ней). Без него притенённому
-// кубику визуально нечего показать сквозь себя, кроме плоского фона
-// страницы — см. makeGroundTexture в chalk-module.js.
-//
-// Позиция ПЕРЕСЧИТАНА под конкретную камеру движка (camBase=(0,3.2,9.5),
-// lookAt(0,0.4,0) — см. slot-engine-mount.js), а не скопирована из старого
-// эталонного модуля напрямую: та же ОТНОСИТЕЛЬНАЯ позиция от FLOOR_Y при
-// заметно более высокой и более наклонной камере физически не попадала в
-// луч взгляда сквозь грань кубика — первая попытка оказалась невидима,
-// проверено пользователем. Реальная геометрия: луч из камеры
-// через ВЕРХНИЙ край лицевой грани кубика (0, +CUBE_SIZE/2, +CUBE_SIZE/2)
-// пересекает плоскость Y=FLOOR_Y примерно на Z≈-3.16 (при CUBE_SIZE=1.1) —
-// значит, чтобы пол был виден именно СКВОЗЬ грань (а не только у самого
-// основания), он должен физически залегать на высоте пола, а не ниже, и
-// простираться минимум настолько же в глубину, с запасом.
-/** @returns {import('three').Mesh} */
-export function makeGround() {
-  if (!_groundTex) _groundTex = makeGroundTexture();
-  const mesh = new THREE.Mesh(
-    getGroundGeo(),
-    new THREE.MeshBasicMaterial({ map: _groundTex, transparent: true, depthWrite: false, fog: false })
-  );
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(0, FLOOR_Y - 0.02, -3);
-  return mesh;
+  return obj === _cubeGeo || obj === _shadowGeo || obj === _shadowTex;
 }
 
 function makeShadow() {
