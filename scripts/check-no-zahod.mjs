@@ -12,16 +12,30 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const TARGET_DIRS = ['docs/app/lib'];
+// docs/app целиком (lib/examples/data.js/role-demo.js/alpha-panel.js/
+// rule-panel.js/sanskrit-sandhi-app.html/test-slot-engine*.html), не только
+// lib/ — ровно та же дыра в дисциплине, что уже дважды подводила в этой
+// сессии (заход 66: правило распространялось только на lib/, «заход N»
+// дважды случайно проскочило в код за пределами lib/, пока его не нашли
+// вручную построчным аудитом). vendor/ и явно замороженные эталонные модули
+// исключены — они не редактируются, требовать от них чистоты бессмысленно.
+const TARGET_DIRS = ['docs/app'];
+const EXCLUDE = new Set([
+  join('docs/app', 'vendor'),
+  join('docs/app/examples', 'rule3-agnayas.js'),
+  join('docs/app/examples', 'rule71-vak-asti.js'),
+  join('docs/app/lib', 'anim-elements.js'),
+]);
 const PATTERN = /заход\s*\d|Заход\s*\d|ЗАХОД\s*\d/;
 
 function collectFiles(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
+    if (EXCLUDE.has(full)) continue;
     const st = statSync(full);
     if (st.isDirectory()) out.push(...collectFiles(full));
-    else if (name.endsWith('.js')) out.push(full);
+    else if (name.endsWith('.js') || name.endsWith('.html')) out.push(full);
   }
   return out;
 }
@@ -41,5 +55,5 @@ if (problems.length) {
   problems.forEach(p => console.error('  ' + p));
   process.exit(1);
 } else {
-  console.log('OK — «заход N» не найдено в docs/app/lib/*.js');
+  console.log('OK — «заход N» не найдено в docs/app/**/*.{js,html} (кроме vendor/ и замороженных эталонов)');
 }

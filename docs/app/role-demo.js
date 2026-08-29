@@ -1,5 +1,5 @@
-// Вынесено из sanskrit-sandhi-app.html (заход 69) — подсистема 2D-подсветки
-// ролей (источник/триггер/результат) на алфавитной панели. Делает собственные
+// Подсистема 2D-подсветки ролей (источник/триггер/результат) на алфавитной
+// панели, вынесенная из основного скрипта приложения. Делает собственные
 // document.getElementById() (те же id, что и в основном скрипте) — элементы
 // уже есть в статической разметке к моменту выполнения любого модуля, порядок
 // импорта не имеет значения. Наружу нужны только три функции: остальное —
@@ -127,12 +127,12 @@ function clearRoleDemo() {
   roleStepsWrap.style.display = 'none';
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
-  grammarExplain.style.display = 'none'; // заход 21 — блок гуны/вриддхи виден только при активном примере
+  grammarExplain.style.display = 'none'; // блок гуны/вриддхи виден только при активном примере
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
-  // РЕШЕНО (заход 17): снимаем слушатель slotstep предыдущего примера —
-  // иначе при каждой смене 3D-примера слушатели копятся на animTiles
-  // (элемент переиспользуется, innerHTML очищается, но addEventListener
-  // на самом animTiles — нет, он не привязан к содержимому).
+  // Снимаем слушатель slotstep предыдущего примера — иначе при каждой смене
+  // 3D-примера слушатели копятся на animTiles (элемент переиспользуется,
+  // innerHTML очищается, но addEventListener на самом animTiles — нет, он
+  // не привязан к содержимому).
   if (currentSlotStepListener) {
     animTiles.removeEventListener('slotstep', currentSlotStepListener);
     currentSlotStepListener = null;
@@ -168,8 +168,8 @@ function renderRoleStep(step) {
   wrap.querySelectorAll('.lc').forEach(el => el.classList.add('role-dim'));
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
   // Подсветка ячеек таблицы гуна/вриддхи слева (gunaCells) — независимо от
-  // текста в правой панели (заход 32: общий текст уехал под саму таблицу,
-  // не завязан на шаг вообще); эта подсветка по-прежнему про КОНКРЕТНЫЙ шаг.
+  // текста в правой панели (общий текст живёт под самой таблицей, не
+  // привязан к шагу); эта подсветка по-прежнему про КОНКРЕТНЫЙ шаг.
   (step.gunaCells || []).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('gv-active');
@@ -226,17 +226,16 @@ function renderRoleStep(step) {
   roleStepsText.textContent = step.text || '';
 }
 
-/* РЕШЕНО (заход 17, «дублируется запись про шаги» + «синхронизировать с
-   анимацией»). Для примеров С 3D-анимацией (ex.module задан) кнопочная
-   лента не нужна вообще — переключение шагов делает сама анимация, у неё
-   уже есть собственные чипы под кубиками (см. slot-engine.js). Эта функция
-   показывает первый шаг сразу (как раньше) и слушает событие slotstep на
+/* Для примеров С 3D-анимацией (ex.module задан) кнопочная лента не нужна
+   вообще — переключение шагов делает сама анимация, у неё уже есть
+   собственные чипы под кубиками (см. slot-engine.js). Эта функция
+   показывает первый шаг сразу (как обычно) и слушает событие slotstep на
    animTiles — 3D-модуль дошёл до нового шага → 2D-подсветка алфавита
    переключается следом, без отдельного клика и без своей ленты. */
 function renderRoleDemoSynced(demo) {
   clearRoleDemo();
   if (!demo || !demo.steps || !demo.steps.length) return;
-  grammarExplain.style.display = 'flex'; // заход 21 — виден только когда есть реальный активный пример
+  grammarExplain.style.display = 'flex'; // виден только когда есть реальный активный пример
   roleStepsWrap.style.display = 'none'; // кнопки не нужны — синхронизация делает их лишними
   renderRoleStep(demo.steps[0]);
   currentSlotStepListener = e => {
@@ -251,7 +250,7 @@ function renderRoleDemoSynced(demo) {
 function renderRoleDemo(demo) {
   clearRoleDemo();
   if (!demo || !demo.steps || !demo.steps.length) return;
-  grammarExplain.style.display = 'flex'; // заход 21 — виден только когда есть реальный активный пример
+  grammarExplain.style.display = 'flex'; // виден только когда есть реальный активный пример
 
   if (demo.steps.length === 1) {
     // один шаг — переключать нечего, лента не нужна, сразу показываем объяснение
@@ -265,10 +264,9 @@ function renderRoleDemo(demo) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'role-step-btn' + (i === 0 ? ' active' : '');
-    // ИСПРАВЛЕНО (заход 26, формат подписи по прямой просьбе — тот же,
-    // что теперь у чипов слот-движка под 3D-анимацией): «Шаг N · прав. X»
-    // → «Шаг N. Грамматика» / «Шаг N. Правило X» — единый вид в обоих
-    // местах экрана, не два разных.
+    // Формат подписи единый с чипами слот-движка под 3D-анимацией:
+    // «Шаг N. Грамматика» / «Шаг N. Правило X» — не «Шаг N · прав. X»,
+    // один и тот же вид в обоих местах экрана, не два разных.
     const tag = step.tag === 'грам.' ? 'Грамматика' : ('Правило ' + step.tag);
     btn.textContent = 'Шаг ' + (i + 1) + '. ' + tag;
     btn.addEventListener('click', () => {

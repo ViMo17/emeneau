@@ -12,9 +12,8 @@
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
     padding:6px 10px; border-radius:6px; z-index:10; max-width:640px; }
 
-  /* .slot-wave-ring перенесён в slot-engine.js (заход 12) — раньше этот блок
-     жил здесь и только здесь, без него у любого нового примера с influence
-     волны оказались бы невидимыми. */
+  /* .slot-wave-ring живёт в slot-engine.js, не здесь — общий для всех
+     примеров с influence, не только для этого. */
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
@@ -22,10 +21,10 @@
 </head>
 <body>
 <div id="note">Слот-движок — изолированная проверка. Данные вынесены в
-  examples/rule3-agnayas-slots.js (заход 13) — тот же файл использует и
-  основное приложение (sanskrit-sandhi-app.html, EXAMPLES[3]), эта страница
-  только для быстрой проверки в отрыве от всего интерфейса. Открывать через
-  живой сайт (https://).</div>
+  examples/rule3-agnayas-slots.js — тот же файл использует и основное
+  приложение (sanskrit-sandhi-app.html, EXAMPLES[3]), эта страница только
+  для быстрой проверки в отрыве от всего интерфейса. Открывать через живой
+  сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <script type="module">
 import { mount } from './examples/rule3-agnayas-slots.js';
