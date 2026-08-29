@@ -18,6 +18,8 @@ const browserGlobals = {
   performance: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
+  setInterval: 'readonly',
+  clearInterval: 'readonly',
   fetch: 'readonly',
 };
 

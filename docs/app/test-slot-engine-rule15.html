@@ -27,7 +27,8 @@
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <script type="module">
 import { mount } from './examples/rule15-sadhi.js';
-mount(document.getElementById('anim-container'));
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
 </script>
 </body>
 </html>

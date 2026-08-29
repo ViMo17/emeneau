@@ -11,17 +11,6 @@
   #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
     padding:6px 10px; border-radius:6px; z-index:10; max-width:640px; }
-  #pause-bar { position:fixed; top:10px; right:10px; z-index:10; display:flex;
-    gap:6px; flex-wrap:wrap; max-width:320px; justify-content:flex-end; }
-  #pause-bar button { font-family:'Helvetica Neue',sans-serif; font-size:12px;
-    padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,.25);
-    background:rgba(0,0,0,.45); color:#E6E1D2; cursor:pointer; }
-  #pause-bar button:hover { background:rgba(0,0,0,.65); }
-  #pause-bar button:disabled { opacity:.35; cursor:default; }
-  #dump { position:fixed; bottom:10px; left:10px; right:10px; z-index:10;
-    font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; line-height:1.5;
-    color:#E6E1D2; background:rgba(0,0,0,.55); padding:8px 12px; border-radius:6px;
-    max-height:38vh; overflow:auto; white-space:pre; }
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
@@ -38,75 +27,10 @@
   (правило 71, 180°). Дословная цитата источника — в комментариях
   examples/rule70-taddhiranyam-slots.js. Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
-<div id="pause-bar">
-  <button id="btn-pause">⏸ Пауза</button>
-  <button id="btn-back200" disabled>«« -200мс</button>
-  <button id="btn-back50" disabled>« -50мс</button>
-  <button id="btn-fwd50" disabled>+50мс »</button>
-  <button id="btn-fwd200" disabled>+200мс »»</button>
-</div>
-<pre id="dump"></pre>
 <script type="module">
 import { mount } from './examples/rule70-taddhiranyam-slots.js';
-
-// Диагностический инструмент для расследования CLAUDE.md, Часть 6, п.0
-// (асимметричная прозрачность притенённых кубиков) — только на этой
-// тестовой странице, не часть движка/приложения. Пауза замораживает
-// рендер на текущем elapsed (см. pause/resume/stepBy в
-// slot-engine-mount.js), дамп ниже холста читает РЕАЛЬНЫЕ значения
-// .opacity по каждой из 6 граней каждого кубика напрямую из THREE-
-// материалов — те же объекты, что и на экране, не пересчитанные заново.
-const handle = mount(document.getElementById('anim-container'));
-const btnPause = document.getElementById('btn-pause');
-const stepBtns = [
-  ['btn-back200', -200], ['btn-back50', -50], ['btn-fwd50', 50], ['btn-fwd200', 200],
-].map(([id, delta]) => [document.getElementById(id), delta]);
-const dumpEl = document.getElementById('dump');
-
-function matsLabel(cube) {
-  const m = cube.mesh.material;
-  if (m === cube.matsMain) return 'matsMain';
-  if (m === cube._pulsingMats) return '_pulsingMats (копия matsMain, грань 4 подменена)';
-  if (m === cube.matsBlank) return 'matsBlank';
-  if (m === cube.matsReady) return 'matsReady';
-  if (m === cube.matsSignal) return 'matsSignal';
-  return '(неизвестный набор)';
-}
-
-function renderDump() {
-  const ctx = window.__slotDebug;
-  if (!ctx) { dumpEl.textContent = '(нет window.__slotDebug — движок ещё не смонтирован)'; return; }
-  const elapsed = handle.getElapsed();
-  const lines = [`elapsed = ${elapsed.toFixed(0)} мс   (${handle.paused ? 'ПАУЗА' : 'идёт'})`, ''];
-  const slots = Object.keys(ctx.cubes).map(Number).sort((a, b) => a - b);
-  for (const slot of slots) {
-    const cube = ctx.cubes[slot];
-    const mats = Array.isArray(cube.mesh.material) ? cube.mesh.material : [cube.mesh.material];
-    const opac = mats.map(m => m.opacity.toFixed(2));
-    const trans = mats.map(m => (m.transparent ? '1' : '0'));
-    lines.push(
-      `слот ${String(slot).padStart(2)}  "${cube.tr}"  материал: ${matsLabel(cube)}`,
-      `          opacity по граням [0..5]: ${opac.join(', ')}`,
-      `          transparent по граням:    ${trans.join(', ')}`,
-    );
-  }
-  dumpEl.textContent = lines.join('\n');
-}
-
-btnPause.addEventListener('click', () => {
-  if (handle.paused) { handle.resume(); btnPause.textContent = '⏸ Пауза'; }
-  else { handle.pause(); btnPause.textContent = '▶ Продолжить'; }
-  stepBtns.forEach(([btn]) => { btn.disabled = !handle.paused; });
-  renderDump();
-});
-stepBtns.forEach(([btn, delta]) => {
-  btn.addEventListener('click', () => { handle.stepBy(delta); renderDump(); });
-});
-document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); btnPause.click(); }
-});
-setInterval(renderDump, 200); // живой дамп и во время проигрыша, не только на паузе
-renderDump();
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
 </script>
 </body>
 </html>
