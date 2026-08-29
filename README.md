@@ -53,6 +53,7 @@ npm test            # 132 теста, встроенный тестраннер 
 npm run lint        # ESLint, только "рекомендованные" правила
 npm run check-conventions   # автоматическая проверка, что в docs/app не завелись
                             # комментарии с историей рабочих сессий («заход N»)
+npm run audit               # известные уязвимости в зависимостях (--audit-level=high)
 ```
 
 Всё это же гоняется в CI (`.github/workflows/ci.yml`) на каждый push/PR.
