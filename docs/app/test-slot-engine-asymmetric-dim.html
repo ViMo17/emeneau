@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Диагностика: асимметричная прозрачность (задняя грань 100%, остальные 40%)</title>
+<title>Диагностика v2: асимметричная прозрачность (независимая реализация, без общего кода движка)</title>
 <style>
   html, body { height:100%; margin:0; background:#2A2D35; }
   #stage-wrap { width:100%; height:100vh; position:relative; }
@@ -10,7 +10,7 @@
   #anim-container canvas { display:block; width:100%; height:100%; }
   #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
-    padding:6px 10px; border-radius:6px; z-index:10; max-width:700px; }
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:720px; }
   #dump { position:fixed; bottom:10px; left:10px; right:10px; z-index:10;
     font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; line-height:1.5;
     color:#E6E1D2; background:rgba(0,0,0,.55); padding:8px 12px; border-radius:6px;
@@ -21,20 +21,76 @@
 </script>
 </head>
 <body>
-<div id="note">Диагностика асимметричной прозрачности (CLAUDE.md, Часть 6, п.0)
-  — контролируемый эксперимент: одна и та же буква "k" (единый цвет) на
-  ВСЕХ 10 слотах, единственная переменная — позиция. У каждого кубика
-  ЗАДНЯЯ грань (idx5, обычно не видна камере напрямую) держит полную
-  непрозрачность (opacity=1), у остальных пяти (idx0-4, включая нижнюю)
-  — 40% (opacity=0.4). Статичная сцена, без анимации/падения — сразу в
-  покое. Не часть движка приложения, только для скриншота+сравнения по
-  слотам. Открывать через живой сайт (https://).</div>
+<div id="note">Диагностика v2 (CLAUDE.md, Часть 6, п.0) — НЕЗАВИСИМАЯ от
+  движка реализация: геометрия и материалы построены здесь напрямую
+  (THREE.BoxGeometry + свой canvas-рисовальщик), НЕ через makeCube/
+  buildChalkMaterials — чтобы проверить, не в общем ли коде движка дело.
+  Схема по 3 категориям граней: ЗАДНЯЯ (idx5) — непрозрачна, исходный цвет
+  из алфавита; НИЖНЯЯ (idx3) — 50% прозрачности, исходный цвет; ОСТАЛЬНЫЕ
+  боковые (idx0,1,2 — право/лево/верх) — 50% прозрачности, цвет затемнён
+  на 80% к чёрному. ЛИЦЕВАЯ (idx4, с буквой) сознательно НЕ включена в
+  «остальные» — оставлена как есть, иначе буква нечитаема на тёмном фоне
+  (см. эталонный рисунок пользователя — там буква яркая); поправить, если
+  задумано иначе. Один и тот же цвет/буква на всех 10 слотах — единственная
+  переменная — позиция. Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <pre id="dump"></pre>
 <script type="module">
 import * as THREE from './vendor/three.module.js';
-import { makeCube, updateShadow } from './lib/slot-engine-cube.js';
-import { N_SLOTS, SLOT, colorFor } from './lib/slot-engine-core.js';
+
+const N_SLOTS = 10, SLOT = 1.2, CUBE_SIZE = 1.1;
+const GLYPH = 'k';
+const BASE_COLOR = 0xA8D878; // colorFor('k') — гортанная варга, тот же зелёный, что в движке
+
+function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
+
+// Собственный, полностью независимый рисовальщик грани — не paintFlatFace/
+// paintGlyph из chalk-module.js. tintToBlack — доля затемнения к чёрному
+// (0=чистый baseColor, 1=чистый чёрный), применяется к самой заливке
+// холста (не через material.color-множитель), чтобы точно знать, что
+// видно на текстуре.
+function paintFace(baseColor, tintToBlack, glyph) {
+  const SZ = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = SZ;
+  const ctx = cv.getContext('2d');
+  const r = (baseColor >> 16) & 255, g = (baseColor >> 8) & 255, b = baseColor & 255;
+  const rr = Math.round(r * (1 - tintToBlack)), gg = Math.round(g * (1 - tintToBlack)), bb = Math.round(b * (1 - tintToBlack));
+  ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+  ctx.fillRect(0, 0, SZ, SZ);
+  if (glyph) {
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${Math.round(SZ * 0.58)}px 'Helvetica Neue', Arial, sans-serif`;
+    ctx.fillText(glyph, SZ / 2, SZ / 2);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+
+function makeMat(baseColor, tintToBlack, glyph, opacity) {
+  const tex = paintFace(baseColor, tintToBlack, glyph);
+  return new THREE.MeshStandardMaterial({
+    map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false,
+    transparent: true, opacity,
+  });
+}
+
+// Порядок BoxGeometry: 0:+X(право) 1:-X(лево) 2:+Y(верх) 3:-Y(низ) 4:+Z(перёд,буква) 5:-Z(зад)
+function buildAsymmetricCubeMaterials() {
+  return [
+    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 0 право — «остальная», 80% к чёрному
+    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 1 лево — «остальная»
+    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 2 верх — «остальная»
+    makeMat(BASE_COLOR, 0.0, null, 0.5),   // 3 низ — 50%, БЕЗ затемнения к чёрному
+    makeMat(BASE_COLOR, 0.0, GLYPH, 1.0),  // 4 перёд (буква) — НЕ включена в «остальные», как есть
+    makeMat(BASE_COLOR, 0.0, null, 1.0),   // 5 зад — непрозрачна, исходный цвет
+  ];
+}
+
+const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
 
 const container = document.getElementById('anim-container');
 const scene = new THREE.Scene();
@@ -52,20 +108,12 @@ const key = new THREE.DirectionalLight(0xffffff, 0.6);
 key.position.set(3, 6, 4);
 scene.add(key);
 
-function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
-
-// Одна и та же буква/цвет на всех 10 слотах — позиция единственная
-// переменная. Грань idx5 (задняя) — opacity 1, остальные 5 (idx0-4,
-// включая нижнюю idx3) — opacity 0.4, оба transparent:true (makeCube уже
-// выставляет transparent:true на все 6 граней через buildOneMatSet).
-const cubes = [];
+const meshes = [];
 for (let slot = 0; slot < N_SLOTS; slot++) {
-  const cube = makeCube('k', slot * 97 + 13);
-  cube.mesh.position.set(slotX(slot), 0, 0);
-  cube.mesh.material.forEach((m, idx) => { m.opacity = idx === 5 ? 1.0 : 0.4; });
-  scene.add(cube.mesh);
-  scene.add(cube.shadow);
-  cubes.push({ slot, cube });
+  const mesh = new THREE.Mesh(geo, buildAsymmetricCubeMaterials());
+  mesh.position.set(slotX(slot), 0, 0);
+  scene.add(mesh);
+  meshes.push({ slot, mesh });
 }
 
 function resize() {
@@ -79,17 +127,19 @@ new ResizeObserver(resize).observe(container);
 resize();
 
 function frame() {
-  cubes.forEach(({ cube }) => updateShadow(cube));
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
 const dumpEl = document.getElementById('dump');
-const lines = ['Статичная сцена — координаты и материалы зафиксированы один раз:', ''];
-for (const { slot, cube } of cubes) {
-  const opac = cube.mesh.material.map(m => m.opacity.toFixed(2));
-  lines.push(`слот ${String(slot).padStart(2)}  x=${slotX(slot).toFixed(2)}  colorHex=#${colorFor('k').toString(16).padStart(6,'0')}  opacity[0..5]=${opac.join(', ')}`);
+const faceNames = ['право(+X)', 'лево(-X)', 'верх(+Y)', 'низ(-Y)', 'перёд(+Z,буква)', 'зад(-Z)'];
+const lines = ['Статичная сцена, независимая реализация (не makeCube/buildChalkMaterials):', ''];
+for (const { slot, mesh } of meshes) {
+  lines.push(`слот ${String(slot).padStart(2)}  x=${slotX(slot).toFixed(2)}`);
+  mesh.material.forEach((m, i) => {
+    lines.push(`          ${faceNames[i].padEnd(16)} opacity=${m.opacity.toFixed(2)}`);
+  });
 }
 dumpEl.textContent = lines.join('\n');
 </script>
