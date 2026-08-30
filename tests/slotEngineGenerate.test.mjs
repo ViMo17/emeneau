@@ -202,6 +202,22 @@ test('buildGunaSplitExample: раскладка совпадает побайт�
   ]);
 });
 
+test('buildGunaSplitExample: РЕГРЕССИЯ — {word:N} в ops должен быть на единицу больше spec.word (движок 1-индексирован, spec — 0-индексирован)', () => {
+  // Реальный найденный баг: resolveSlotRef (slot-engine-words.js) читает
+  // {word:N} как groups[N-1] — единицей-индексированное. gunaTrigger.word/
+  // approachMovers.word в спецификации генератора — индекс в spec.words
+  // (0-индексированный, как везде в этом файле). Без +1 при построении
+  // ops триггер гунации/movers approach указывали на ПЕРВОЕ слово (agni)
+  // вместо второго (as) — влияние подчёркивало не ту группу, approach
+  // двигал буквы agni к их же собственной букве (цель — i, слот внутри
+  // agni), что приводило к падению движка (mesh у несуществующего
+  // кубика) при реальном рендере.
+  const data = buildGunaSplitExample(AGNAYAS_SPEC);
+  const [influence, , approach] = data.ops;
+  assert.deepEqual(influence.from, { word: 2 }, 'gunaTrigger:{word:1} (0-индекс, "as") -> {word:2} в ops (1-индекс)');
+  assert.deepEqual(approach.movers, { word: 2 }, 'approachMovers:{word:1} (0-индекс, "as") -> {word:2} в ops (1-индекс)');
+});
+
 test('buildGunaSplitExample: activeSlots и структура ops точно совпадают с agnayas ([4,6,7] затем [4,5,6] — не «цель+все movers»)', () => {
   const data = buildGunaSplitExample(AGNAYAS_SPEC);
   assert.deepEqual(data.steps[0].activeSlots, [4, 6, 7]);

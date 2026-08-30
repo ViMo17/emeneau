@@ -326,9 +326,17 @@ export function buildGunaSplitExample(spec) {
       { kind: 'rule', ruleNum, start: step2Start, end: step2End, activeSlots: step2ActiveSlots, color, primary: true },
     ],
     ops: [
-      { type: 'influence', from: { word: gunaTrigger.word }, to: targetSlot, start: influenceStart, ringHoldDur },
+      // {word:N} в САМИХ ops — вход в resolveSlotRef (slot-engine-words.js),
+      // а не в наш собственный wordSlots — там N ЕДИНИЦЕЙ-индексирован
+      // (`groups[ref.word - 1]`), тогда как spec.gunaTrigger.word/spec.
+      // approachMovers.word здесь и всюду в этом файле — 0-индексированы
+      // (как индекс в spec.words). Отсюда +1 — реальный найденный баг: без
+      // него `{word:1}` (по смыслу «второе слово», 0-индекс) движок читал
+      // бы как «первое слово» (agni) — триггер гунации и movers approach
+      // указывали НЕ на -as, а на саму agni.
+      { type: 'influence', from: { word: gunaTrigger.word + 1 }, to: targetSlot, start: influenceStart, ringHoldDur },
       { type: 'transform', at: targetSlot, toGlyph: toGuna, toColor: toGunaColor, start: transformStart, spinTurns: 1 },
-      { type: 'approach', movers: { word: approachMovers.word }, target: targetSlot, start: approachStart, distance: 0.5, pulse: true },
+      { type: 'approach', movers: { word: approachMovers.word + 1 }, target: targetSlot, start: approachStart, distance: 0.5, pulse: true },
       { type: 'split', at: targetSlot, start: splitStart, holdOffset: holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 }, arrivals: arrivalOps },
     ],
   };
