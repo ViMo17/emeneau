@@ -183,3 +183,84 @@ export function buildInfluenceTransformExample(spec) {
     steps: [{ trigger, target, toGlyph, transformKind, ruleNum, color, clearance, primary: true }],
   });
 }
+
+// Между шагами с РАЗНЫМ activeSlots движок сам вставляет «проявление»
+// (buildRuntimeSteps/sameActiveSlots, slot-engine-steps.js) — все буквы
+// на миг становятся видны, прежде чем притенение сузится под следующий
+// шаг. Длительность этого проявления — та же формула, что и у самого
+// движка (REVEAL_STAGGER/REVEAL_RAMP, дефолты 130/700).
+const REVEAL_STAGGER = 130;
+const REVEAL_RAMP = 700;
+// Небольшой запас после конца проявления до реального старта следующего
+// шага — сверено с āsīt (100мс) — та же ручная вариация, что и у
+// остальных буферов.
+const REVEAL_EXTRA_BUFFER = 100;
+// Запас после конца approach (движение подъезда/присоединения) до конца
+// шага — сверено с āsīt (150мс).
+const APPROACH_TAIL_BUFFER = 150;
+// Запас после конца merge (сама вспышка слияния, applyMerge.dur=1400 по
+// умолчанию) до конца шага — сверено с āsīt (500мс).
+const MERGE_TAIL_BUFFER = 500;
+
+/**
+ * Строит { initial, steps, ops } для категории «approach + merge» (реестр,
+ * Часть А: два одинаковых соседних звука сливаются в один, например āsīt
+ * a+a→ā) — ДВА шага: (1) грамматический — окончание примыкает к основе
+ * (approach, без притенения, activeSlots=все слоты), (2) сандхи — слияние
+ * (merge). Шаг 1 — общий для конкретно этой грамматической ситуации
+ * (не всегда нужен другим примерам той же merge-категории, например
+ * внешнему сандхи без предварительного присоединения — там можно
+ * передать steps:[] и вызвать buildMergeStep напрямую, отдельной
+ * функции для этого пока нет).
+ *
+ * @param {Object} spec
+ * @param {string[][]} spec.words — слова (морфологические части), между ними зазор в 1 слот
+ * @param {Object} spec.attach — шаг 1: окончание примыкает к основе
+ * @param {{word: number, letter: number}[]} spec.attach.movers — буквы, которые едут
+ * @param {{word: number, letter: number}} spec.attach.target — буква, к которой едут
+ * @param {number} [spec.attach.approachDur] - длительность подъезда (дефолт движка 1200)
+ * @param {Object} spec.merge — шаг 2: слияние
+ * @param {{word: number, letter: number}} spec.merge.from — буква-источник (исчезает)
+ * @param {{word: number, letter: number}} spec.merge.at — буква-цель (получает новый глиф)
+ * @param {string} spec.merge.toGlyph
+ * @param {number} [spec.merge.dur] - длительность самого слияния (дефолт движка 1400)
+ * @param {number} spec.ruleNum
+ * @param {number} spec.color
+ * @returns {import('./slot-engine-types.js').ExampleData}
+ */
+export function buildApproachMergeExample(spec) {
+  const { words, attach, merge, ruleNum, color } = spec;
+  const { initial, wordSlots, totalLetters } = layoutWords(words);
+
+  const moverSlots = attach.movers.map(({ word, letter }) => wordSlots[word][letter]);
+  const targetSlot1 = wordSlots[attach.target.word][attach.target.letter];
+  const approachDur = attach.approachDur ?? 1200;
+
+  const fallComplete = (totalLetters - 1) * FALL_STAGGER + FALL_DUR;
+  const step1Start = fallComplete + BUFFER_AFTER_FALL;
+  const step1End = step1Start + approachDur + APPROACH_TAIL_BUFFER;
+
+  const revealDur = REVEAL_STAGGER * (totalLetters - 1) + REVEAL_RAMP;
+  const step2Start = step1End + revealDur + REVEAL_EXTRA_BUFFER;
+
+  const fromSlot = wordSlots[merge.from.word][merge.from.letter];
+  const atSlot = wordSlots[merge.at.word][merge.at.letter];
+  const mergeDur = merge.dur ?? 1400;
+  const step2End = step2Start + mergeDur + MERGE_TAIL_BUFFER;
+
+  const allSlots = initial.map(x => x.slot);
+  return {
+    initial,
+    steps: [
+      { kind: 'grammar', start: step1Start, end: step1End, activeSlots: allSlots },
+      { kind: 'rule', ruleNum, start: step2Start, end: step2End, activeSlots: [fromSlot, atSlot], color, primary: true },
+    ],
+    ops: [
+      {
+        type: 'approach', movers: moverSlots, target: targetSlot1, start: step1Start,
+        approachDur, holdDur: 0, retreat: false, distance: 1.0, jitterAmp: 0, pulse: false,
+      },
+      { type: 'merge', from: fromSlot, at: atSlot, start: step2Start, dur: mergeDur, toGlyph: merge.toGlyph },
+    ],
+  };
+}

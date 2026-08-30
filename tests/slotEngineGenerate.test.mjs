@@ -13,7 +13,7 @@
 // регрессия генератора.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildInfluenceTransformExample, buildInfluenceTransformChain, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
+import { buildInfluenceTransformExample, buildInfluenceTransformChain, buildApproachMergeExample, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
 
 test('buildInfluenceTransformExample: раскладка слотов совпадает побуквенно с rule71 (vāk asti)', () => {
   const data = buildInfluenceTransformExample({
@@ -117,6 +117,36 @@ test('buildInfluenceTransformExample (один шаг) — частный слу
     steps: [{ trigger: { word: 1, letter: 0 }, target: { word: 0, letter: 2 }, toGlyph: 'g', transformKind: TRANSFORM_KIND.vargaPair, ruleNum: 71, color: 0xAE987A, primary: true }],
   });
   assert.deepEqual(single, chain);
+});
+
+test('buildApproachMergeExample: раскладка совпадает побуквенно с āsīt (rule7)', () => {
+  const data = buildApproachMergeExample({
+    words: [['a'], ['a', 's'], ['ī', 't']],
+    attach: { movers: [{ word: 2, letter: 0 }, { word: 2, letter: 1 }], target: { word: 1, letter: 1 } },
+    merge: { from: { word: 0, letter: 0 }, at: { word: 1, letter: 0 }, toGlyph: 'ā' },
+    ruleNum: 7, color: 0xAFBFD4,
+  });
+  assert.deepEqual(data.initial, [
+    { slot: 1, tr: 'a' }, { slot: 3, tr: 'a' }, { slot: 4, tr: 's' }, { slot: 6, tr: 'ī' }, { slot: 7, tr: 't' },
+  ]);
+});
+
+test('buildApproachMergeExample: тайминги в пределах 40мс от рукописного āsīt (постоянное смещение по всей цепочке — та же ручная вариация, что и в остальных генераторах)', () => {
+  const data = buildApproachMergeExample({
+    words: [['a'], ['a', 's'], ['ī', 't']],
+    attach: { movers: [{ word: 2, letter: 0 }, { word: 2, letter: 1 }], target: { word: 1, letter: 1 } },
+    merge: { from: { word: 0, letter: 0 }, at: { word: 1, letter: 0 }, toGlyph: 'ā' },
+    ruleNum: 7, color: 0xAFBFD4,
+  });
+  const [approach, merge] = data.ops;
+  assert.equal(approach.movers[0], 6); assert.equal(approach.movers[1], 7);
+  assert.equal(approach.target, 4);
+  assert.equal(merge.from, 1); assert.equal(merge.at, 3); assert.equal(merge.toGlyph, 'ā');
+  assert.ok(Math.abs(approach.start - 2700) <= 40, `approach.start=${approach.start}, эталон 2700`);
+  assert.ok(Math.abs(data.steps[0].end - 4050) <= 40, `steps[0].end=${data.steps[0].end}, эталон 4050`);
+  assert.ok(Math.abs(merge.start - 5370) <= 40, `merge.start=${merge.start}, эталон 5370`);
+  assert.ok(Math.abs(data.steps[1].end - 7270) <= 40, `steps[1].end=${data.steps[1].end}, эталон 7270`);
+  assert.deepEqual(validateExampleData(data), []);
 });
 
 test('buildInfluenceTransformExample: результат проходит validateExampleData без замечаний', () => {
