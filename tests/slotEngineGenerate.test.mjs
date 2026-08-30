@@ -13,7 +13,20 @@
 // регрессия генератора.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildInfluenceTransformExample, buildInfluenceTransformChain, buildApproachMergeExample, buildApproachElideExample, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
+import { buildInfluenceTransformExample, buildInfluenceTransformChain, buildApproachMergeExample, buildApproachElideExample, buildGunaSplitExample, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
+
+const AGNAYAS_SPEC = {
+  words: [['a', 'g', 'n', 'i'], ['a', 's']],
+  gunaTarget: { word: 0, letter: 3 },
+  gunaTrigger: { word: 1 },
+  toGuna: 'e', toGunaColor: 0x7DCFCA,
+  approachMovers: { word: 1 },
+  arrivals: [
+    { into: 'a', slotOffset: 0, fromOffset: { x: 1.0, y: 2.5, z: -1.5 }, delay: 500, dur: 1600, arcHeight: 0.9 },
+    { into: 'y', slotOffset: 1, fromOffset: { x: 1.3, y: 3.0, z: -1.8 }, delay: 0, dur: 1850, arcHeight: 1.3 },
+  ],
+  ruleNum: 3, color: 0xAFBFD4,
+};
 
 test('buildInfluenceTransformExample: раскладка слотов совпадает побуквенно с rule71 (vāk asti)', () => {
   const data = buildInfluenceTransformExample({
@@ -178,6 +191,46 @@ test('buildApproachElideExample: тайминги в пределах 60мс о�
   assert.ok(Math.abs(approach.start - 2600) <= 60, `approach.start=${approach.start}, эталон 2600`);
   assert.ok(Math.abs(elide.start - 3950) <= 60, `elide.start=${elide.start}, эталон 3950 (leg1End+450)`);
   assert.ok(Math.abs(data.steps[0].end - 7300) <= 60, `steps[0].end=${data.steps[0].end}, эталон 7300 (elide.start+3200+150)`);
+  assert.deepEqual(validateExampleData(data), []);
+});
+
+test('buildGunaSplitExample: раскладка совпадает побайтово с agnayas (rule3)', () => {
+  const data = buildGunaSplitExample(AGNAYAS_SPEC);
+  assert.deepEqual(data.initial, [
+    { slot: 1, tr: 'a' }, { slot: 2, tr: 'g' }, { slot: 3, tr: 'n' }, { slot: 4, tr: 'i' },
+    { slot: 6, tr: 'a' }, { slot: 7, tr: 's' },
+  ]);
+});
+
+test('buildGunaSplitExample: activeSlots и структура ops точно совпадают с agnayas ([4,6,7] затем [4,5,6] — не «цель+все movers»)', () => {
+  const data = buildGunaSplitExample(AGNAYAS_SPEC);
+  assert.deepEqual(data.steps[0].activeSlots, [4, 6, 7]);
+  assert.deepEqual(data.steps[1].activeSlots, [4, 5, 6], 'дальний mover (s, слот 7) НЕ входит — только цель, будущий слот "y" и ближний mover');
+  const [influence, transform, approach, split] = data.ops;
+  assert.equal(influence.ringHoldDur, 4000);
+  assert.equal(transform.spinTurns, 1);
+  assert.equal(approach.distance, 0.5);
+  assert.equal(approach.pulse, true);
+  assert.equal(split.arrivals[0].newSlot, 4);
+  assert.equal(split.arrivals[1].newSlot, 5);
+  assert.deepEqual(split.holdOffset, { x: -1.6, y: 2.4, z: 0.4 });
+});
+
+test('buildGunaSplitExample: тайминги — ПОСТОЯННОЕ смещение ~220мс по всей цепочке (буфер после падения меньше, чем в среднем), без дополнительного расхождения дальше по цепочке', () => {
+  const data = buildGunaSplitExample(AGNAYAS_SPEC);
+  const [influence, transform, approach, split] = data.ops;
+  const deltas = [
+    influence.start - 2700,
+    transform.start - 5300,
+    data.steps[0].end - 6700,
+    data.steps[1].start - 8300,
+    approach.start - 8300,
+    split.start - 11050,
+    data.steps[1].end - 16150,
+  ];
+  const first = deltas[0];
+  for (const d of deltas) assert.equal(d, first, `все смещения должны быть РАВНЫ (${JSON.stringify(deltas)}) — иначе формула где-то разошлась независимо от буфера`);
+  assert.ok(Math.abs(first) <= 250, `смещение=${first}, ожидание в пределах ~220-250мс`);
   assert.deepEqual(validateExampleData(data), []);
 });
 

@@ -23,7 +23,7 @@
 // интеграцией в приложение, как и рукописные примеры.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { N_SLOTS, MS_PER_360 } from './slot-engine-core.js';
+import { N_SLOTS, MS_PER_360, slotX } from './slot-engine-core.js';
 
 const FALL_STAGGER = 260; // движковый дефолт (data.fallStagger ?? 260) — продублирован здесь для расчёта момента приземления
 const FALL_DUR = 1300;    // движковый дефолт (data.fallDur ?? 1300)
@@ -223,6 +223,113 @@ export function buildApproachElideExample(spec) {
         holdPulse: true,
       },
       { type: 'elide', at: targetSlot, start: elideStart },
+    ],
+  };
+}
+
+// Дефолты applyApproach (БЕЗ midDistance — простая одноразовая ветка:
+// подъезд → пауза → пружинистый отскок назад) — сверены с кодом
+// slot-engine-ops.js, не подобраны.
+const APPROACH_DUR_DEFAULT = 1150;
+const APPROACH_HOLD_DUR_DEFAULT = 550;
+const APPROACH_RETREAT_DUR_DEFAULT = 950;
+// Запас между полным циклом approach (туда-пауза-обратно) и стартом split
+// — сверено с agnayas (ТОЧНОЕ совпадение), не допуск.
+const APPROACH_TO_SPLIT_GAP = 100;
+// Дефолты applySplit — сверены с кодом, не подобраны.
+const SPLIT_ANTICIPATE_DUR = 900;
+const SPLIT_RISE_DUR = 1300;
+const SPLIT_HOLD_DUR = 1000;
+const SPLIT_FADE_DUR = 1100;
+
+/**
+ * Строит { initial, steps, ops } для категории «грамматика (guṇa,
+ * influence+transform) → сандхи (approach+split)» — например agnayas:
+ * i→e (guṇa, вызвана всем хвостом -as), затем e+a→a+y (несовместимость,
+ * approach с отскоком, распад на два звука). ДВА разных механизма
+ * подряд — самая сложная из покрытых категорий реестра.
+ *
+ * @param {Object} spec
+ * @param {string[][]} spec.words
+ * @param {{word: number, letter: number}} spec.gunaTarget — гласная, которая гунируется (i→e)
+ * @param {{word: number}} spec.gunaTrigger — СЛОВО целиком (не одна буква) — вызывает гунацию
+ * @param {string} spec.toGuna — итог гунации (обычно 'e')
+ * @param {number} spec.toGunaColor
+ * @param {{word: number}} spec.approachMovers — слово целиком, подъезжает и отскакивает от гунированной гласной
+ * @param {Array<{into: string, slotOffset: number, fromOffset: {x:number,y:number,z:number}, delay: number, dur: number, arcHeight?: number}>} spec.arrivals — результаты распада; slotOffset — смещение слота ОТНОСИТЕЛЬНО gunaTarget (0 = то же место, 1 = следующий)
+ * @param {{x:number,y:number,z:number}} [spec.holdOffset] - куда поднимается исходная буква на время отстойника (дефолт как в agnayas)
+ * @param {number} spec.ruleNum
+ * @param {number} spec.color
+ * @returns {import('./slot-engine-types.js').ExampleData}
+ */
+export function buildGunaSplitExample(spec) {
+  const { words, gunaTarget, gunaTrigger, toGuna, toGunaColor, approachMovers, arrivals, holdOffset, ruleNum, color } = spec;
+  const { initial, wordSlots, totalLetters } = layoutWords(words);
+
+  const targetSlot = wordSlots[gunaTarget.word][gunaTarget.letter];
+  const fallComplete = (totalLetters - 1) * FALL_STAGGER + FALL_DUR;
+
+  // Шаг 1 (грамматика: гунация) — та же формула, что и в
+  // buildInfluenceTransformChain, но триггер — СЛОВО целиком ({word:N}),
+  // не одна буква, поэтому не переиспользуем ту функцию напрямую (её
+  // сигнатура рассчитана на {word,letter}).
+  const influenceStart = fallComplete + BUFFER_AFTER_FALL;
+  const transformStart = influenceStart + INFLUENCE_TO_TRANSFORM_GAP;
+  const transformDur = 1 * MS_PER_360; // гунация — целый оборот, всегда spinTurns:1
+  const ringHoldDur = INFLUENCE_TO_TRANSFORM_GAP + transformDur;
+
+  // Между шагом 1 и шагом 2 — «проявление» (activeSlots разные), та же
+  // формула, что и в buildApproachMergeExample, только буфер после
+  // проявления сверен отдельно с agnayas (250, не 100 — оба значения
+  // наблюдались на разных примерах, разброс больше, чем у остальных
+  // констант, меньше уверенности).
+  const revealDur = REVEAL_STAGGER * (totalLetters - 1) + REVEAL_RAMP;
+  const REVEAL_EXTRA_AGNAYAS = 250;
+  // step1.end = transform.start + длительность самого оборота (НЕ формула
+  // «одиночного терминального шага» transformStart+anticipateDur-50,
+  // которая тут не подошла) — сверено с agnayas ТОЧНО: 5300+1400=6700.
+  const step1End = transformStart + transformDur;
+  const step2Start = step1End + revealDur + REVEAL_EXTRA_AGNAYAS;
+
+  const moverSlots = wordSlots[approachMovers.word];
+  const approachStart = step2Start;
+  const splitStart = approachStart + APPROACH_DUR_DEFAULT + APPROACH_HOLD_DUR_DEFAULT + APPROACH_RETREAT_DUR_DEFAULT + APPROACH_TO_SPLIT_GAP;
+
+  const splitActiveStart = splitStart + SPLIT_ANTICIPATE_DUR;
+  const riseEnd = splitActiveStart + SPLIT_RISE_DUR;
+  const lastArrivalEnd = Math.max(...arrivals.map(a => a.delay + a.dur));
+  const compareReadyAt = Math.max(riseEnd, splitActiveStart + lastArrivalEnd);
+  const fadeStart = compareReadyAt + SPLIT_HOLD_DUR;
+  const step2End = fadeStart + SPLIT_FADE_DUR;
+
+  const arrivalOps = arrivals.map(a => {
+    const newSlot = targetSlot + a.slotOffset;
+    return {
+      into: a.into, newSlot,
+      from: { x: slotX(newSlot) + a.fromOffset.x, y: a.fromOffset.y, z: a.fromOffset.z },
+      delay: a.delay, dur: a.dur, arcHeight: a.arcHeight ?? 1.0,
+    };
+  });
+
+  // activeSlots шага 2 — цель + будущие слоты результатов распада (видны
+  // заранее, хотя кубики появятся только внутри самого split) + ПЕРВЫЙ
+  // (ближайший) mover, не все movers — сверено с agnayas ([4,5,6], не
+  // [4,6,7]): дальний mover (s) остаётся притенённым фоном, хоть и
+  // физически едет вместе с ближним.
+  const arrivalSlots = [...new Set(arrivals.map(a => targetSlot + a.slotOffset))];
+  const step2ActiveSlots = [...new Set([...arrivalSlots, moverSlots[0]])];
+
+  return {
+    initial,
+    steps: [
+      { kind: 'grammar', start: influenceStart, end: step1End, activeSlots: [targetSlot, ...wordSlots[gunaTrigger.word]] },
+      { kind: 'rule', ruleNum, start: step2Start, end: step2End, activeSlots: step2ActiveSlots, color, primary: true },
+    ],
+    ops: [
+      { type: 'influence', from: { word: gunaTrigger.word }, to: targetSlot, start: influenceStart, ringHoldDur },
+      { type: 'transform', at: targetSlot, toGlyph: toGuna, toColor: toGunaColor, start: transformStart, spinTurns: 1 },
+      { type: 'approach', movers: { word: approachMovers.word }, target: targetSlot, start: approachStart, distance: 0.5, pulse: true },
+      { type: 'split', at: targetSlot, start: splitStart, holdOffset: holdOffset ?? { x: -1.6, y: 2.4, z: 0.4 }, arrivals: arrivalOps },
     ],
   };
 }
