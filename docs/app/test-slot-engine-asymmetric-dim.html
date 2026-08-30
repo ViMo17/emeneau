@@ -36,7 +36,11 @@
   первая версия использовала Standard, чьё зеркальное отражение зависит
   от угла камера↔свет↔грань (этот угол меняется по позиции в ряду) и
   маскировало сам эффект прозрачности под видом «проблемы освещения».
-  Открывать через живой сайт (https://).</div>
+  Прозрачные грани — side:DoubleSide: по эталонному рисунку пользователя
+  сквозь них должна быть видна ВНУТРЕННЯЯ сторона противоположной стенки
+  (глубина), не просто плоское затемнение — без DoubleSide внутренняя
+  сторона геометрии не рендерится вообще, смотреть внутрь физически
+  некуда. Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <pre id="dump"></pre>
 <script type="module">
@@ -74,14 +78,26 @@ function paintFace(baseColor, tintToBlack, glyph) {
   return tex;
 }
 
-function makeMat(baseColor, tintToBlack, glyph, opacity) {
+function makeMat(baseColor, tintToBlack, glyph, opacity, doubleSide) {
   const tex = paintFace(baseColor, tintToBlack, glyph);
   // MeshBasicMaterial — НЕ реагирует на свет сцены вообще (ни диффузно,
   // ни зеркально): показывает ровно то, что задано в самом материале
   // (текстура×opacity), без искажений от угла между камерой, светом и
   // гранью, который у MeshStandardMaterial меняется по позиции в ряду и
   // маскирует именно то, что здесь проверяется.
-  return new THREE.MeshBasicMaterial({ map: tex, fog: false, transparent: true, opacity });
+  //
+  // side:DoubleSide — на прозрачных гранях ОБЯЗАТЕЛЬНО: по умолчанию
+  // (FrontSide) рендерятся только ВНЕШНИЕ треугольники геометрии,
+  // внутренняя сторона грани не рисуется вообще — сквозь прозрачную грань
+  // буквально нечего увидеть, кроме фона страницы позади всего кубика
+  // (плоское затемнение, не глубина). По эталонному рисунку пользователя
+  // сквозь прозрачную грань должна быть видна ВНУТРЕННЯЯ сторона
+  // противоположной (задней, непрозрачной) стенки того же кубика — для
+  // этого нужен DoubleSide, иначе смотреть внутрь физически некуда.
+  return new THREE.MeshBasicMaterial({
+    map: tex, fog: false, transparent: true, opacity,
+    side: doubleSide ? THREE.DoubleSide : THREE.FrontSide,
+  });
 }
 
 // Порядок BoxGeometry: 0:+X(право) 1:-X(лево) 2:+Y(верх) 3:-Y(низ) 4:+Z(перёд,буква) 5:-Z(зад)
@@ -89,12 +105,12 @@ function makeMat(baseColor, tintToBlack, glyph, opacity) {
 // если грань 50%+чёрный, буква темнеет вместе с ней, не отдельным слоем.
 function buildAsymmetricCubeMaterials() {
   return [
-    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 0 право — «остальная», 80% к чёрному
-    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 1 лево — «остальная»
-    makeMat(BASE_COLOR, 0.8, null, 0.5),   // 2 верх — «остальная»
-    makeMat(BASE_COLOR, 0.0, null, 0.5),   // 3 низ — 50%, БЕЗ затемнения к чёрному
-    makeMat(BASE_COLOR, 0.8, GLYPH, 0.5),  // 4 перёд (буква) — теперь тоже «остальная», буква темнеет вместе с гранью
-    makeMat(BASE_COLOR, 0.0, null, 1.0),   // 5 зад — непрозрачна, исходный цвет
+    makeMat(BASE_COLOR, 0.8, null, 0.5, true),   // 0 право — «остальная», 80% к чёрному, DoubleSide
+    makeMat(BASE_COLOR, 0.8, null, 0.5, true),   // 1 лево — «остальная»
+    makeMat(BASE_COLOR, 0.8, null, 0.5, true),   // 2 верх — «остальная»
+    makeMat(BASE_COLOR, 0.0, null, 0.5, true),   // 3 низ — 50%, БЕЗ затемнения к чёрному
+    makeMat(BASE_COLOR, 0.8, GLYPH, 0.5, true),  // 4 перёд (буква) — теперь тоже «остальная», буква темнеет вместе с гранью
+    makeMat(BASE_COLOR, 0.0, null, 1.0, false),  // 5 зад — непрозрачна, исходный цвет, FrontSide достаточно (не просвечивается насквозь)
   ];
 }
 
