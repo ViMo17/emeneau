@@ -160,6 +160,73 @@ export function buildInfluenceTransformChain(spec) {
   };
 }
 
+// Зазор между концом leg1 (подъезд вплотную) и стартом elide — движки
+// приближения (spawnWave при holdPulse) реально «долетают» за ~400мс,
+// плюс небольшой запас, чтобы реакция читалась ПОСЛЕ импульса, не
+// одновременно с ним — сверено с śādhi (leg1End=3500, elide.start=3950,
+// разница ровно 450).
+const APPROACH_TO_ELIDE_GAP = 450;
+// Полная длительность elide (рождение+пауза+угасание) — сумма дефолтов
+// самой applyElide (riseDur:1300 + holdDur:800 + fadeDur:1100 = 3200), не
+// отдельная константа генератора — если дефолты движка изменятся, эта
+// формула должна быть пересчитана вместе с ними.
+const ELIDE_TOTAL_DUR = 1300 + 800 + 1100;
+// Запас после полного угасания elide до конца шага — сверено с śādhi
+// (150мс), тот же порядок величины, что и в approach+merge (āsīt).
+const ELIDE_TAIL_BUFFER = 150;
+
+/**
+ * Строит { initial, steps, ops } для категории «approach + elide» (реестр:
+ * буква исчезает без замены как реакция на приближение соседа — например
+ * śādhi, s+dh→∅). Один шаг: движущаяся часть (movers) подъезжает вплотную
+ * к цели (leg1), держит паузу с непрерывным пульсом (midHoldDur) — В ЭТОЙ
+ * паузе цель начинает elide (погружается, исчезает), — затем movers
+ * довершают путь на освободившееся место (leg2).
+ *
+ * @param {Object} spec
+ * @param {string[][]} spec.words — слова (морфологические части), между ними зазор в 1 слот
+ * @param {{word: number, letter: number}[]} spec.movers — буквы, которые едут (первая — «активный» участник для activeSlots, остальные едут пассажирами)
+ * @param {{word: number, letter: number}} spec.target — буква, которая исчезает (elide, без замены)
+ * @param {number} spec.ruleNum
+ * @param {number} spec.color
+ * @param {number} [spec.approachDur] - длительность leg1 (дефолт движка 900)
+ * @param {number} [spec.midHoldDur] - длительность паузы, в которой начинается elide (дефолт 1400 — сверено с śādhi, но только на ОДНОМ примере, меньше уверенности, чем у остальных констант)
+ * @param {number} [spec.leg2Dur] - длительность довозки на освободившееся место (дефолт движка 600)
+ * @param {number} [spec.midDistance] - зазор, на котором останавливается leg1 (дефолт движка 1.0)
+ * @param {number} [spec.distance] - общее расстояние подъезда (дефолт движка 2.0)
+ * @returns {import('./slot-engine-types.js').ExampleData}
+ */
+export function buildApproachElideExample(spec) {
+  const { words, movers, target, ruleNum, color, approachDur, midHoldDur, leg2Dur, midDistance, distance } = spec;
+  const { initial, wordSlots, totalLetters } = layoutWords(words);
+
+  const moverSlots = movers.map(({ word, letter }) => wordSlots[word][letter]);
+  const targetSlot = wordSlots[target.word][target.letter];
+  const approachDurVal = approachDur ?? 900;
+
+  const fallComplete = (totalLetters - 1) * FALL_STAGGER + FALL_DUR;
+  const stepStart = fallComplete + BUFFER_AFTER_FALL;
+  const leg1End = stepStart + approachDurVal;
+  const elideStart = leg1End + APPROACH_TO_ELIDE_GAP;
+  const stepEnd = elideStart + ELIDE_TOTAL_DUR + ELIDE_TAIL_BUFFER;
+
+  return {
+    initial,
+    steps: [
+      { kind: 'rule', ruleNum, start: stepStart, end: stepEnd, activeSlots: [targetSlot, moverSlots[0]], color, primary: true },
+    ],
+    ops: [
+      {
+        type: 'approach', movers: moverSlots, target: targetSlot, start: stepStart,
+        approachDur: approachDurVal, midDistance: midDistance ?? 1.0, midHoldDur: midHoldDur ?? 1400,
+        leg2Dur: leg2Dur ?? 600, distance: distance ?? 2.0, retreat: false, jitterAmp: 0, pulse: false,
+        holdPulse: true,
+      },
+      { type: 'elide', at: targetSlot, start: elideStart },
+    ],
+  };
+}
+
 /**
  * Строит { initial, steps, ops } для ОДНОШАГОВОГО правила категории
  * «influence+transform» — частный случай buildInfluenceTransformChain с

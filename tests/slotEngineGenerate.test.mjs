@@ -13,7 +13,7 @@
 // регрессия генератора.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildInfluenceTransformExample, buildInfluenceTransformChain, buildApproachMergeExample, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
+import { buildInfluenceTransformExample, buildInfluenceTransformChain, buildApproachMergeExample, buildApproachElideExample, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
 
 test('buildInfluenceTransformExample: раскладка слотов совпадает побуквенно с rule71 (vāk asti)', () => {
   const data = buildInfluenceTransformExample({
@@ -146,6 +146,38 @@ test('buildApproachMergeExample: тайминги в пределах 40мс о�
   assert.ok(Math.abs(data.steps[0].end - 4050) <= 40, `steps[0].end=${data.steps[0].end}, эталон 4050`);
   assert.ok(Math.abs(merge.start - 5370) <= 40, `merge.start=${merge.start}, эталон 5370`);
   assert.ok(Math.abs(data.steps[1].end - 7270) <= 40, `steps[1].end=${data.steps[1].end}, эталон 7270`);
+  assert.deepEqual(validateExampleData(data), []);
+});
+
+test('buildApproachElideExample: структура ops/steps совпадает с śādhi (rule15) — approach(movers,target)+elide(at), activeSlots=[target,первый mover]', () => {
+  const data = buildApproachElideExample({
+    words: [['ś', 'ā', 's'], ['dh', 'i']],
+    movers: [{ word: 1, letter: 0 }, { word: 1, letter: 1 }],
+    target: { word: 0, letter: 2 },
+    ruleNum: 15, color: 0x869EC1,
+  });
+  const [approach, elide] = data.ops;
+  assert.equal(approach.type, 'approach');
+  assert.equal(elide.type, 'elide');
+  assert.equal(approach.target, elide.at, 'approach едет К той же цели, что потом исчезает');
+  assert.deepEqual(data.steps[0].activeSlots, [elide.at, approach.movers[0]]);
+  assert.equal(data.steps.length, 1, 'śādhi — один шаг, без предварительной грамматики');
+});
+
+test('buildApproachElideExample: тайминги в пределах 60мс от рукописного śādhi (approachDur/midHoldDur/leg2Dur — те же значения по умолчанию)', () => {
+  const data = buildApproachElideExample({
+    words: [['ś', 'ā', 's'], ['dh', 'i']],
+    movers: [{ word: 1, letter: 0 }, { word: 1, letter: 1 }],
+    target: { word: 0, letter: 2 },
+    ruleNum: 15, color: 0x869EC1,
+  });
+  const [approach, elide] = data.ops;
+  assert.equal(approach.approachDur, 900);
+  assert.equal(approach.midHoldDur, 1400);
+  assert.equal(approach.leg2Dur, 600);
+  assert.ok(Math.abs(approach.start - 2600) <= 60, `approach.start=${approach.start}, эталон 2600`);
+  assert.ok(Math.abs(elide.start - 3950) <= 60, `elide.start=${elide.start}, эталон 3950 (leg1End+450)`);
+  assert.ok(Math.abs(data.steps[0].end - 7300) <= 60, `steps[0].end=${data.steps[0].end}, эталон 7300 (elide.start+3200+150)`);
   assert.deepEqual(validateExampleData(data), []);
 });
 
