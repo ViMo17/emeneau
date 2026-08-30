@@ -31,6 +31,11 @@
   50% прозрачности, цвет затемнён на 80% к чёрному (буква плотно
   привязана к текстуре грани, темнеет вместе с ней). Один и тот же
   цвет/буква на всех 10 слотах — единственная переменная — позиция.
+  Материал — MeshBasicMaterial, НЕ MeshStandardMaterial: не реагирует на
+  свет сцены вообще, показывает ровно то, что задано (текстура×opacity) —
+  первая версия использовала Standard, чьё зеркальное отражение зависит
+  от угла камера↔свет↔грань (этот угол меняется по позиции в ряду) и
+  маскировало сам эффект прозрачности под видом «проблемы освещения».
   Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <pre id="dump"></pre>
@@ -71,10 +76,12 @@ function paintFace(baseColor, tintToBlack, glyph) {
 
 function makeMat(baseColor, tintToBlack, glyph, opacity) {
   const tex = paintFace(baseColor, tintToBlack, glyph);
-  return new THREE.MeshStandardMaterial({
-    map: tex, roughness: 0.55, metalness: 0, envMapIntensity: 0, fog: false,
-    transparent: true, opacity,
-  });
+  // MeshBasicMaterial — НЕ реагирует на свет сцены вообще (ни диффузно,
+  // ни зеркально): показывает ровно то, что задано в самом материале
+  // (текстура×opacity), без искажений от угла между камерой, светом и
+  // гранью, который у MeshStandardMaterial меняется по позиции в ряду и
+  // маскирует именно то, что здесь проверяется.
+  return new THREE.MeshBasicMaterial({ map: tex, fog: false, transparent: true, opacity });
 }
 
 // Порядок BoxGeometry: 0:+X(право) 1:-X(лево) 2:+Y(верх) 3:-Y(низ) 4:+Z(перёд,буква) 5:-Z(зад)
@@ -104,10 +111,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.outputEncoding = THREE.sRGBEncoding;
 container.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const key = new THREE.DirectionalLight(0xffffff, 0.6);
-key.position.set(3, 6, 4);
-scene.add(key);
+// Свет НЕ добавлен намеренно — MeshBasicMaterial на него всё равно не
+// реагирует, лишний свет в сцене только путал бы, что здесь на самом деле проверяется.
 
 const meshes = [];
 for (let slot = 0; slot < N_SLOTS; slot++) {
