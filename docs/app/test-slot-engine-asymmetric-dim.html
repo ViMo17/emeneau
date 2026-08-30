@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Диагностика: асимметричная прозрачность (задняя грань 100%, остальные 40%)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; position:relative; }
+  #anim-container { width:100%; height:100%; }
+  #anim-container canvas { display:block; width:100%; height:100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:700px; }
+  #dump { position:fixed; bottom:10px; left:10px; right:10px; z-index:10;
+    font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; line-height:1.5;
+    color:#E6E1D2; background:rgba(0,0,0,.55); padding:8px 12px; border-radius:6px;
+    max-height:32vh; overflow:auto; white-space:pre; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Диагностика асимметричной прозрачности (CLAUDE.md, Часть 6, п.0)
+  — контролируемый эксперимент: одна и та же буква "k" (единый цвет) на
+  ВСЕХ 10 слотах, единственная переменная — позиция. У каждого кубика
+  ЗАДНЯЯ грань (idx5, обычно не видна камере напрямую) держит полную
+  непрозрачность (opacity=1), у остальных пяти (idx0-4, включая нижнюю)
+  — 40% (opacity=0.4). Статичная сцена, без анимации/падения — сразу в
+  покое. Не часть движка приложения, только для скриншота+сравнения по
+  слотам. Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<pre id="dump"></pre>
+<script type="module">
+import * as THREE from './vendor/three.module.js';
+import { makeCube, updateShadow } from './lib/slot-engine-cube.js';
+import { N_SLOTS, SLOT, colorFor } from './lib/slot-engine-core.js';
+
+const container = document.getElementById('anim-container');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+const camBase = new THREE.Vector3(0, 3.2, 9.5);
+camera.position.copy(camBase);
+camera.lookAt(0, 0.4, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.outputEncoding = THREE.sRGBEncoding;
+container.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const key = new THREE.DirectionalLight(0xffffff, 0.6);
+key.position.set(3, 6, 4);
+scene.add(key);
+
+function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
+
+// Одна и та же буква/цвет на всех 10 слотах — позиция единственная
+// переменная. Грань idx5 (задняя) — opacity 1, остальные 5 (idx0-4,
+// включая нижнюю idx3) — opacity 0.4, оба transparent:true (makeCube уже
+// выставляет transparent:true на все 6 граней через buildOneMatSet).
+const cubes = [];
+for (let slot = 0; slot < N_SLOTS; slot++) {
+  const cube = makeCube('k', slot * 97 + 13);
+  cube.mesh.position.set(slotX(slot), 0, 0);
+  cube.mesh.material.forEach((m, idx) => { m.opacity = idx === 5 ? 1.0 : 0.4; });
+  scene.add(cube.mesh);
+  scene.add(cube.shadow);
+  cubes.push({ slot, cube });
+}
+
+function resize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  if (w === 0 || h === 0) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(container);
+resize();
+
+function frame() {
+  cubes.forEach(({ cube }) => updateShadow(cube));
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+const dumpEl = document.getElementById('dump');
+const lines = ['Статичная сцена — координаты и материалы зафиксированы один раз:', ''];
+for (const { slot, cube } of cubes) {
+  const opac = cube.mesh.material.map(m => m.opacity.toFixed(2));
+  lines.push(`слот ${String(slot).padStart(2)}  x=${slotX(slot).toFixed(2)}  colorHex=#${colorFor('k').toString(16).padStart(6,'0')}  opacity[0..5]=${opac.join(', ')}`);
+}
+dumpEl.textContent = lines.join('\n');
+</script>
+</body>
+</html>
