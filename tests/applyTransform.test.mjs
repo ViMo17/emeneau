@@ -23,6 +23,7 @@ function makeCube(slot) {
   mesh.position.set(slot, 0, 0);
   return {
     tr: 'k',
+    color: 0xA8D878, // нужен buildOpposingFaceMaterials (landsOnOppositeFace) — реальный canvas через installCanvasStub
     seed: slot * 100, // regenMats использует cube.seed — без него NaN, не крашится, но нечестно
     mesh,
     matsMain: 'matsMain',
@@ -65,26 +66,65 @@ test('applyTransform: пауза-осознание (anticipateDur) — пуль
   assert.equal(op._began, undefined, 'активная фаза ещё не началась');
 });
 
-test('applyTransform: категория vargaPair (k→g) — активная фаза начинается ровно после anticipateDur, 180°, нейтральная грань', () => {
+test('applyTransform: категория vargaPair (k→g) — обе буквы нанесены ДО начала вращения, 180° за 1800мс, без перерисовки на середине пути', () => {
+  // ОБНОВЛЕНО: раньше (до фикса «противолежащая грань») кубик показывал
+  // нейтральный matsBlank всё вращение, а глиф менялся через regenMats на
+  // середине пути (t>=0.15) — по прямому наблюдению пользователя это
+  // выглядело как «буква пропадает, потом внезапно появляется после
+  // конца вращения», а не «видна сбоку, затем становится лицевой». Теперь
+  // — buildOpposingFaceMaterials наносит ТЕКУЩУЮ букву на лицевую грань
+  // (idx4) и БУДУЩУЮ на противолежащую (idx5) СРАЗУ, до первого кадра
+  // вращения — regenMats(cube.tr) откладывается до самого приземления
+  // (там уже неважно для картинки, нужно только для будущих операций на
+  // этом же кубике). Длительность — 1800мс (не spinTurns×MS_PER_360=700),
+  // сверено с эталоном (docs/effects/rule-assimilation-varga-t-d.html).
   const cubes = { 3: makeCube(3) };
   const ctx = makeCtx(cubes);
   const op = { type: 'transform', at: 3, toGlyph: 'g', start: 1000, ...TRANSFORM_KIND.vargaPair };
   const anticipateDur = 900; // дефолт
-  const dur = 0.5 * MS_PER_360; // 700мс
+  const dur = 1800; // дефолт для landsOnOppositeFace, НЕ spinTurns×MS_PER_360
   const activeStart = 1000 + anticipateDur;
 
   applyTransform(op, activeStart, ctx); // ровно момент конца паузы — старт активной фазы
   assert.equal(cubes[3].mesh.scale.x, 1, 'пульс масштабом снят к началу активной фазы');
-  assert.equal(cubes[3].mesh.material, cubes[3].matsBlank, 'на старте активной фазы — нейтральная грань (signal:blank), не серебро');
+  assert.notEqual(cubes[3].mesh.material, cubes[3].matsBlank, 'landsOnOppositeFace НЕ использует matsBlank вообще');
+  assert.equal(cubes[3].mesh.material, cubes[3]._oppositeMats, 'на старте активной фазы — уже смонтирован набор с обеими буквами');
+  assert.equal(cubes[3].tr, 'k', 'cube.tr ещё старый — regenMats откладывается до приземления');
 
-  applyTransform(op, activeStart + dur * 0.5, ctx); // середина вращения — глиф уже сменился (порог 15%)
-  assert.equal(cubes[3].tr, 'g', 'глиф внутри cube.tr должен смениться через regenMats к середине пути');
-  assert.equal(cubes[3].mesh.material, cubes[3].matsBlank, 'материал остаётся нейтральным до самого конца — переход цветом ещё не завершён');
+  applyTransform(op, activeStart + dur * 0.5, ctx); // середина вращения (90°)
+  assert.equal(cubes[3].mesh.material, cubes[3]._oppositeMats, 'материал не меняется в течение всего вращения — обе буквы уже на месте');
+  assert.equal(cubes[3].tr, 'k', 'глиф внутри cube.tr МЕНЯЕТСЯ только при приземлении, не на середине пути (в отличие от целых оборотов)');
+  assert.ok(Math.abs(cubes[3].mesh.rotation.y) > 0.5, 'на середине 180°-разворота угол заметно отличен от нуля');
 
   applyTransform(op, activeStart + dur, ctx); // точно момент завершения вращения
+  assert.equal(cubes[3].tr, 'g', 'к моменту приземления regenMats уже применён');
   assert.equal(cubes[3].mesh.material, cubes[3].matsMain, 'по завершении вращения — истинный цвет (ссылка на актуальный matsMain)');
   assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот сброшен в 0 по завершении');
+  assert.equal(cubes[3]._oppositeMats, null, 'временный набор граней уничтожен после приземления — не висит без ссылок');
   assert.equal(op._done, undefined, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: _done не должен выставляться сразу по завершении вращения — есть ещё пауза-фиксация (holdDur)');
+});
+
+test('applyTransform: РЕГРЕССИЯ — поворот не откатывается назад на кадрах ПОСЛЕ приземления (найдено численной симуляцией)', () => {
+  // Реальный найденный баг: rotation.y пересчитывался БЕЗУСЛОВНО на каждом
+  // кадре по формуле -1×easeOutCubic(t)×2π×spinTurns, где t зажат в 1
+  // после окончания вращения — для 180° (spinTurns:0.5) это даёт -180°,
+  // а не 0°, затирая явный сброс в блоке приземления уже на СЛЕДУЮЩЕМ
+  // кадре после самого приземления. Для целых оборотов (360°/720°)
+  // разница (-360°/-720° против 0°) визуально неотличима, поэтому баг
+  // оставался незамеченным до категории «противолежащая грань».
+  const cubes = { 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 3, toGlyph: 'g', start: 1000, ...TRANSFORM_KIND.vargaPair };
+  const rotationEnd = 1000 + 900 + 1800; // anticipateDur + dur(landsOnOppositeFace)
+
+  applyTransform(op, rotationEnd, ctx); // момент приземления
+  assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот сброшен на самом кадре приземления');
+
+  applyTransform(op, rotationEnd + 1, ctx); // СЛЕДУЮЩИЙ кадр — именно здесь была регрессия
+  assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот НЕ должен откатываться назад на следующем кадре');
+
+  applyTransform(op, rotationEnd + 500, ctx); // где-то в середине паузы-фиксации
+  assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот остаётся нулевым на протяжении всей паузы-фиксации');
 });
 
 test('applyTransform: пауза-фиксация (holdDur) — _done выставляется РОВНО через holdDur после завершения вращения, не раньше', () => {

@@ -55,7 +55,9 @@ function makeShadow() {
 // Уничтожает один набор материалов (6 граней) — безопасно для чего угодно:
 // пропускает элементы без настоящего .dispose (например заглушки в тестах,
 // которые подсовывают простые строки/объекты вместо реальных материалов).
-function disposeMatSet(mats) {
+// Экспортирована — нужна ops.js для очистки временного набора
+// buildOpposingFaceMaterials (см. applyTransform, landsOnOppositeFace).
+export function disposeMatSet(mats) {
   if (!Array.isArray(mats)) return;
   mats.forEach(m => {
     if (m && typeof m.dispose === 'function') {

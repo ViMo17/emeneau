@@ -4,13 +4,13 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { paintGlyph } from './chalk-module.js';
+import { paintGlyph, buildOpposingFaceMaterials } from './chalk-module.js';
 import {
   CUBE_SIZE, SLOT, MS_PER_360, SILVER_RGB, GROUP_COLOR, GROUP_RGB,
   colorFor, ringColorFrom, clamp01, lerp, easeOutCubic, easeInOutCubic,
   easeOutBack, slotX, setOpacity,
 } from './slot-engine-core.js';
-import { makeCube, regenMats } from './slot-engine-cube.js';
+import { makeCube, regenMats, disposeMatSet } from './slot-engine-cube.js';
 import { resolveSlotRef } from './slot-engine-words.js';
 import { stepIndexAt, stepTargetOpacity } from './slot-engine-steps.js';
 
@@ -93,8 +93,19 @@ export function applyTransform(op, elapsed, ctx) {
     if (elapsed < op.start) return;
     if (op._done) return;
     const spinTurns = op.spinTurns ?? 1;
-    const dur = Math.abs(spinTurns) * MS_PER_360;
-    const bounceH = op.bounceH ?? 0.3;
+    // Полуоборот (0.5, 1.5, 2.5...) — к зрителю в конце разворота выходит
+    // ПРОТИВОЛЕЖАЩАЯ грань кубика (TRANSFORM_KIND.vargaPair). Для этого
+    // случая буква нового звука наносится на противолежащую грань ЗАРАНЕЕ,
+    // до начала вращения (см. buildOpposingFaceMaterials в chalk-module.js)
+    // — без промежуточного «слепого» материала и без перерисовки на
+    // середине пути, когда грань ещё обращена к зрителю. Портировано из
+    // проверенного эталона (docs/effects/rule-assimilation-varga-t-d.html,
+    // buildDentalVarga) — там же и более медленный, «тяжёлый» оборот
+    // (1800мс на 180°, не по общей формуле spinTurns×MS_PER_360) и меньший
+    // подскок (0.16 вместо 0.3).
+    const landsOnOppositeFace = Math.round(spinTurns * 2) % 2 !== 0;
+    const dur = landsOnOppositeFace ? (op.dur ?? 1800) : Math.abs(spinTurns) * MS_PER_360;
+    const bounceH = op.bounceH ?? (landsOnOppositeFace ? 0.16 : 0.3);
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
 
     // transform получает ТУ ЖЕ симметричную пару пауз, что уже есть у split
@@ -138,13 +149,34 @@ export function applyTransform(op, elapsed, ctx) {
     const signalMats = op.signal === 'blank' ? 'matsBlank' : 'matsSignal';
     if (!op._began) {
       op._began = true;
-      cube.mesh.material = cube[signalMats];
+      if (landsOnOppositeFace) {
+        // Оба глифа — сразу, ДО начала вращения: idx4 (лицевая) держит
+        // ТЕКУЩУЮ букву, idx5 (противолежащая) — БУДУЩУЮ. Никакой
+        // перерисовки на середине пути не требуется — «превращение»
+        // целиком получается из самой геометрии разворота.
+        const newColor = op.toColor ?? colorFor(op.toGlyph);
+        cube._oppositeMats = buildOpposingFaceMaterials(cube.color, cube.seed + 5, cube.tr, op.toGlyph);
+        cube.mesh.material = cube._oppositeMats;
+        op._pendingColor = newColor; // нужен после приземления, см. ниже
+      } else {
+        cube.mesh.material = cube[signalMats];
+      }
     }
     const t = clamp01((elapsed - activeStart) / dur);
-    cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
-    cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
-    cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
-    if (!op._swapped && t >= 0.15) {
+    // ТОЛЬКО пока не приземлился — иначе НАЙДЕННЫЙ РЕАЛЬНЫЙ БАГ (поймано
+    // численной симуляцией): t остаётся зажатым в 1 и на КАЖДОМ следующем
+    // кадре формула ниже пересчитывает rotation.y заново — для целых
+    // оборотов (spinTurns:1,2 — 360°/720°) результат (-360°/-720°)
+    // визуально неотличим от 0°, поэтому оставался незамеченным, но для
+    // половинного оборота (0.5 — 180°) даёт ЗАМЕТНО другой угол (-180°,
+    // не 0°), затирая явный сброс в блоке приземления ниже уже на
+    // СЛЕДУЮЩЕМ кадре после самого приземления.
+    if (!op._landed) {
+      cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
+      cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
+      cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
+    }
+    if (!landsOnOppositeFace && !op._swapped && t >= 0.15) {
       op._swapped = true;
       const newColor = op.toColor ?? colorFor(op.toGlyph);
       // Пересобираем ВСЕ наборы материалов кубика (matsMain/matsBlank/
@@ -154,7 +186,9 @@ export function applyTransform(op, elapsed, ctx) {
       // наносится сразу же, тем же моментом ~15% пути, что и раньше —
       // но материал остаётся тем же промежуточным (silver ИЛИ blank, см.
       // выше), не matsMain: буква уже новая, цвет ещё не вернулся, это
-      // следующая, отдельная фаза (см. ниже).
+      // следующая, отдельная фаза (см. ниже). НЕ применяется, когда кубик
+      // садится на противолежащую грань — там оба глифа уже нанесены
+      // заранее (см. op._began выше), перерисовывать нечего.
       regenMats(cube, op.toGlyph, newColor);
       cube.mesh.material = cube[signalMats];
     }
@@ -163,6 +197,18 @@ export function applyTransform(op, elapsed, ctx) {
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
       cube.mesh.position.x = slotX(op.at);
+      if (landsOnOppositeFace) {
+        // matsMain/matsBlank/... пересобираются под новую букву ТОЛЬКО
+        // теперь, после приземления — нужно для будущих операций на этом
+        // же кубике (повторный transform, settle и т.п.), а не для самого
+        // текущего разворота (тот уже полностью показан через _oppositeMats
+        // выше). Временный набор граней уничтожается — иначе утечка
+        // текстур, тот же класс бага, что уже был найден и исправлен для
+        // regenMats/lazily-собираемых наборов.
+        regenMats(cube, op.toGlyph, op._pendingColor);
+        disposeMatSet(cube._oppositeMats);
+        cube._oppositeMats = null;
+      }
       cube.mesh.material = cube.matsMain; // возвращает себе истинный цвет столбца
       op._rotationEnd = elapsed;
     }

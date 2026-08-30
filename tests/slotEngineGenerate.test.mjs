@@ -1,10 +1,16 @@
 // Тесты buildInfluenceTransformExample (slot-engine-generate.js) —
-// каждое число проверено сверкой с ДВУМЯ уже построенными и визуально
+// каждое число проверено сверкой с уже построенными и визуально
 // подтверждёнными эталонами (rule71 vāk asti, rule70 taddhiraṇyam шаг 1),
 // не абстрактно. Допуск ±20мс на influence.start/transform.start —
 // расхождение с ручным выбором буфера после падения (340мс у rule71,
 // 300мс у taddhiraṇyam — обычная ручная вариация, не ошибка формулы).
-// ringHoldDur — ТОЧНОЕ совпадение в обоих случаях, без допуска.
+// ringHoldDur — точная формула GAP+transformDur, где transformDur для
+// landsOnOppositeFace (TRANSFORM_KIND.vargaPair) — 1800мс (после фикса
+// «буква на противолежащей грани заранее», не 700 = spinTurns×MS_PER_360,
+// как было раньше) — см. slot-engine-ops.js, applyTransform. Значение
+// 3300 в рукописном rule71-vak-asti-slots.js — СТАРОЕ, до этого фикса,
+// новый расчёт (4400) с ним больше не совпадает — это ожидаемо, не
+// регрессия генератора.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildInfluenceTransformExample, buildInfluenceTransformChain, TRANSFORM_KIND, validateExampleData } from '../docs/app/lib/slot-engine.js';
@@ -39,7 +45,7 @@ test('buildInfluenceTransformExample: тайминги в пределах 20м�
   const transform = data.ops.find(op => op.type === 'transform');
   assert.ok(Math.abs(influence.start - 3200) <= 20, `influence.start=${influence.start}, эталон 3200`);
   assert.ok(Math.abs(transform.start - 5800) <= 20, `transform.start=${transform.start}, эталон 5800`);
-  assert.equal(influence.ringHoldDur, 3300, 'ringHoldDur — точное совпадение, не допуск');
+  assert.equal(influence.ringHoldDur, 4400, 'ringHoldDur = GAP(2600) + 1800 (landsOnOppositeFace, после фикса грани) — не 3300 из старого рукописного примера');
   assert.equal(influence.from, 5);
   assert.equal(influence.to, 3);
   assert.equal(transform.at, 3);
@@ -94,7 +100,7 @@ test('buildInfluenceTransformChain: формула связки шагов (step
   assert.equal(influence1.ringHoldDur, 4000);
   assert.ok(Math.abs(influence2.start - 8080) <= 20, `influence2.start=${influence2.start}, эталон 8080`);
   assert.ok(Math.abs(transform2.start - 10680) <= 20, `transform2.start=${transform2.start}, эталон 10680`);
-  assert.equal(influence2.ringHoldDur, 3300);
+  assert.equal(influence2.ringHoldDur, 4400, 'GAP(2600)+1800 (шаг 2 — vargaPair, landsOnOppositeFace)');
   assert.equal(data.steps[0].primary, true);
   assert.equal(data.steps[1].primary, false, 'вспомогательный шаг цепочки — БЕЗ primary, как в реальном примере');
   assert.deepEqual(validateExampleData(data), []);

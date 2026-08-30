@@ -81,6 +81,32 @@ function buildChalkMaterials(baseColor, seed, glyph) {
   });
 }
 
+// Материал с РАЗНЫМИ буквами на противолежащих торцевых гранях (idx4 —
+// текущий звук, idx5 — будущий) — для transform-поворотов ровно на
+// нечётное число полуоборотов (0.5, 1.5... TRANSFORM_KIND.vargaPair), где
+// к зрителю после разворота выходит ПРОТИВОЛЕЖАЩАЯ грань. В отличие от
+// buildChalkMaterials (та же буква на обеих гранях — годится, когда кубик
+// возвращается к СВОЕЙ ЖЕ грани после целого числа оборотов), здесь буква
+// нового звука должна быть НАНЕСЕНА ЗАРАНЕЕ, до начала вращения, а не
+// дорисована посреди пути — портировано из проверенного эталона
+// (docs/effects/rule-assimilation-varga-t-d.html, buildDentalVarga: там
+// же не regenMats на середине оборота, а сразу два глифа на одном
+// материале с самого начала).
+function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
+  const SZ = 256;
+  const faces = [0,1,2,3,4,5];
+  return faces.map((idx)=>{
+    const cv = paintFlatFace(SZ, baseColor);
+    if (idx === 4 && frontGlyph) paintGlyph(cv, frontGlyph);
+    if (idx === 5 && backGlyph) paintGlyph(cv, backGlyph);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    return new THREE.MeshStandardMaterial({
+      map: tex, roughness: 0.55, metalness: 0.0, envMapIntensity: 0, fog: false, transparent: true,
+    });
+  });
+}
+
 // makeChalkGeo — имя сохранено ради совместимости с вызывающим кодом; реализация теперь
 // просто гладкое скругление рёбер (без органического шума по вершинам/нормалям — это и
 // была единственная причина «мелового» неровного вида геометрии).
@@ -128,4 +154,4 @@ function makeShadowBlobTexture() {
   return tx;
 }
 
-export { CW, paintGlyph, buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture };
+export { CW, paintGlyph, buildChalkMaterials, buildOpposingFaceMaterials, makeChalkGeo, makeShadowBlobTexture };

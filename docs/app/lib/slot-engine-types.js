@@ -123,6 +123,7 @@
  * @property {number} [clearance] - боковое раскачивание, знак = направление к пустому месту
  * @property {number} [anticipateDur] - пауза-осознание до вращения
  * @property {number} [holdDur] - пауза-фиксация после вращения
+ * @property {number} [dur] - переопределение длительности вращения (мс); при landsOnOppositeFace дефолт 1800, иначе spinTurns×MS_PER_360
  * @property {number} [bounceH]
  * @property {number} [toColor]
  * @property {boolean} [_done]
@@ -133,6 +134,7 @@
  * @property {boolean} [_swapped]
  * @property {boolean} [_landed]
  * @property {number} [_rotationEnd]
+ * @property {number} [_pendingColor] - при landsOnOppositeFace: цвет, который нужно применить в regenMats после приземления
  */
 
 /** @typedef {Object} SplitOp
@@ -260,6 +262,7 @@
  * @property {number} [_fallDur] - длительность обычного падения, мс
  * @property {PulseFace} [_pulseFace]
  * @property {MatSet} [_pulsingMats] - копия matsMain с гранью [4] подменённой на _pulseFace
+ * @property {MatSet} [_oppositeMats] - временный набор на время transform-разворота на противолежащую грань (buildOpposingFaceMaterials) — текущая буква на idx4, будущая на idx5; уничтожается после приземления
  */
 
 /** Общий контекст, который держат все apply*-функции — расширялся по мере

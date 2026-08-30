@@ -128,7 +128,15 @@ export function buildInfluenceTransformChain(spec) {
       : timing[i + 1].influenceStart - STEP_END_LEAD;
     const triggerSlot = wordSlots[s.trigger.word][s.trigger.letter];
     const targetSlot = wordSlots[s.target.word][s.target.letter];
-    const transformDur = Math.abs(s.transformKind.spinTurns ?? 1) * MS_PER_360;
+    // Длительность оборота — ТА ЖЕ формула, что и в applyTransform
+    // (slot-engine-ops.js, landsOnOppositeFace): полуоборот (0.5, 1.5...,
+    // TRANSFORM_KIND.vargaPair) садится на противолежащую грань и всегда
+    // идёт 1800мс (эталон — docs/effects/rule-assimilation-varga-t-d.html),
+    // не по общей формуле spinTurns×MS_PER_360 — та применяется только к
+    // целым оборотам (гуна/вриддхи/ассимиляция).
+    const spinTurns = s.transformKind.spinTurns ?? 1;
+    const landsOnOppositeFace = Math.round(spinTurns * 2) % 2 !== 0;
+    const transformDur = landsOnOppositeFace ? 1800 : Math.abs(spinTurns) * MS_PER_360;
     const ringHoldDur = INFLUENCE_TO_TRANSFORM_GAP + transformDur;
     /** @type {import('./slot-engine-types.js').Step} */
     const step = {
