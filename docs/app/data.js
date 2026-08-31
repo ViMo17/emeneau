@@ -469,6 +469,12 @@ EXAMPLES[69] = [{
 }];
 EXAMPLES[70] = [{
   desc: 'tat + hiraṇyam «золото» → tat + dhiraṇyam → taddhiraṇyam «то золото»',
+  // Подключение к слот-движку тем же путём, что agnayas/āsīt/śādhi — module +
+  // roleDemo, синхронизированы через slotstep. roleDemo из двух шагов ниже
+  // (тег '70' — h→dh, тег '71' — t→d) идёт в том же порядке, что и два
+  // `rule`-шага (ruleNum:70, ruleNum:71) в examples/rule70-taddhiranyam-slots.js —
+  // синхронизация по позиции в массиве, не по числу тега.
+  module: './examples/rule70-taddhiranyam-slots.js',
   roleDemo: { steps: [
     { tag: '70', type: 'voicing', source: 'ha', trigger: 'ta', result: 'dha',
       text: 'h после смычного t становится звонким придыхательным того же места (столбец от триггера t, звонкость+придыхание — своя, лексическая для h).' },
@@ -717,7 +723,14 @@ EXAMPLES[71] = [
   },
   {
     desc: 'vāk + asti → vāg asti «есть голос»',
-    module: './examples/rule71-vak-asti.js'
+    // Раньше './examples/rule71-vak-asti.js' — старый, рукописный THREE.js-
+    // модуль (не удалён, остаётся в репозитории как замороженный эталон
+    // механики двусторонней покраски грани, см. комментарии в chalk-module.js).
+    // Текущая версия — на общем слот-движке, проверена на тестовом полигоне
+    // (test-slot-engine-rule71.html): падение, влияние, transform k→g на
+    // противолежащей грани (TRANSFORM_KIND.vargaPair), без сборки слов —
+    // граница внешних сандхи не схлопывается.
+    module: './examples/rule71-vak-asti-slots.js'
   }
 ];
 
