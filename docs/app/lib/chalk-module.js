@@ -141,59 +141,97 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
 //    контекстом на разных рендерерах был найден и исправлен — просто
 //    итоговая картинka всё равно не устроила).
 //
-// ТЕКУЩАЯ версия — палитра, предложенная пользователем (готовый SVG/CSS
-// компонент с изометрическим кубом, многостоповые градиенты на каждую
-// грань) — портирована в canvas 2D linearGradient/radialGradient с теми же
-// hex-стопами. 6 стопов на грань вместо 2-3 — та самая разница, которая
-// отличает «металлический вид» от «пятна»: реальные иконки/иллюстрации
-// имитируют металл именно так, без всякого рейтрейсинга. Буква на грани
-// остаётся ЧЁРНОЙ (тот же paintGlyph, что и у обычных кубиков) — читается
-// как гравировка на блестящей поверхности, не теряет разборчивости.
-const METALLIC_STOPS = {
-  silver: [
-    [0.00, '#ffffff'], [0.18, '#e4edf6'], [0.40, '#c8d8ea'],
-    [0.62, '#dde8f2'], [0.80, '#b0c4d8'], [1.00, '#8aacc4'],
-  ],
-  gold: [
-    [0.00, '#fffbe0'], [0.12, '#fde878'], [0.30, '#f0c428'],
-    [0.52, '#f8d840'], [0.72, '#d4a010'], [1.00, '#a87800'],
-  ],
-};
-const METALLIC_SPEC = {
-  silver: 'rgba(255,255,255,ALPHA)',
-  gold: 'rgba(255,250,200,ALPHA)',
+// ВТОРАЯ версия пользователя (доп.) — уже не один градиент на все грани,
+// а ТРИ разные роли (та же логика, что различает top/left/right в
+// исходном SVG-кубе): верхняя/лицевая грань — самая яркая, диагональный
+// градиент + мягкий радиальный блик; «блик-полоса» — узкая почти-белая
+// полоса посреди грани (имитация изогнутой отражающей поверхности); тень —
+// равномерно тёмная грань. Плюс ambient occlusion (затемнение к низу) —
+// на ВСЕХ гранях. Портировано hex-в-hex, только позиция блика-полосы
+// (userSpaceOnUse x=15..50 в исходном SVG) заменена на растяжку через всю
+// ширину грани — там это часть композиции всего изометрического куба
+// (грань показана не целиком в кадре), здесь грань — весь кадр текстуры.
+// Буква (idx4/5) — на «верхней»-роли: самая светлая и ровная, наименьший
+// риск потерять контраст с чёрным глифом.
+/**
+ * @typedef {[number, string]} ColorStop
+ * @typedef {{top: ColorStop[], topSpec: ColorStop[], highlight: ColorStop[], shadow: ColorStop[], aoAlpha: number}} MetallicPalette
+ */
+/** @type {{silver: MetallicPalette, gold: MetallicPalette}} */
+const METALLIC = {
+  silver: {
+    top: [[0, '#edf3f7'], [0.30, '#d2dfe8'], [0.65, '#b4c8d4'], [1, '#96b0be']],
+    topSpec: [[0, 'rgba(255,255,255,0.6)'], [0.5, 'rgba(255,255,255,0.08)'], [1, 'rgba(255,255,255,0)']],
+    highlight: [
+      [0, '#6e8fa0'], [0.18, '#aac4d2'], [0.32, '#ddedf6'], [0.42, '#f6fbfe'],
+      [0.52, '#ccdde8'], [0.66, '#88a6b6'], [0.82, '#6a8898'], [1, '#58788a'],
+    ],
+    shadow: [[0, '#607888'], [0.45, '#4e6472'], [1, '#3a4e5c']],
+    aoAlpha: 0.16,
+  },
+  gold: {
+    top: [[0, '#f4e070'], [0.25, '#e0c040'], [0.60, '#c8a018'], [1, '#ae8808']],
+    topSpec: [[0, 'rgba(255,252,210,0.7)'], [0.5, 'rgba(255,240,140,0.1)'], [1, 'rgba(255,220,0,0)']],
+    highlight: [
+      [0, '#8a5c00'], [0.16, '#b88010'], [0.30, '#e0b828'], [0.42, '#f8e868'], [0.50, '#fdf6c0'],
+      [0.60, '#eac830'], [0.72, '#c09018'], [0.88, '#9a7008'], [1, '#7c5400'],
+    ],
+    shadow: [[0, '#7a5000'], [0.45, '#5e3c00'], [1, '#402800']],
+    aoAlpha: 0.18,
+  },
 };
 
-function paintMetallicFace(sz, variant) {
+/** @param {number} sz @param {'silver'|'gold'} variant @param {'top'|'highlight'|'shadow'} role */
+function paintMetallicFace(sz, variant, role) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = sz;
   const ctx = cv.getContext('2d');
+  const p = METALLIC[variant];
 
-  const diag = ctx.createLinearGradient(0, 0, sz, sz);
-  METALLIC_STOPS[variant].forEach(([pos, color]) => diag.addColorStop(pos, color));
-  ctx.fillStyle = diag;
-  ctx.fillRect(0, 0, sz, sz);
+  if (role === 'top') {
+    const g = ctx.createLinearGradient(0, 0, sz, sz);
+    p.top.forEach(([pos, c]) => g.addColorStop(pos, c));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, sz, sz);
+    const spec = ctx.createRadialGradient(sz * 0.30, sz * 0.25, 0, sz * 0.30, sz * 0.25, sz * 0.55);
+    p.topSpec.forEach(([pos, c]) => spec.addColorStop(pos, c));
+    ctx.fillStyle = spec;
+    ctx.fillRect(0, 0, sz, sz);
+  } else if (role === 'highlight') {
+    const g = ctx.createLinearGradient(0, 0, sz, 0);
+    p.highlight.forEach(([pos, c]) => g.addColorStop(pos, c));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, sz, sz);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, sz);
+    p.shadow.forEach(([pos, c]) => g.addColorStop(pos, c));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, sz, sz);
+  }
 
-  // Мягкий блик-«спекуляр» у верхнего левого угла — тот же приём, что в
-  // исходном SVG (radialGradient cx≈28-30%, cy≈20-26%), не отдельная резкая
-  // окружность, а плавно гаснущий радиальный градиент поверх диагонали.
-  const specColor = METALLIC_SPEC[variant];
-  const spec = ctx.createRadialGradient(sz * 0.29, sz * 0.23, 0, sz * 0.29, sz * 0.23, sz * 0.5);
-  spec.addColorStop(0, specColor.replace('ALPHA', '0.55'));
-  spec.addColorStop(0.4, specColor.replace('ALPHA', '0.16'));
-  spec.addColorStop(1, specColor.replace('ALPHA', '0'));
-  ctx.fillStyle = spec;
+  // Ambient occlusion — темнее к низу грани, одинаково на всех трёх ролях.
+  const ao = ctx.createLinearGradient(0, 0, 0, sz);
+  ao.addColorStop(0.55, 'rgba(0,0,0,0)');
+  ao.addColorStop(1, `rgba(0,0,0,${p.aoAlpha})`);
+  ctx.fillStyle = ao;
   ctx.fillRect(0, 0, sz, sz);
 
   return cv;
 }
+
+// Порядок граней BoxGeometry: 0=+X, 1=-X, 2=+Y(верх), 3=-Y(низ),
+// 4=+Z(перед, глиф), 5=-Z(зад, глиф) — см. тот же порядок в
+// buildChalkMaterials выше. Роль по грани — не одна на всех: верх и обе
+// глифовые грани светлые (лучшая разборчивость буквы), одна боковая —
+// блик-полоса, другая боковая и низ — тень.
+const METALLIC_ROLE_BY_FACE = { 0: 'highlight', 1: 'shadow', 2: 'top', 3: 'shadow', 4: 'top', 5: 'top' };
 
 /** @param {'silver'|'gold'} variant @param {number} seed @param {string} glyph */
 function buildMetallicMaterials(variant, seed, glyph) {
   const SZ = 256;
   const faces = [0, 1, 2, 3, 4, 5];
   return faces.map((idx) => {
-    const cv = paintMetallicFace(SZ, variant);
+    const cv = paintMetallicFace(SZ, variant, METALLIC_ROLE_BY_FACE[idx]);
     if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
