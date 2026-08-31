@@ -1,6 +1,7 @@
 // Минимальный стаб document.createElement('canvas') — только то, что
-// реально вызывает chalk-module.js (paintFlatFace/paintGlyph): fillRect,
-// fillStyle, save/restore, font, measureText, fillText. НЕ полноценный
+// реально вызывает chalk-module.js (paintFlatFace/paintGlyph/
+// paintMetallicFace): fillRect, fillStyle, save/restore, font, measureText,
+// fillText, createLinearGradient/createRadialGradient. НЕ полноценный
 // npm-пакет `canvas` (нативная зависимость, требует компиляции cairo) —
 // для целей тестирования ЛОГИКИ (не визуального результата) достаточно,
 // чтобы код прошёл путь до конца и не упал, реальная отрисовка не нужна.
@@ -33,7 +34,8 @@ function makeStubContext() {
     beginPath() {},
     arc() {},
     stroke() {},
-    createRadialGradient() { return { addColorStop() {} }; }, // makeShadowBlobTexture (chalk-module.js)
+    createRadialGradient() { return { addColorStop() {} }; }, // makeShadowBlobTexture/paintMetallicFace (chalk-module.js)
+    createLinearGradient() { return { addColorStop() {} }; }, // paintMetallicFace (buildMetallicMaterials, chalk-module.js)
     measureText(str) {
       const m = /(\d+)px/.exec(this.font);
       const fontSize = m ? Number(m[1]) : 16;

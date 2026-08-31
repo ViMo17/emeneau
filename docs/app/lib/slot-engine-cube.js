@@ -4,8 +4,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
-import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, SIGNAL_COLOR, colorFor } from './slot-engine-core.js';
+import { buildChalkMaterials, buildMetallicMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
+import { CUBE_SIZE, READY_COLOR, colorFor } from './slot-engine-core.js';
 
 /** @typedef {import('./slot-engine-types.js').Cube} Cube */
 
@@ -114,16 +114,18 @@ export function makeCube(tr, seed) {
   const cube = /** @type {any} */ ({ tr, color, seed, _settled: false });
   defineMatsSlot(cube, 'matsMain', null); // всегда эагерно — нужен сразу, как только кубик падает
   defineMatsSlot(cube, 'matsReady', c => buildOneMatSet(READY_COLOR, c.seed + 2, c.tr));
-  defineMatsSlot(cube, 'matsSignal', c => buildOneMatSet(SILVER_COLOR, c.seed + 3, c.tr));
-  // Золото — вриддхи, тот же приём, что серебро/гунация (см. CLAUDE.md,
-  // реестр зарезервированных значений). Пока плоская заливка, как и
-  // серебро — металлический вариант (buildMetallicMaterials в
-  // chalk-module.js) отложен: правильный envMap-подбор требует живой
-  // визуальной обратной связи в реальном времени, не подходит для
-  // пошагового скриншот-цикла. Переключить оба на металл будет ЛЕГКО
-  // (одна замена buildOneMatSet → buildMetallicMaterials с renderer),
-  // сама структура — уже готова, просто заливка временно плоская.
-  defineMatsSlot(cube, 'matsGold', c => buildOneMatSet(SIGNAL_COLOR, c.seed + 4, c.tr));
+  // Серебро/золото — металлические материалы (buildMetallicMaterials,
+  // chalk-module.js), НЕ buildOneMatSet: многостоповые градиенты по грани
+  // (верх/блик-полоса/тень) + ambient occlusion, портировано из палитры
+  // пользователя. TODO (осознанно отложено, не забыто): это ручная 2D-
+  // имитация металла, не настоящее отражение — единственный путь к
+  // фотореалистичному металлу (envMap, через THREE.PMREMGenerator) уже
+  // пробовался и не довёл до убедительного результата без возможности
+  // живой визуальной обратной связи. Вернуться к этому вопросу отдельно,
+  // когда будет способ смотреть на рендер в реальном времени, не по
+  // скриншотам.
+  defineMatsSlot(cube, 'matsSignal', c => buildMetallicMaterials('silver', c.seed + 3, c.tr));
+  defineMatsSlot(cube, 'matsGold', c => buildMetallicMaterials('gold', c.seed + 4, c.tr));
   defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
   cube.matsMain = buildOneMatSet(color, seed, tr);
   cube.mesh = new THREE.Mesh(getCubeGeo(), cube.matsMain);
