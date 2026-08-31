@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { buildChalkMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
-import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, colorFor } from './slot-engine-core.js';
+import { CUBE_SIZE, READY_COLOR, SILVER_COLOR, SIGNAL_COLOR, colorFor } from './slot-engine-core.js';
 
 /** @typedef {import('./slot-engine-types.js').Cube} Cube */
 
@@ -74,10 +74,10 @@ function buildOneMatSet(color, seed, glyph) {
 }
 
 /* Свойство-«слот» набора материалов на кубике (matsMain/matsBlank/matsReady/
-   matsSignal) — геттер/сеттер, не голое поле:
+   matsSignal/matsGold) — геттер/сеттер, не голое поле:
      - ЧТЕНИЕ без lazyBuilder — просто возвращает уже сохранённое значение
        (matsMain, всегда собран заранее, лениво строить нечего).
-     - ЧТЕНИЕ с lazyBuilder (matsBlank/matsReady/matsSignal) — строит набор
+     - ЧТЕНИЕ с lazyBuilder (matsBlank/matsReady/matsSignal/matsGold) — строит набор
        ТОЛЬКО при первом реальном обращении, не заранее «про запас». Кубик,
        который ни разу за пример не показывает этот вариант (не участвует
        в transform/settle), никогда не платит за его постройку.
@@ -113,9 +113,18 @@ export function makeCube(tr, seed) {
   /** @type {Cube} */
   const cube = /** @type {any} */ ({ tr, color, seed, _settled: false });
   defineMatsSlot(cube, 'matsMain', null); // всегда эагерно — нужен сразу, как только кубик падает
-  defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
   defineMatsSlot(cube, 'matsReady', c => buildOneMatSet(READY_COLOR, c.seed + 2, c.tr));
   defineMatsSlot(cube, 'matsSignal', c => buildOneMatSet(SILVER_COLOR, c.seed + 3, c.tr));
+  // Золото — вриддхи, тот же приём, что серебро/гунация (см. CLAUDE.md,
+  // реестр зарезервированных значений). Пока плоская заливка, как и
+  // серебро — металлический вариант (buildMetallicMaterials в
+  // chalk-module.js) отложен: правильный envMap-подбор требует живой
+  // визуальной обратной связи в реальном времени, не подходит для
+  // пошагового скриншот-цикла. Переключить оба на металл будет ЛЕГКО
+  // (одна замена buildOneMatSet → buildMetallicMaterials с renderer),
+  // сама структура — уже готова, просто заливка временно плоская.
+  defineMatsSlot(cube, 'matsGold', c => buildOneMatSet(SIGNAL_COLOR, c.seed + 4, c.tr));
+  defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
   cube.matsMain = buildOneMatSet(color, seed, tr);
   cube.mesh = new THREE.Mesh(getCubeGeo(), cube.matsMain);
   cube.shadow = makeShadow();
@@ -124,9 +133,9 @@ export function makeCube(tr, seed) {
 
 /* Кубик становится НОВОЙ буквой/цветом (transform/merge) — matsMain
    пересобирается сразу (нужен немедленно, буква уже видна на грани),
-   matsBlank/matsReady/matsSignal просто СБРАСЫВАЮТСЯ (через сеттер выше —
-   старые при этом уничтожаются) и лениво пересоберутся под НОВУЮ букву
-   при следующем реальном обращении, не раньше. */
+   matsBlank/matsReady/matsSignal/matsGold просто СБРАСЫВАЮТСЯ (через сеттер
+   выше — старые при этом уничтожаются) и лениво пересоберутся под НОВУЮ
+   букву при следующем реальном обращении, не раньше. */
 /** @param {Cube} cube @param {string} newTr @param {number} [newColor] */
 export function regenMats(cube, newTr, newColor) {
   const color = newColor ?? colorFor(newTr);
@@ -137,6 +146,7 @@ export function regenMats(cube, newTr, newColor) {
   cube.matsBlank = undefined;
   cube.matsReady = undefined;
   cube.matsSignal = undefined;
+  cube.matsGold = undefined;
 }
 
 /* Тень уменьшается и тускнеет с высотой кубика над полом (минимум 0.35 —

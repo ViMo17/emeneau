@@ -142,11 +142,11 @@ export function applyTransform(op, elapsed, ctx) {
     // «идёт огласовка»; для любого другого transform (парная замена внутри
     // варги, ассимиляция под соседа) серебро ложно намекало бы на ту же
     // природу. op.signal ('silver' — дефолт, обратная совместимость с
-    // agnayas; 'blank' — нейтральная грань БЕЗ буквы, тот же цвет кубика,
-    // никакого намёка на гуну/вриддхи) переключает это через общий параметр
-    // движка, не отдельным куском кода внутри
-    // примера.
-    const signalMats = op.signal === 'blank' ? 'matsBlank' : 'matsSignal';
+    // agnayas; 'gold' — вриддхи, matsGold; 'blank' — нейтральная грань БЕЗ
+    // буквы, тот же цвет кубика, никакого намёка на гуну/вриддхи)
+    // переключает это через общий параметр движка, не отдельным куском
+    // кода внутри примера.
+    const signalMats = op.signal === 'blank' ? 'matsBlank' : op.signal === 'gold' ? 'matsGold' : 'matsSignal';
     if (!op._began) {
       op._began = true;
       if (landsOnOppositeFace) {

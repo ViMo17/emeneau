@@ -30,8 +30,13 @@ test('TRANSFORM_KIND: гунация НЕ включена намеренно (�
   assert.equal('guna' in TRANSFORM_KIND, false);
 });
 
-test('TRANSFORM_KIND: вриддхи НЕ включена намеренно (открытый вопрос про signal:gold)', () => {
-  assert.equal('vrddhi' in TRANSFORM_KIND, false);
+test('TRANSFORM_KIND.vrddhi — 720° (2 оборота), золотой сигнал', () => {
+  assert.equal(TRANSFORM_KIND.vrddhi.spinTurns, 2);
+  assert.equal(TRANSFORM_KIND.vrddhi.signal, 'gold');
+});
+
+test('TRANSFORM_KIND: vrddhi ровно вдвое больше оборотов, чем гунация (дефолт движка spinTurns:1)', () => {
+  assert.equal(TRANSFORM_KIND.vrddhi.spinTurns, 2 * 1);
 });
 
 test('MS_PER_360 — базовая единица длительности поворота, положительное число', () => {

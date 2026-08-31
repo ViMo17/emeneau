@@ -243,9 +243,10 @@
  */
 
 /** Кубик слота — не класс, обычный объект (makeCube, slot-engine-cube.js).
- * matsBlank/matsReady/matsSignal — ленивые (см. defineMatsSlot), строятся
- * только при первом реальном обращении. _fallDone/_pulseFace/_pulsingMats —
- * записываются apply*-функциями во время показа, не частью makeCube.
+ * matsBlank/matsReady/matsSignal/matsGold — ленивые (см. defineMatsSlot),
+ * строятся только при первом реальном обращении. _fallDone/_pulseFace/
+ * _pulsingMats — записываются apply*-функциями во время показа, не частью
+ * makeCube.
  * @typedef {Object} Cube
  * @property {string} tr
  * @property {number} color
@@ -257,6 +258,7 @@
  * @property {MatSet} [matsBlank]
  * @property {MatSet} [matsReady]
  * @property {MatSet} [matsSignal]
+ * @property {MatSet} [matsGold]
  * @property {boolean} [_fallDone] - кубик прилетел через дугу (split/arrive), обычное падение пропускается
  * @property {number} [_fallStart] - задержка начала обычного падения, мс (slot-engine-mount.js)
  * @property {number} [_fallDur] - длительность обычного падения, мс

@@ -29,6 +29,7 @@ function makeCube(slot) {
     matsMain: 'matsMain',
     matsBlank: 'matsBlank',
     matsSignal: 'matsSignal',
+    matsGold: 'matsGold',
   };
 }
 
@@ -102,6 +103,22 @@ test('applyTransform: категория vargaPair (k→g) — обе буквы
   assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот сброшен в 0 по завершении');
   assert.equal(cubes[3]._oppositeMats, null, 'временный набор граней уничтожен после приземления — не висит без ссылок');
   assert.equal(op._done, undefined, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: _done не должен выставляться сразу по завершении вращения — есть ещё пауза-фиксация (holdDur)');
+});
+
+test('applyTransform: категория vrddhi (u→au) — 720°, активная фаза переключает материал на matsGold, не matsSignal', () => {
+  const cubes = { 2: makeCube(2) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 2, toGlyph: 'au', start: 1000, ...TRANSFORM_KIND.vrddhi };
+  const anticipateDur = 900; // дефолт
+  const activeStart = 1000 + anticipateDur;
+  const dur = 2 * MS_PER_360; // spinTurns:2, обычная формула (не landsOnOppositeFace — целое число оборотов)
+
+  applyTransform(op, activeStart, ctx);
+  assert.equal(cubes[2].mesh.material, cubes[2].matsGold, 'signal:gold переключает материал на matsGold, не на matsSignal (серебро зарезервировано за гунацией)');
+
+  applyTransform(op, activeStart + dur, ctx); // точно момент приземления
+  assert.equal(cubes[2].tr, 'au', 'к моменту приземления regenMats уже применён');
+  assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по завершении вращения — истинный цвет, не золото навсегда');
 });
 
 test('applyTransform: РЕГРЕССИЯ — поворот не откатывается назад на кадрах ПОСЛЕ приземления (найдено численной симуляцией)', () => {
