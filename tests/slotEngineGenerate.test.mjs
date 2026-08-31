@@ -80,7 +80,7 @@ test('buildInfluenceTransformExample: ringHoldDur точно совпадает 
   });
   const influence = data.ops.find(op => op.type === 'influence');
   const transform = data.ops.find(op => op.type === 'transform');
-  assert.equal(influence.ringHoldDur, 4000, 'ringHoldDur = GAP(2600) + spinTurns(1)×MS_PER_360(1400) = 4000, эталон taddhiraṇyam');
+  assert.equal(influence.ringHoldDur, 4600, 'ringHoldDur = GAP(2600) + spinTurns(1)×MS_PER_360(2000) = 4600 (MS_PER_360 замедлен с 1400 по прямому замечанию пользователя — гунация читалась слишком быстро)');
   assert.ok(Math.abs(influence.start - 3680) <= 20, `influence.start=${influence.start}, эталон 3680`);
   assert.ok(Math.abs(transform.start - 6280) <= 20, `transform.start=${transform.start}, эталон 6280`);
 });
@@ -110,7 +110,7 @@ test('buildInfluenceTransformChain: формула связки шагов (step
   const [influence1, transform1, influence2, transform2] = data.ops;
   assert.ok(Math.abs(influence1.start - 3680) <= 20, `influence1.start=${influence1.start}, эталон 3680`);
   assert.ok(Math.abs(transform1.start - 6280) <= 20, `transform1.start=${transform1.start}, эталон 6280`);
-  assert.equal(influence1.ringHoldDur, 4000);
+  assert.equal(influence1.ringHoldDur, 4600, 'GAP(2600)+spinTurns(1)×MS_PER_360(2000) — assimToNeighbor, целый оборот');
   assert.ok(Math.abs(influence2.start - 8080) <= 20, `influence2.start=${influence2.start}, эталон 8080`);
   assert.ok(Math.abs(transform2.start - 10680) <= 20, `transform2.start=${transform2.start}, эталон 10680`);
   assert.equal(influence2.ringHoldDur, 4400, 'GAP(2600)+1800 (шаг 2 — vargaPair, landsOnOppositeFace)');
@@ -223,7 +223,7 @@ test('buildGunaSplitExample: activeSlots и структура ops точно с
   assert.deepEqual(data.steps[0].activeSlots, [4, 6, 7]);
   assert.deepEqual(data.steps[1].activeSlots, [4, 5, 6], 'дальний mover (s, слот 7) НЕ входит — только цель, будущий слот "y" и ближний mover');
   const [influence, transform, approach, split] = data.ops;
-  assert.equal(influence.ringHoldDur, 4000);
+  assert.equal(influence.ringHoldDur, 4600, 'GAP(2600)+spinTurns(1)×MS_PER_360(2000)');
   assert.equal(transform.spinTurns, 1);
   assert.equal(approach.distance, 0.5);
   assert.equal(approach.pulse, true);
@@ -233,16 +233,23 @@ test('buildGunaSplitExample: activeSlots и структура ops точно с
 });
 
 test('buildGunaSplitExample: тайминги — ПОСТОЯННОЕ смещение ~220мс по всей цепочке (буфер после падения меньше, чем в среднем), без дополнительного расхождения дальше по цепочке', () => {
+  // Эталонные числа (6700/8300/8300/11050/16150) — из rule3-agnayas-slots.js
+  // ПОСЛЕ пересчёта на MS_PER_360=2000 (было 1400): всё, что физически
+  // зависит от фактического приземления вращения (весь хвост после
+  // transform.start), сдвинуто на +600мс — та же формула
+  // (transformDur=1×MS_PER_360), что и в самом генераторе, поэтому
+  // постоянное смещение (первоначально ~220мс) сохраняется тем же самым
+  // числом, не растёт — оба сдвинулись синхронно.
   const data = buildGunaSplitExample(AGNAYAS_SPEC);
   const [influence, transform, approach, split] = data.ops;
   const deltas = [
     influence.start - 2700,
     transform.start - 5300,
-    data.steps[0].end - 6700,
-    data.steps[1].start - 8300,
-    approach.start - 8300,
-    split.start - 11050,
-    data.steps[1].end - 16150,
+    data.steps[0].end - 7300,
+    data.steps[1].start - 8900,
+    approach.start - 8900,
+    split.start - 11650,
+    data.steps[1].end - 16750,
   ];
   const first = deltas[0];
   for (const d of deltas) assert.equal(d, first, `все смещения должны быть РАВНЫ (${JSON.stringify(deltas)}) — иначе формула где-то разошлась независимо от буфера`);

@@ -32,7 +32,7 @@ const EXPECTED_EXPORTS = [
   // ops
   'applyTransform', 'applyElide', 'applyInfluence', 'applyApproach',
   'flyArcPosition', 'applySplit', 'applyArrive', 'applyMerge', 'applySettle',
-  'applyDim', 'applyStepDim', 'project', 'frontAnchor', 'spawnPulseRing',
+  'applyDim', 'applyStepDim', 'project', 'frontAnchor', 'spawnPulseRing', 'spawnSparkleBurst',
   // mount
   'mountSlotExample',
 ];

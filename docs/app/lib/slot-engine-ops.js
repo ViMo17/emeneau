@@ -175,20 +175,49 @@ export function applyTransform(op, elapsed, ctx) {
       cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
       cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
       cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
+      // Золотая россыпь искр — только вриддхи (signal:'gold'), только пока
+      // кубик активно крутится. Период (280мс) — примерно втрое чаще, чем
+      // сустейн-кольца influence (тот же порядок числа, что и остальные
+      // движковые интервалы, не отдельно подобранное магическое число).
+      if (op.signal === 'gold') {
+        const sparkleGap = 280;
+        const idx = Math.floor((elapsed - activeStart) / sparkleGap);
+        const key = '_sparkle' + idx;
+        if (idx >= 0 && !op[key]) {
+          op[key] = true;
+          spawnSparkleBurst(frontAnchor(cube.mesh), ctx);
+        }
+      }
     }
-    if (!landsOnOppositeFace && !op._swapped && t >= 0.15) {
+    // НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ: момент подмены буквы раньше был
+    // привязан к ДОЛЕ ВРЕМЕНИ (t>=0.15), не к углу поворота — при
+    // spinTurns:1 (гунация, 360°) это давало ~139° реального поворота
+    // (из-за ускорения easeOutCubic в начале движения), достаточно рано,
+    // чтобы грань к этому моменту уже была скрыта от камеры (проходит
+    // ребром). При spinTurns:2 (вриддхи, 720°) ТА ЖЕ доля 0.15 от
+    // ВДВОЕ БОЛЬШЕГО пути даёт ~278° — грань к этому моменту уже почти
+    // довернулась обратно к зрителю, подмена случалась впритык к моменту,
+    // когда старая буква снова читаема, а после подмены до её повторного
+    // появления в кадре (~360°) — заметная пауза (прямая находка
+    // пользователя по экрану: старая буква видна почти до конца первого
+    // оборота, новая — только после ~450°). Исправлено — порог теперь в
+    // ГРАДУСАХ поворота (90°, первая четверть — грань гарантированно
+    // ребром к камере, скрыта, НЕЗАВИСИМО от spinTurns), не в доле
+    // времени: подмена происходит на первой же скрытой фазе при любой
+    // длительности оборота, не только при 360°.
+    const rotatedDeg = easeOutCubic(t) * 360 * Math.abs(spinTurns);
+    if (!landsOnOppositeFace && !op._swapped && rotatedDeg >= 90) {
       op._swapped = true;
       const newColor = op.toColor ?? colorFor(op.toGlyph);
       // Пересобираем ВСЕ наборы материалов кубика (matsMain/matsBlank/
       // matsReady/matsSignal), не только текущий — фикс бага, из-за которого
       // «сигнальный»/«финальный» материал ещё долго хранил исходную,
-      // добуквенную версию (см. комментарий в regenMats). Новая буква
-      // наносится сразу же, тем же моментом ~15% пути, что и раньше —
-      // но материал остаётся тем же промежуточным (silver ИЛИ blank, см.
-      // выше), не matsMain: буква уже новая, цвет ещё не вернулся, это
-      // следующая, отдельная фаза (см. ниже). НЕ применяется, когда кубик
-      // садится на противолежащую грань — там оба глифа уже нанесены
-      // заранее (см. op._began выше), перерисовывать нечего.
+      // добуквенную версию (см. комментарий в regenMats). Материал
+      // остаётся тем же промежуточным (silver/gold/blank, см. выше), не
+      // matsMain: буква уже новая, цвет ещё не вернулся, это следующая,
+      // отдельная фаза (см. ниже). НЕ применяется, когда кубик садится на
+      // противолежащую грань — там оба глифа уже нанесены заранее (см.
+      // op._began выше), перерисовывать нечего.
       regenMats(cube, op.toGlyph, newColor);
       cube.mesh.material = cube[signalMats];
     }
@@ -253,9 +282,10 @@ export function frontAnchor(mesh, zOff = CUBE_SIZE * 0.42, yOff = 0.1) {
 /* Кольцо-пульс НА МЕСТЕ (не бежит от точки к точке, а расходится вокруг
    одной) — сигнал «вот-вот изменится» (пауза-осознание перед split) ИЛИ
    «я источник, я влияю» (сустейн-кольца у нимитты в influence, см. ниже).
-   rgbStr — необязательный: без него кольцо золотое (CSS по умолчанию,
-   как раньше), с ним — оттенок СОБСТВЕННОГО цвета конкретного кубика
-   (см. ringColorFrom) — общая утилита, не частность agnayas. */
+   rgbStr — необязательный: без него кольцо серебряное (CSS по умолчанию —
+   см. .slot-pulse-ring, SILVER_RGB), с ним — оттенок СОБСТВЕННОГО цвета
+   конкретного кубика (см. ringColorFrom) — общая утилита, не частность
+   agnayas. */
 /** @param {import('three').Vector3} atVec3 @param {number} dur @param {string|undefined} rgbStr @param {Ctx} ctx */
 export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   const { labelsEl } = ctx;
@@ -268,6 +298,37 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   if (rgbStr) ring.style.borderColor = `rgba(${rgbStr},.55)`;
   labelsEl.appendChild(ring);
   setTimeout(() => ring.remove(), dur + 80);
+}
+
+// Золотая россыпь искр — прямой запрос пользователя, во время активного
+// вращения вриддхи (signal:'gold'). Несколько мелких светящихся точек
+// разлетаются от передней грани кубика в случайных направлениях и гаснут
+// — тот же язык, что и остальные DOM-оверлеи движка (project() для
+// позиции, CSS-анимация на --custom-property, самоудаление по setTimeout),
+// не новая техника, просто новая форма (частицы, не кольцо/волна).
+// Только для золота — серебро/гунация остаются без искр, различие
+// намеренное (см. CLAUDE.md, «Серебро/Золото»: не декоративное
+// разнообразие, вриддхи — более редкое и заметное событие).
+/** @param {import('three').Vector3} atVec3 @param {Ctx} ctx @param {number} [count] */
+export function spawnSparkleBurst(atVec3, ctx, count = 4) {
+  const { labelsEl } = ctx;
+  const p = project(atVec3, ctx);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 16 + Math.random() * 28;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist - 8; // лёгкий перекос вверх — искры не падают строго по кругу
+    const dur = 500 + Math.random() * 280;
+    const el = document.createElement('div');
+    el.className = 'slot-sparkle';
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+    el.style.setProperty('--sx', dx + 'px');
+    el.style.setProperty('--sy', dy + 'px');
+    el.style.setProperty('--sparkle-dur', dur + 'ms');
+    labelsEl.appendChild(el);
+    setTimeout(() => el.remove(), dur + 60);
+  }
 }
 
 /** @param {ElideOp} op @param {number} elapsed @param {Ctx} ctx */

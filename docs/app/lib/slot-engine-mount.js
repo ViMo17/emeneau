@@ -251,10 +251,22 @@ export function mountSlotExample(container, data, opts = {}) {
   // асимметричной прозрачности (см. CLAUDE.md, Часть 6, пункт 0).
   // @ts-ignore — __slotDebug не часть типа Window, диагностический люк намеренно ad-hoc
   if (typeof window !== 'undefined') window.__slotDebug = ctx;
+  // Высота старта падения — реальная проекционная математика (THREE.
+  // Vector3.project через camera), не подбор на глаз: старое значение (6)
+  // проецировалось в NDC y=2.25 при обычном (широком) окне — больше чем
+  // вдвое выше верхнего края видимого кадра (кадр кончается на NDC y=1,
+  // видимый верх сцены — примерно y=2.9, тот же порядок, что у верхнего
+  // края отстойника чуть ниже). Падение визуально начиналось не с
+  // «высоко над сценой», а с точки, где кубик уже НЕВИДИМ добрую половину
+  // пути — реальная прямая правка пользователя («буква выпадает слишком
+  // близко к тексту», хотя место для анимации есть). FALL_START_Y=3.6 —
+  // чуть выше видимого края (NDC y≈0.90 у самого высокого кубика),
+  // небольшой запас на «влетание», не глубоко за кадром.
+  const FALL_START_Y = 3.6;
   const fallOrder = data.initial.map(x => x.slot).sort((a, b) => a - b);
   data.initial.forEach(({ slot, tr }) => {
     const c = makeCube(tr, slot * 97 + 13);
-    c.mesh.position.set(slotX(slot), 6 + Math.random() * 2, 0); // старт высоко, с разбросом
+    c.mesh.position.set(slotX(slot), FALL_START_Y + Math.random() * 0.6, 0); // старт чуть выше кадра, с небольшим разбросом
     c._fallStart = fallOrder.indexOf(slot) * (data.fallStagger ?? 260); // было 200 — медленнее, спокойнее
     c._fallDur = data.fallDur ?? 1300; // было 900
     c._fallDone = false;
@@ -266,8 +278,8 @@ export function mountSlotExample(container, data, opts = {}) {
   function fallY(elapsed, cube) {
     const t = clamp01((elapsed - cube._fallStart) / cube._fallDur);
     if (elapsed < cube._fallStart) return cube.mesh.position.y;
-    const fromY = 6, toY = 0;
-    return fromY + (toY - fromY) * easeFall(t);
+    const toY = 0;
+    return FALL_START_Y + (toY - FALL_START_Y) * easeFall(t);
   }
 
   function resize() {
@@ -465,6 +477,24 @@ function injectStylesOnce() {
       0%   { transform: scale(0.4); opacity: 0; border-width: 4px; filter: blur(1.5px) brightness(1); }
       18%  { opacity: .6; filter: blur(1.5px) brightness(1.7); }
       100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; filter: blur(1.5px) brightness(1); }
+    }
+    /* Золотая искра (вриддхи, spawnSparkleBurst) — цвет фиксированный
+       (GOLD_RGB), не переопределяется инлайном: искры только у золота,
+       переменности цвета здесь не требуется, в отличие от колец. */
+    .slot-sparkle {
+      position: absolute;
+      width: 5px; height: 5px;
+      margin: -2.5px 0 0 -2.5px;
+      border-radius: 50%;
+      background: rgba(232,200,96,.95);
+      box-shadow: 0 0 6px 1.5px rgba(232,200,96,.65);
+      pointer-events: none;
+      animation: slot-sparkle-fly var(--sparkle-dur) cubic-bezier(.15,.6,.4,1) forwards;
+    }
+    @keyframes slot-sparkle-fly {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      65%  { opacity: .9; }
+      100% { transform: translate(var(--sx,0),var(--sy,0)) scale(.25); opacity: 0; }
     }
     /* Рамка-подчёркивание под группой-нимиттой — нейтральный GROUP_COLOR,
        не фонетический; opacity управляется из JS покадрово
