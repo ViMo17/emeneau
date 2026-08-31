@@ -16,7 +16,7 @@ import { installCanvasStub } from './helpers/canvasStub.mjs';
 
 installCanvasStub();
 
-import { applyTransform, TRANSFORM_KIND, MS_PER_360 } from '../docs/app/lib/slot-engine.js';
+import { applyTransform, TRANSFORM_KIND, MS_PER_360, easeOutCubic } from '../docs/app/lib/slot-engine.js';
 
 function makeCube(slot) {
   const mesh = new THREE.Object3D(); // достаточно для position/rotation/quaternion — не нужен настоящий Mesh с геометрией
@@ -119,6 +119,73 @@ test('applyTransform: категория vrddhi (u→au) — 720°, активн
   applyTransform(op, activeStart + dur, ctx); // точно момент приземления
   assert.equal(cubes[2].tr, 'au', 'к моменту приземления regenMats уже применён');
   assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по завершении вращения — истинный цвет, не золото навсегда');
+});
+
+// Точная позиционная схема по прямой раскладке пользователя: шаги по 90°
+// (позиция N = (N-1)×90°). Один оборот (гунация) — прямая замена ровно на
+// позиции 3 (180°, «зад» первого оборота), без разрыва. Два оборота
+// (вриддхи) — старая буква гаснет В ПУСТОТУ на той же позиции 3 (180°),
+// и ничего не нанесено на грань вплоть до позиции 7 (540°, «зад» уже
+// ВТОРОГО оборота) — только там наносится результат. Раньше (заходы,
+// предшествующие этому) порог был привязан то к доле времени (t>=0.15),
+// то к фиксированному углу (90°/130°) без различия одно-/двухоборотных
+// категорий — оба давали либо преждевременное мигание, либо повторный
+// показ уже готового результата на каждом развороте двойного оборота.
+function tForDeg(spinTurns, deg) {
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (easeOutCubic(mid) * 360 * spinTurns < deg) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+test('applyTransform: гунация (1 оборот) — прямая замена РОВНО на позиции 3 (180°), без промежуточной пустой грани', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1, signal: 'silver' };
+  const activeStart = 900;
+  const dur = 1 * MS_PER_360;
+  const revealT = tForDeg(1, 180);
+  const revealElapsed = activeStart + revealT * dur;
+
+  applyTransform(op, revealElapsed - 15, ctx);
+  assert.equal(cubes[4].tr, 'k', 'за 15мс до 180° — ещё старая буква');
+  assert.equal(cubes[4]._disappeared, undefined, 'одного оборота: разрыва нет вообще, флаг не выставляется');
+
+  applyTransform(op, revealElapsed + 15, ctx);
+  assert.equal(cubes[4].tr, 'e', 'через 15мс после 180° — уже новая буква, без промежуточной пустой фазы');
+  assert.equal(cubes[4].mesh.material, cubes[4].matsSignal, 'материал сразу сигнальный с новым глифом, не временный пустой');
+});
+
+test('applyTransform: вриддхи (2 оборота) — буква гаснет в пустоту на позиции 3 (180°), результат — только на позиции 7 (540°)', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'ai', start: 0, spinTurns: 2, signal: 'gold' };
+  const activeStart = 900;
+  const dur = 2 * MS_PER_360;
+  const disappearT = tForDeg(2, 180);
+  const revealT = tForDeg(2, 540);
+  const disappearElapsed = activeStart + disappearT * dur;
+  const revealElapsed = activeStart + revealT * dur;
+
+  applyTransform(op, disappearElapsed - 15, ctx);
+  assert.equal(cubes[4].tr, 'k','до 180° — ещё старая буква (в золотом сигнальном материале)');
+
+  applyTransform(op, disappearElapsed + 15, ctx);
+  assert.equal(cubes[4].tr, 'k','cube.tr не меняется на этой фазе — regenMats ещё не вызван');
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsGold, 'материал больше НЕ matsGold с буквой k — это временный пустой набор');
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsMain, 'и не финальный истинный цвет — грань именно пустая, ожидание');
+
+  applyTransform(op, (disappearElapsed + revealElapsed) / 2, ctx);
+  assert.equal(cubes[4].tr, 'k','в середине ожидания (между 180° и 540°) — по-прежнему пустая грань, ничего не нанесено');
+
+  applyTransform(op, revealElapsed - 15, ctx);
+  assert.equal(cubes[4].tr, 'k','за 15мс до 540° — результат ещё не нанесён');
+
+  applyTransform(op, revealElapsed + 15, ctx);
+  assert.equal(cubes[4].tr, 'ai', 'через 15мс после 540° — вриддхи нанесена');
+  assert.equal(cubes[4].mesh.material, cubes[4].matsGold, 'материал — реальный matsGold с новым глифом, не временный');
 });
 
 test('applyTransform: РЕГРЕССИЯ — поворот не откатывается назад на кадрах ПОСЛЕ приземления (найдено численной симуляцией)', () => {

@@ -132,10 +132,12 @@
  * @property {boolean} [_pulse1]
  * @property {boolean} [_anticipateDone]
  * @property {boolean} [_began]
- * @property {boolean} [_swapped]
+ * @property {boolean} [_disappeared] - старая буква сменилась на пустую грань (только при multi-turn, см. applyTransform)
+ * @property {boolean} [_revealed]
  * @property {boolean} [_landed]
  * @property {number} [_rotationEnd]
  * @property {number} [_pendingColor] - при landsOnOppositeFace: цвет, который нужно применить в regenMats после приземления
+ * @property {MatSet} [_blankSignalMats] - временный набор без буквы на время ожидания между _disappeared и _revealed (multi-turn), уничтожается сразу после reveal
  */
 
 /** @typedef {Object} SplitOp
