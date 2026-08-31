@@ -126,70 +126,78 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
 // про плоскую заливку было неверным, а потому что у НИХ, в отличие от
 // обычной буквы, сам смысл — «сейчас что-то особенное» (см. CLAUDE.md,
 // «Серебро»/«Золото» в реестре зарезервированных значений), и плоская
-// заливка этот смысл не поддерживает. metalness остаётся 0 — окружения
-// (envMap) для отражений нигде в сценах не настроено, поднятие metalness
-// без него дало бы просто тёмный, а не блестящий материал; металлический
-// вид имитируется НАРИСОВАННЫМ по диагонали бликом плюс более низкий
-// roughness — так реальный direct-light «key» в сцене даёт по-настоящему
-// острый блик поверх нарисованного, не только имитацию. Блик и глинт
-// рисуются на ОТДЕЛЬНОМ слое и размываются (ctx.filter) перед наложением —
-// первая версия клала резкие стопы градиента прямо на грань, читалось как
-// «полосы»/артефакт, не как естественный отблеск (прямая правка
-// пользователя по скриншоту) — размытие и сниженный контраст обязательны,
-// не необязательная полировка.
-function paintMetallicFace(sz, baseHex) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = sz;
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#' + baseHex.toString(16).padStart(6, '0');
-  ctx.fillRect(0, 0, sz, sz);
+// заливка этот смысл не поддерживает.
+//
+// ПЕРВАЯ версия (нарисованный градиентом блик поверх плоской заливки, даже
+// размытый) была отвергнута пользователем по скриншоту — читалась как
+// «мраморная пятнистая текстура», не металл: рисованный блик на матовом
+// материале физически не может выглядеть как отражение, только как
+// размазанная краска. Настоящий металлический вид требует НАСТОЯЩЕГО
+// отражения окружения (envMap) — без него `metalness` в MeshStandardMaterial
+// просто дал бы тёмный, безжизненный материал (нечему отражаться). envMap
+// генерируется процедурно через THREE.PMREMGenerator из маленькой сцены
+// (см. getMetallicEnvMap ниже) — НЕ внешняя картинка/HDR-файл, ноль новых
+// ассетов и зависимостей, тот же принцип минимализма, что и везде в
+// проекте. Буква на грани остаётся ЧЁРНОЙ (тот же paintGlyph, что и у
+// обычных кубиков) — на металле она читается как гравировка (тёмный,
+// малоотражающий участок на блестящей поверхности), не теряет
+// разборчивости, ради которой кубики вообще существуют.
+let _metallicEnvMap = null;
+function getMetallicEnvMap() {
+  if (_metallicEnvMap) return _metallicEnvMap;
+  // Временный рендерер — нужен PMREMGenerator ТОЛЬКО чтобы скомпилировать
+  // шейдер запекания, к реальной сцене примера отношения не имеет и в неё
+  // не добавляется. Строится и запекается один раз на всю страницу
+  // (ленивый модульный кэш, тот же приём, что у _cubeGeo/_shadowGeo в
+  // slot-engine-cube.js), результат — обычная текстура, переживает любое
+  // количество mount()/unmount() отдельных примеров.
+  const tempRenderer = new THREE.WebGLRenderer({ antialias: false });
+  const pmrem = new THREE.PMREMGenerator(tempRenderer);
+  pmrem.compileCubemapShader();
 
-  const sheenCv = document.createElement('canvas');
-  sheenCv.width = sheenCv.height = sz;
-  const sctx = sheenCv.getContext('2d');
+  // Процедурная «комната»: тёмная сфера-фон + три плоских панели разной
+  // яркости/оттенка (тёплый яркий «потолок», холодная и тёмная боковые
+  // панели) — металлу нужен КОНТРАСТ между яркими и тёмными участками
+  // окружения, чтобы отражение вообще читалось как отражение, не как
+  // ровный серый. Ровно то же, что даёт мягкий свет из окна в реальных
+  // референс-фото металлических поверхностей.
+  const envScene = new THREE.Scene();
+  envScene.add(new THREE.Mesh(
+    new THREE.SphereGeometry(20, 24, 12),
+    new THREE.MeshBasicMaterial({ color: 0x2c2e35, side: THREE.BackSide })
+  ));
+  const panel = (x, y, z, w, h, color) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color }));
+    m.position.set(x, y, z);
+    m.lookAt(0, 0, 0);
+    envScene.add(m);
+  };
+  panel(0, 9, 0, 14, 5, 0xfff2dc);   // тёплая яркая полоса сверху
+  panel(-7, 1, 5, 4, 7, 0xd6dde6);   // холодная светлая панель сбоку
+  panel(7, -2, -5, 4, 7, 0x15161b);  // тёмная панель с другой стороны
 
-  // Диагональный блик — заметно мягче и менее контрастный, чем в первой
-  // версии (пик 0.55 → 0.30, тёплый оттенок вместо чистого белого — чистый
-  // белый поверх насыщенного золота читался как «выжженное пятно», не как
-  // отражение).
-  const sheen = sctx.createLinearGradient(0, 0, sz, sz);
-  sheen.addColorStop(0.00, 'rgba(0,0,0,0.14)');
-  sheen.addColorStop(0.38, 'rgba(0,0,0,0)');
-  sheen.addColorStop(0.50, 'rgba(255,248,235,0.30)');
-  sheen.addColorStop(0.62, 'rgba(0,0,0,0)');
-  sheen.addColorStop(1.00, 'rgba(0,0,0,0.14)');
-  sctx.fillStyle = sheen;
-  sctx.fillRect(0, 0, sz, sz);
-
-  // Блик-«глинт» у угла — на том же слое, той же размывкой, не отдельная
-  // резкая окружность поверх уже размытой диагонали.
-  const glint = sctx.createRadialGradient(sz * 0.3, sz * 0.26, 0, sz * 0.3, sz * 0.26, sz * 0.42);
-  glint.addColorStop(0, 'rgba(255,250,240,0.28)');
-  glint.addColorStop(1, 'rgba(255,250,240,0)');
-  sctx.fillStyle = glint;
-  sctx.fillRect(0, 0, sz, sz);
-
-  ctx.save();
-  ctx.filter = `blur(${sz * 0.08}px)`;
-  ctx.drawImage(sheenCv, 0, 0);
-  ctx.restore();
-
-  return cv;
+  const rt = pmrem.fromScene(envScene, 0.035);
+  pmrem.dispose();
+  tempRenderer.dispose();
+  _metallicEnvMap = rt.texture;
+  return _metallicEnvMap;
 }
 
 function buildMetallicMaterials(baseColor, seed, glyph) {
   const SZ = 256;
+  const envMap = getMetallicEnvMap();
   const faces = [0, 1, 2, 3, 4, 5];
   return faces.map((idx) => {
-    const cv = paintMetallicFace(SZ, baseColor);
+    const cv = paintFlatFace(SZ, baseColor); // плоская заливка — весь «металл» теперь даёт envMap, не рисунок
     if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     return new THREE.MeshStandardMaterial({
       map: tex,
-      roughness: 0.28, // ниже, чем у обычных кубиков (0.55) — острее блик от key-света
-      metalness: 0.0,
-      envMapIntensity: 0,
+      envMap,
+      envMapIntensity: 1.1,
+      roughness: 0.24,
+      metalness: 0.9,
       fog: false,
       side: THREE.DoubleSide,
       transparent: true,
