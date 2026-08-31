@@ -118,6 +118,68 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
   });
 }
 
+// Металлический вариант — ТОЛЬКО для сигнальной фазы transform (серебро/
+// золото гунации/вриддхи), не общая замена buildChalkMaterials. Обычные
+// кубики намеренно плоские (см. комментарий выше в этом файле — процедурный
+// шум убрали ради скорости и предсказуемости цвета) — трогать это решение
+// не нужно, серебро/золото просят другого эффекта не потому что решение
+// про плоскую заливку было неверным, а потому что у НИХ, в отличие от
+// обычной буквы, сам смысл — «сейчас что-то особенное» (см. CLAUDE.md,
+// «Серебро»/«Золото» в реестре зарезервированных значений), и плоская
+// заливка этот смысл не поддерживает. metalness остаётся 0 — окружения
+// (envMap) для отражений нигде в сценах не настроено, поднятие metalness
+// без него дало бы просто тёмный, а не блестящий материал; металлический
+// вид имитируется НАРИСОВАННЫМ по диагонали бликом (тёмный край → яркая
+// полоса → тёмный край, как у гнутого полированного металла) плюс более
+// низкий roughness — так реальный direct-light «key» в сцене даёт по-
+// настоящему острый блик поверх нарисованного, не только имитацию.
+function paintMetallicFace(sz, baseHex) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = sz;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#' + baseHex.toString(16).padStart(6, '0');
+  ctx.fillRect(0, 0, sz, sz);
+
+  const sheen = ctx.createLinearGradient(0, 0, sz, sz);
+  sheen.addColorStop(0.00, 'rgba(0,0,0,0.22)');
+  sheen.addColorStop(0.32, 'rgba(0,0,0,0.04)');
+  sheen.addColorStop(0.50, 'rgba(255,255,255,0.55)');
+  sheen.addColorStop(0.68, 'rgba(0,0,0,0.04)');
+  sheen.addColorStop(1.00, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, 0, sz, sz);
+
+  // Фиксированный блик-«глинт» у угла — читается как полированная
+  // поверхность даже в кадрах, где ключевой свет не даёт настоящего блика.
+  const glint = ctx.createRadialGradient(sz * 0.28, sz * 0.24, 0, sz * 0.28, sz * 0.24, sz * 0.32);
+  glint.addColorStop(0, 'rgba(255,255,255,0.50)');
+  glint.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glint;
+  ctx.fillRect(0, 0, sz, sz);
+
+  return cv;
+}
+
+function buildMetallicMaterials(baseColor, seed, glyph) {
+  const SZ = 256;
+  const faces = [0, 1, 2, 3, 4, 5];
+  return faces.map((idx) => {
+    const cv = paintMetallicFace(SZ, baseColor);
+    if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.encoding = THREE.sRGBEncoding;
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 0.28, // ниже, чем у обычных кубиков (0.55) — острее блик от key-света
+      metalness: 0.0,
+      envMapIntensity: 0,
+      fog: false,
+      side: THREE.DoubleSide,
+      transparent: true,
+    });
+  });
+}
+
 // makeChalkGeo — имя сохранено ради совместимости с вызывающим кодом; реализация теперь
 // просто гладкое скругление рёбер (без органического шума по вершинам/нормалям — это и
 // была единственная причина «мелового» неровного вида геометрии).
@@ -165,4 +227,4 @@ function makeShadowBlobTexture() {
   return tx;
 }
 
-export { CW, paintGlyph, buildChalkMaterials, buildOpposingFaceMaterials, makeChalkGeo, makeShadowBlobTexture };
+export { CW, paintGlyph, buildChalkMaterials, buildOpposingFaceMaterials, buildMetallicMaterials, makeChalkGeo, makeShadowBlobTexture };
