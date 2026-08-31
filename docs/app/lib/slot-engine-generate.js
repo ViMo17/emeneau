@@ -23,7 +23,7 @@
 // интеграцией в приложение, как и рукописные примеры.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { N_SLOTS, MS_PER_360, slotX } from './slot-engine-core.js';
+import { MS_PER_360, slotX, centeredStart } from './slot-engine-core.js';
 
 const FALL_STAGGER = 260; // движковый дефолт (data.fallStagger ?? 260) — продублирован здесь для расчёта момента приземления
 const FALL_DUR = 1300;    // движковый дефолт (data.fallDur ?? 1300)
@@ -47,15 +47,16 @@ const STEP_END_LEAD = 250;
 /**
  * Раскладка: слова подряд, между ними по одному пустому слоту (граница
  * слов — тот же принцип, что и у ВСЕХ примеров внешних сандхи, зазор не
- * схлопывается), весь блок центрируется по N_SLOTS — формула сверена
- * побуквенно с rule71 (vāk asti).
+ * схлопывается), весь блок центрируется по centeredStart (общая формула
+ * в slot-engine-core.js, тот же источник, что и у centerSlots для
+ * рукописных примеров) — сверена побуквенно с rule71 (vāk asti).
  * @param {string[][]} words
  * @returns {{initial: import('./slot-engine-types.js').InitialItem[], wordSlots: number[][], totalLetters: number}}
  */
 function layoutWords(words) {
   const totalLetters = words.reduce((s, w) => s + w.length, 0);
   const totalSpan = totalLetters + (words.length - 1);
-  const startSlot = Math.floor((N_SLOTS - totalSpan) / 2);
+  const startSlot = centeredStart(totalSpan);
 
   const initial = [];
   /** @type {number[][]} */

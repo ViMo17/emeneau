@@ -17,9 +17,10 @@ import * as engine from '../docs/app/lib/slot-engine.js';
 
 const EXPECTED_EXPORTS = [
   // core
-  'N_SLOTS', 'CUBE_SIZE', 'SLOT', 'MS_PER_360', 'READY_COLOR', 'SIGNAL_COLOR',
-  'SILVER_COLOR', 'GROUP_COLOR', 'TRANSFORM_KIND', 'tokenize', 'slotX',
-  'centerSlots', 'colorFor', 'clamp01', 'lerp', 'easeOutCubic', 'easeInOutCubic',
+  'N_SLOTS', 'CUBE_SIZE', 'SLOT', 'MS_PER_360', 'HALF_WORLD_H', 'READY_COLOR',
+  'SIGNAL_COLOR', 'SILVER_COLOR', 'GROUP_COLOR', 'TRANSFORM_KIND', 'tokenize',
+  'slotX', 'centeredStart', 'centerSlots', 'halfWorldW', 'computeFitFov',
+  'colorFor', 'clamp01', 'lerp', 'easeOutCubic', 'easeInOutCubic',
   'easeInCubic', 'easeOutBack', 'easeOutBounce', 'easeFall',
   // words
   'computeWordGroups', 'resolveSlotRef',

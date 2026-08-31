@@ -8,6 +8,14 @@
 export const N_SLOTS = 10;
 export const CUBE_SIZE = 1.1;
 export const SLOT = 1.2;
+// Вертикальный "мировой" полу-размер кадра — ОБЩИЙ для всех примеров без
+// исключения. Портировано дословно из старых (до общего движка) файлов
+// rule3-agnayas.js/rule71-vak-asti.js (там — HALF_WORLD_H), сохраняет тот
+// же "характер" камеры, к которому был построен весь визуальный язык —
+// то, что делает кубик одного и того же размера между примерами при
+// обычной ширине окна (см. halfWorldW/computeFitFov ниже — переменная
+// часть кадра, своя под каждый пример, включается только когда мешает).
+export const HALF_WORLD_H = 2.3;
 // Скорость оборота трансформации — 1400мс на один оборот, взята из
 // T.gunaDur rule3-agnayas.js (не своё число движка). ЛОКАЛЬНАЯ константа-
 // стандарт: не менять без явной сверки с рабочим файлом. Для вриддхи —
@@ -84,13 +92,48 @@ export function tokenize(word) {
 /** @param {number} i @returns {number} */
 export function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
 
+/* Единственный источник формулы центрирования — и для centerSlots (автор
+   вручную центрирует N букв), и для layoutWords в slot-engine-generate.js
+   (несколько слов подряд + зазоры между ними, span считается снаружи). */
+/** @param {number} span @returns {number} */
+export function centeredStart(span) { return Math.floor((N_SLOTS - span) / 2); }
+
 /* Утилита для автора данных — считает, с какого слота центрировать N букв,
    ПЕРЕД тем как вручную прописывать initial. Не используется в рантайме. */
 /** @param {string[]} letters @param {number|null} [startAt] @returns {import('./slot-engine-types.js').InitialItem[]} */
 export function centerSlots(letters, startAt = null) {
   const n = letters.length;
-  const start = startAt !== null ? startAt : Math.floor((N_SLOTS - n) / 2);
+  const start = startAt !== null ? startAt : centeredStart(n);
   return letters.map((tr, i) => ({ slot: start + i, tr }));
+}
+
+/* Половина мирового габарита ряда по ширине — робастно к нецентрированной
+   раскладке (берёт максимум |левого края| и |правого края| от x=0, не
+   totalSpan/2 — та формула молча предполагает симметрию и недооценивает
+   нужный отступ у смещённых примеров, см. CLAUDE.md про пересчёт камеры).
+   margin — запас сверх самих кубиков (0.55 — то же число, что было в
+   старых rule3-agnayas.js/rule71-vak-asti.js). */
+/** @param {number} minSlot @param {number} maxSlot @param {number} [margin] @returns {number} */
+export function halfWorldW(minSlot, maxSlot, margin = 0.55) {
+  const leftEdge = slotX(minSlot) - CUBE_SIZE / 2;
+  const rightEdge = slotX(maxSlot) + CUBE_SIZE / 2;
+  return Math.max(Math.abs(leftEdge), Math.abs(rightEdge)) + margin;
+}
+
+/* Адаптивный FOV — портировано из resize() старых (до общего движка)
+   файлов rule3-agnayas.js/rule71-vak-asti.js. HALF_WORLD_H общий для всех
+   примеров (см. выше) — при обычном/широком окне именно он определяет
+   camera.fov, ОДИНАКОВЫЙ у всех примеров (тот самый неизменный "характер"
+   камеры). hw (halfWorldW конкретного примера) включается в игру только
+   когда окно становится настолько узким, что иначе край ряда обрежется —
+   тогда FOV растёт ровно настолько, сколько нужно ИМЕННО этому примеру, не
+   больше. baseFov — нижняя граница (тот же 32°, что был раньше жёстко
+   зашит в PerspectiveCamera). */
+/** @param {number} aspect @param {number} camZ @param {number} hw @param {number} [baseFov] @returns {number} */
+export function computeFitFov(aspect, camZ, hw, baseFov = 32) {
+  const fovForHeight = 2 * Math.atan(HALF_WORLD_H / camZ) * 180 / Math.PI;
+  const fovForWidth = 2 * Math.atan(hw / (camZ * aspect)) * 180 / Math.PI;
+  return Math.max(baseFov, fovForHeight, fovForWidth);
 }
 
 /* ═══════════════════ ЦВЕТА ПО МЕСТУ ОБРАЗОВАНИЯ ═══════════════════ */
