@@ -129,10 +129,14 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
 // заливка этот смысл не поддерживает. metalness остаётся 0 — окружения
 // (envMap) для отражений нигде в сценах не настроено, поднятие metalness
 // без него дало бы просто тёмный, а не блестящий материал; металлический
-// вид имитируется НАРИСОВАННЫМ по диагонали бликом (тёмный край → яркая
-// полоса → тёмный край, как у гнутого полированного металла) плюс более
-// низкий roughness — так реальный direct-light «key» в сцене даёт по-
-// настоящему острый блик поверх нарисованного, не только имитацию.
+// вид имитируется НАРИСОВАННЫМ по диагонали бликом плюс более низкий
+// roughness — так реальный direct-light «key» в сцене даёт по-настоящему
+// острый блик поверх нарисованного, не только имитацию. Блик и глинт
+// рисуются на ОТДЕЛЬНОМ слое и размываются (ctx.filter) перед наложением —
+// первая версия клала резкие стопы градиента прямо на грань, читалось как
+// «полосы»/артефакт, не как естественный отблеск (прямая правка
+// пользователя по скриншоту) — размытие и сниженный контраст обязательны,
+// не необязательная полировка.
 function paintMetallicFace(sz, baseHex) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = sz;
@@ -140,22 +144,35 @@ function paintMetallicFace(sz, baseHex) {
   ctx.fillStyle = '#' + baseHex.toString(16).padStart(6, '0');
   ctx.fillRect(0, 0, sz, sz);
 
-  const sheen = ctx.createLinearGradient(0, 0, sz, sz);
-  sheen.addColorStop(0.00, 'rgba(0,0,0,0.22)');
-  sheen.addColorStop(0.32, 'rgba(0,0,0,0.04)');
-  sheen.addColorStop(0.50, 'rgba(255,255,255,0.55)');
-  sheen.addColorStop(0.68, 'rgba(0,0,0,0.04)');
-  sheen.addColorStop(1.00, 'rgba(0,0,0,0.22)');
-  ctx.fillStyle = sheen;
-  ctx.fillRect(0, 0, sz, sz);
+  const sheenCv = document.createElement('canvas');
+  sheenCv.width = sheenCv.height = sz;
+  const sctx = sheenCv.getContext('2d');
 
-  // Фиксированный блик-«глинт» у угла — читается как полированная
-  // поверхность даже в кадрах, где ключевой свет не даёт настоящего блика.
-  const glint = ctx.createRadialGradient(sz * 0.28, sz * 0.24, 0, sz * 0.28, sz * 0.24, sz * 0.32);
-  glint.addColorStop(0, 'rgba(255,255,255,0.50)');
-  glint.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = glint;
-  ctx.fillRect(0, 0, sz, sz);
+  // Диагональный блик — заметно мягче и менее контрастный, чем в первой
+  // версии (пик 0.55 → 0.30, тёплый оттенок вместо чистого белого — чистый
+  // белый поверх насыщенного золота читался как «выжженное пятно», не как
+  // отражение).
+  const sheen = sctx.createLinearGradient(0, 0, sz, sz);
+  sheen.addColorStop(0.00, 'rgba(0,0,0,0.14)');
+  sheen.addColorStop(0.38, 'rgba(0,0,0,0)');
+  sheen.addColorStop(0.50, 'rgba(255,248,235,0.30)');
+  sheen.addColorStop(0.62, 'rgba(0,0,0,0)');
+  sheen.addColorStop(1.00, 'rgba(0,0,0,0.14)');
+  sctx.fillStyle = sheen;
+  sctx.fillRect(0, 0, sz, sz);
+
+  // Блик-«глинт» у угла — на том же слое, той же размывкой, не отдельная
+  // резкая окружность поверх уже размытой диагонали.
+  const glint = sctx.createRadialGradient(sz * 0.3, sz * 0.26, 0, sz * 0.3, sz * 0.26, sz * 0.42);
+  glint.addColorStop(0, 'rgba(255,250,240,0.28)');
+  glint.addColorStop(1, 'rgba(255,250,240,0)');
+  sctx.fillStyle = glint;
+  sctx.fillRect(0, 0, sz, sz);
+
+  ctx.save();
+  ctx.filter = `blur(${sz * 0.08}px)`;
+  ctx.drawImage(sheenCv, 0, 0);
+  ctx.restore();
 
   return cv;
 }
