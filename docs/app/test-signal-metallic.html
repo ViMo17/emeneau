@@ -20,10 +20,11 @@
 </head>
 <body>
 <div id="note">Сравнение серебра/золота: текущий плоский залив (1, 3) против
-  предложенного металлического (2, 4) — диагональный блик + блик-«глинт» +
-  пониженный roughness (0.28 против 0.55). Ничего из этого ЕЩЁ не подключено
-  к реальному matsSignal — эта страница ни на что в приложении не влияет,
-  только показывает сравнение для решения.</div>
+  многостопового градиента по палитре пользователя (2, 4) — 6 цветовых
+  стопов на диагонали + мягкий радиальный блик у угла, без envMap/
+  metalness (не нужен WebGL-контекст для отражений). Ничего из этого ЕЩЁ
+  не подключено к реальному matsSignal/matsGold — эта страница ни на что в
+  приложении не влияет, только показывает сравнение для решения.</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <div id="legend">
   <span>1. серебро — сейчас</span>
@@ -56,9 +57,9 @@ const geo = makeChalkGeo(1.1, 1.1, 1.1);
 const SLOT = 1.6;
 const cubes = [
   { x: -1.5 * SLOT, mats: buildChalkMaterials(SILVER_COLOR, 1, 'i') },
-  { x: -0.5 * SLOT, mats: buildMetallicMaterials(SILVER_COLOR, 2, 'i', renderer) },
+  { x: -0.5 * SLOT, mats: buildMetallicMaterials('silver', 2, 'i') },
   { x:  0.5 * SLOT, mats: buildChalkMaterials(SIGNAL_COLOR, 3, 'u') },
-  { x:  1.5 * SLOT, mats: buildMetallicMaterials(SIGNAL_COLOR, 4, 'u', renderer) },
+  { x:  1.5 * SLOT, mats: buildMetallicMaterials('gold', 4, 'u') },
 ];
 cubes.forEach(c => {
   const mesh = new THREE.Mesh(geo, c.mats);

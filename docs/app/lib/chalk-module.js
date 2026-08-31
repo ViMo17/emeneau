@@ -128,85 +128,80 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
 // «Серебро»/«Золото» в реестре зарезервированных значений), и плоская
 // заливка этот смысл не поддерживает.
 //
-// ПЕРВАЯ версия (нарисованный градиентом блик поверх плоской заливки, даже
-// размытый) была отвергнута пользователем по скриншоту — читалась как
-// «мраморная пятнистая текстура», не металл: рисованный блик на матовом
-// материале физически не может выглядеть как отражение, только как
-// размазанная краска. Настоящий металлический вид требует НАСТОЯЩЕГО
-// отражения окружения (envMap) — без него `metalness` в MeshStandardMaterial
-// просто дал бы тёмный, безжизненный материал (нечему отражаться). envMap
-// генерируется процедурно через THREE.PMREMGenerator из маленькой сцены
-// (см. getMetallicEnvMap ниже) — НЕ внешняя картинка/HDR-файл, ноль новых
-// ассетов и зависимостей, тот же принцип минимализма, что и везде в
-// проекте. Буква на грани остаётся ЧЁРНОЙ (тот же paintGlyph, что и у
-// обычных кубиков) — на металле она читается как гравировка (тёмный,
-// малоотражающий участок на блестящей поверхности), не теряет
-// разборчивости, ради которой кубики вообще существуют.
+// ИСТОРИЯ ДВУХ ОТВЕРГНУТЫХ ПОПЫТОК (обе — реальные находки, не гипотезы):
+// 1) Нарисованный градиентом блик поверх плоской заливки, даже размытый —
+//    отвергнуто по скриншоту, читалось как «мраморная пятнистая текстура»
+//    (слишком мало опорных цветов — 2-3 стопа градиента недостаточно, чтобы
+//    прочитаться как металл, не как пятно).
+// 2) Настоящий envMap (THREE.PMREMGenerator + metalness) — физически
+//    правильный путь, но кубики выходили тёмными/безжизненными: без
+//    возможности видеть рендер вживую подобрать контрастную процедурную
+//    «комнату» для отражения оказалось недостижимо за разумное число
+//    скриншот-раундов (сам механизм при этом рабочий, баг с WebGL-
+//    контекстом на разных рендерерах был найден и исправлен — просто
+//    итоговая картинka всё равно не устроила).
 //
-// НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ: первая версия пекла envMap ОТДЕЛЬНЫМ
-// временным THREE.WebGLRenderer — у него свой WebGL-контекст, физически
-// не тот же самый, что рисует видимую сцену. Текстура, созданная в одном
-// WebGL-контексте, не переносится в другой (не GPU-ресурс с общим
-// доступом) — результат: чёрные кубики, envMap технически существовал, но
-// был невидим для рендерера сцены. Исправлено — getMetallicEnvMap ТЕПЕРЬ
-// принимает РЕАЛЬНЫЙ рендерер сцены параметром и печёт им же. Каждый
-// mountSlotExample создаёт СВОЙ renderer (свой WebGL-контекст на
-// пример) — значит и кэш не может быть одним модульным полем на всю
-// страницу, как у _cubeGeo/_shadowGeo (те не привязаны к контексту, это
-// геометрия/данные, не GPU-текстура), а WeakMap по конкретному renderer:
-// каждый renderer печёт envMap один раз при первом обращении, второй и
-// далее mount() с ТЕМ ЖЕ renderer переиспользуют готовое; when renderer
-// уничтожается (unmount) — запись сама уходит из WeakMap вместе с ним, без
-// ручной очистки.
-const _metallicEnvMapByRenderer = new WeakMap();
-function getMetallicEnvMap(renderer) {
-  if (_metallicEnvMapByRenderer.has(renderer)) return _metallicEnvMapByRenderer.get(renderer);
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileCubemapShader();
+// ТЕКУЩАЯ версия — палитра, предложенная пользователем (готовый SVG/CSS
+// компонент с изометрическим кубом, многостоповые градиенты на каждую
+// грань) — портирована в canvas 2D linearGradient/radialGradient с теми же
+// hex-стопами. 6 стопов на грань вместо 2-3 — та самая разница, которая
+// отличает «металлический вид» от «пятна»: реальные иконки/иллюстрации
+// имитируют металл именно так, без всякого рейтрейсинга. Буква на грани
+// остаётся ЧЁРНОЙ (тот же paintGlyph, что и у обычных кубиков) — читается
+// как гравировка на блестящей поверхности, не теряет разборчивости.
+const METALLIC_STOPS = {
+  silver: [
+    [0.00, '#ffffff'], [0.18, '#e4edf6'], [0.40, '#c8d8ea'],
+    [0.62, '#dde8f2'], [0.80, '#b0c4d8'], [1.00, '#8aacc4'],
+  ],
+  gold: [
+    [0.00, '#fffbe0'], [0.12, '#fde878'], [0.30, '#f0c428'],
+    [0.52, '#f8d840'], [0.72, '#d4a010'], [1.00, '#a87800'],
+  ],
+};
+const METALLIC_SPEC = {
+  silver: 'rgba(255,255,255,ALPHA)',
+  gold: 'rgba(255,250,200,ALPHA)',
+};
 
-  // Процедурная «комната»: тёмная сфера-фон + три плоских панели разной
-  // яркости/оттенка (тёплый яркий «потолок», холодная и тёмная боковые
-  // панели) — металлу нужен КОНТРАСТ между яркими и тёмными участками
-  // окружения, чтобы отражение вообще читалось как отражение, не как
-  // ровный серый. Ровно то же, что даёт мягкий свет из окна в реальных
-  // референс-фото металлических поверхностей.
-  const envScene = new THREE.Scene();
-  envScene.add(new THREE.Mesh(
-    new THREE.SphereGeometry(20, 24, 12),
-    new THREE.MeshBasicMaterial({ color: 0x2c2e35, side: THREE.BackSide })
-  ));
-  const panel = (x, y, z, w, h, color) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color }));
-    m.position.set(x, y, z);
-    m.lookAt(0, 0, 0);
-    envScene.add(m);
-  };
-  panel(0, 9, 0, 14, 5, 0xfff2dc);   // тёплая яркая полоса сверху
-  panel(-7, 1, 5, 4, 7, 0xd6dde6);   // холодная светлая панель сбоку
-  panel(7, -2, -5, 4, 7, 0x15161b);  // тёмная панель с другой стороны
+function paintMetallicFace(sz, variant) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = sz;
+  const ctx = cv.getContext('2d');
 
-  const rt = pmrem.fromScene(envScene, 0.035);
-  pmrem.dispose(); // безопасно — генератор шейдера, не сам renderer и не готовая текстура
-  _metallicEnvMapByRenderer.set(renderer, rt.texture);
-  return rt.texture;
+  const diag = ctx.createLinearGradient(0, 0, sz, sz);
+  METALLIC_STOPS[variant].forEach(([pos, color]) => diag.addColorStop(pos, color));
+  ctx.fillStyle = diag;
+  ctx.fillRect(0, 0, sz, sz);
+
+  // Мягкий блик-«спекуляр» у верхнего левого угла — тот же приём, что в
+  // исходном SVG (radialGradient cx≈28-30%, cy≈20-26%), не отдельная резкая
+  // окружность, а плавно гаснущий радиальный градиент поверх диагонали.
+  const specColor = METALLIC_SPEC[variant];
+  const spec = ctx.createRadialGradient(sz * 0.29, sz * 0.23, 0, sz * 0.29, sz * 0.23, sz * 0.5);
+  spec.addColorStop(0, specColor.replace('ALPHA', '0.55'));
+  spec.addColorStop(0.4, specColor.replace('ALPHA', '0.16'));
+  spec.addColorStop(1, specColor.replace('ALPHA', '0'));
+  ctx.fillStyle = spec;
+  ctx.fillRect(0, 0, sz, sz);
+
+  return cv;
 }
 
-/** @param {number} baseColor @param {number} seed @param {string} glyph @param {THREE.WebGLRenderer} renderer — ТОТ ЖЕ рендерер, что рисует сцену (envMap привязан к его WebGL-контексту, см. комментарий выше) */
-function buildMetallicMaterials(baseColor, seed, glyph, renderer) {
+/** @param {'silver'|'gold'} variant @param {number} seed @param {string} glyph */
+function buildMetallicMaterials(variant, seed, glyph) {
   const SZ = 256;
-  const envMap = getMetallicEnvMap(renderer);
   const faces = [0, 1, 2, 3, 4, 5];
   return faces.map((idx) => {
-    const cv = paintFlatFace(SZ, baseColor); // плоская заливка — весь «металл» теперь даёт envMap, не рисунок
+    const cv = paintMetallicFace(SZ, variant);
     if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     return new THREE.MeshStandardMaterial({
       map: tex,
-      envMap,
-      envMapIntensity: 1.1,
-      roughness: 0.24,
-      metalness: 0.9,
+      roughness: 0.32,
+      metalness: 0.0, // без envMap повышенный metalness просто затемнил бы материал — см. историю выше
+      envMapIntensity: 0,
       fog: false,
       side: THREE.DoubleSide,
       transparent: true,
