@@ -3,10 +3,17 @@
 // логика уже была написана и визуально проверена, но жила в двух копиях и
 // не применялась к rule15 (сдвинут влево ещё диагностикой прозрачности и
 // не был возвращён обратно) и к rule3/7 (центрированы вручную, не точно).
+// HALF_WORLD_W_MAX (заход 90, прямое уточнение по итогам живой проверки):
+// движок передаёт в computeFitFov ОДНУ И ТУ ЖЕ общую константу для ВСЕХ
+// примеров, не свою под каждый — кубик должен быть одного размера везде,
+// эталон размера — максимально заполненный случай (сейчас rule70). Сама
+// computeFitFov остаётся чистой функцией, принимающей hw параметром — её
+// тесты на разные hw ниже проверяют свойства формулы саму по себе, не то,
+// как её сейчас использует mount.js (это отдельно, см. тест на HALF_WORLD_W_MAX).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  N_SLOTS, centeredStart, centerSlots, halfWorldW, computeFitFov, slotX, CUBE_SIZE,
+  N_SLOTS, centeredStart, centerSlots, halfWorldW, HALF_WORLD_W_MAX, computeFitFov, slotX, CUBE_SIZE,
 } from '../docs/app/lib/slot-engine.js';
 
 test('centeredStart: чётный span — центр ровно посередине N_SLOTS', () => {
@@ -77,4 +84,24 @@ test('computeFitFov: более широкий пример при ОДНОМ И
 
 test('N_SLOTS остаётся 10 — если константу когда-нибудь поменяют, тесты выше нужно пересчитать', () => {
   assert.equal(N_SLOTS, 10);
+});
+
+test('HALF_WORLD_W_MAX == halfWorldW(0, N_SLOTS-1) — та же формула, не отдельное число', () => {
+  assert.equal(HALF_WORLD_W_MAX, halfWorldW(0, N_SLOTS - 1));
+});
+
+test('computeFitFov с HALF_WORLD_W_MAX: короткий и длинный пример на ОДНОМ окне получают ОДИНАКОВЫЙ FOV', () => {
+  // Прямое требование пользователя: кубик одного размера везде, независимо
+  // от того, какой пример сейчас показан. Показываем это НЕ тавтологией —
+  // сначала убеждаемся, что halfWorldW двух реальных примеров РАЗНАЯ (иначе
+  // тест ничего не проверял бы), затем — что movnt.js больше не использует
+  // эту разницу — mount.js обоим передаёт ОДНУ И ТУ ЖЕ HALF_WORLD_W_MAX.
+  const hwShort = halfWorldW(2, 7); // śādhi после центрирования, span=6
+  const hwLong = halfWorldW(0, 9);  // taddhiraṇyam, весь стенд, span=10
+  assert.notEqual(hwShort, hwLong, 'у короткого и длинного примера своя halfWorldW ДОЛЖНА отличаться — иначе не на чем проверять фикс');
+  for (const aspect of [3.0, 1.6, 1.0, 0.75]) {
+    const fovForShortExample = computeFitFov(aspect, 9.5, HALF_WORLD_W_MAX, 32);
+    const fovForLongExample = computeFitFov(aspect, 9.5, HALF_WORLD_W_MAX, 32);
+    assert.equal(fovForShortExample, fovForLongExample);
+  }
 });

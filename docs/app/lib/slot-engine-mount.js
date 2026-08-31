@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { slotX, clamp01, easeFall, halfWorldW, computeFitFov } from './slot-engine-core.js';
+import { slotX, clamp01, easeFall, HALF_WORLD_W_MAX, computeFitFov } from './slot-engine-core.js';
 import { makeCube, updateShadow, isSharedResource } from './slot-engine-cube.js';
 import { computeWordGroups, resolveSlotRef } from './slot-engine-words.js';
 import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
@@ -217,15 +217,6 @@ export function mountSlotExample(container, data, opts = {}) {
   const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.1, 100);
   const camBase = new THREE.Vector3(0, 3.2, 9.5);
   camera.position.copy(camBase);
-  // Половина мирового габарита ЭТОГО примера по ширине — от занятого
-  // диапазона слотов в data.initial, не от N_SLOTS целиком. Используется в
-  // resize() ниже (computeFitFov), портировано из старых (до общего
-  // движка) rule3-agnayas.js/rule71-vak-asti.js — тот же приём, тот же
-  // общий HALF_WORLD_H, что делает кубик одного размера у всех примеров
-  // при обычном окне, и своя, посчитанная под КОНКРЕТНОЕ слово ширина,
-  // которая включается в игру только при сужении окна (см. CLAUDE.md).
-  const occupiedSlots = data.initial.map(x => x.slot);
-  const exampleHalfWorldW = halfWorldW(Math.min(...occupiedSlots), Math.max(...occupiedSlots));
   // Верхняя граница сцены проверена реальной проекционной математикой
   // камеры (THREE.Vector3.project), не на глаз — на верхний край кубика в
   // отстойнике (holdOffset.y=2.4 + CUBE_SIZE/2) —
@@ -284,7 +275,7 @@ export function mountSlotExample(container, data, opts = {}) {
     if (w === 0 || h === 0) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.fov = computeFitFov(camera.aspect, camBase.z, exampleHalfWorldW, BASE_FOV);
+    camera.fov = computeFitFov(camera.aspect, camBase.z, HALF_WORLD_W_MAX, BASE_FOV);
     camera.updateProjectionMatrix();
   }
   const resizeObserver = new ResizeObserver(resize);
