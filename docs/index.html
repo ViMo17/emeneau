@@ -48,6 +48,21 @@
 
   .card.wide { grid-column: 1 / -1; }
 
+  /* Инструменты разработки — намеренно другой, более утилитарный стиль
+     (не карточка-витрина): плоский список ссылок, приглушённые тона.
+     Визуальная граница между «вот готовый результат» и «внутренний
+     инструмент проверки» должна быть видна сразу, не только по заголовку
+     секции. */
+  .tool-list { display: flex; flex-direction: column; gap: 6px; }
+  .tool-list a {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+    text-decoration: none; color: var(--ink-dim); font-family: var(--sans); font-size: 12.5px;
+    padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .tool-list a:hover { color: var(--ink); border-color: var(--line-strong); }
+  .tool-list .tag { font-size: 10px; color: var(--ink-faint); letter-spacing: .04em; white-space: nowrap; }
+
   footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
   footer a { color: var(--ink-dim); }
 
@@ -65,20 +80,63 @@
     <div class="sec-head"><span class="sec-num">01</span><h2>Приложение</h2></div>
     <div class="grid">
       <a class="card wide" href="app/sanskrit-sandhi-app.html">
-        <div class="t">Сандхи Эмено <span class="dev">— тренажёр (v19)</span></div>
-        <div class="d">71 правило внешнего и внутреннего сандхи, алфавитная панель с семантическими группами, таблица гуна/вриддхи. Зона анимации пока пуста — сюда войдут эффекты после доводки.</div>
-        <span class="status plan">основной файл · в разработке</span>
-      </a>
-      <a class="card wide" href="app/test-slot-engine.html">
-        <div class="t">Слот-движок <span class="dev">— тестовая проверка (agnayas)</span></div>
-        <div class="d">Один движок + данные примера вместо файла на каждый эффект. Проверка на agnayas: падение, тень, волна влияния, гунирование, подход/отскок (несовместимость E+A), отстойник, финальная волна. Не готовый результат — рабочая проверка на ходу.</div>
-        <span class="status plan">тест · в работе</span>
+        <div class="t">Сандхи Эмено <span class="dev">— тренажёр</span></div>
+        <div class="d">71 правило внешнего и внутреннего сандхи. 64 из 71 — кликабельная подсветка источник/триггер/результат прямо на алфавитной панели, таблица гуна/вриддхи. 6 правил — полноценная 3D-анимация (слот-движок, ниже).</div>
+        <span class="status done">основной файл</span>
       </a>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">02</span><h2>Карта эффектов</h2></div>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Слот-движок · готовые примеры</h2></div>
+    <div class="grid">
+      <a class="card" href="app/test-slot-engine.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">agnayas <span class="dev">— правило 3</span></div>
+        <div class="d">agni- «огонь» + guṇa + -as → agnayas «огни». Гунация i→e (грамматика), затем правило 3: e перед a распадается на a+y.</div>
+        <span class="status done">интегрировано · EXAMPLES[3]</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule7.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">āsīt <span class="dev">— правило 7</span></div>
+        <div class="d">a (аугмент) + as- «быть» + īt → āsīt «был». Правило 7: два одинаковых кратких a на морфемном стыке сливаются в один долгий ā (самоподобие, не гуна/вриддхи).</div>
+        <span class="status done">интегрировано · EXAMPLES[7]</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule15.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">śādhi <span class="dev">— правило 15</span></div>
+        <div class="d">śās- «учить» + dhi → śādhi «учи!». Правило 15: конечный s основы подвергается элизии перед начальным dh окончания — без замены выпавшего звука.</div>
+        <span class="status done">интегрировано · EXAMPLES[15]</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule70.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">taddhiraṇyam <span class="dev">— правила 70–71</span></div>
+        <div class="d">tat + hiraṇyam «золото» → taddhiraṇyam «то золото». Цепочка из двух правил: h после t становится звонким придыхательным dh (70), затем t перед новым dh тоже озвончается — d (71).</div>
+        <span class="status done">интегрировано · EXAMPLES[70]</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule71.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">vāk asti <span class="dev">— правило 71</span></div>
+        <div class="d">vāk «речь» + asti «есть» → vāg asti. Внешнее сандхи: граница слов не схлопывается, k озвончается перед гласным a (k→g), окончание -k само не движется.</div>
+        <span class="status done">интегрировано · EXAMPLES[71]</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Слот-движок · в работе</h2></div>
+    <div class="grid">
+      <a class="card wide" href="app/test-slot-engine-rule42.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-vrddhi)"></span></div>
+        <div class="t">tatraiti <span class="dev">— правило 42, первая настоящая вриддхи</span></div>
+        <div class="d">tatra «там» + eti «идёт» → tatraiti «туда идёт». Правило 42: a перед дифтонгом (e) заменяется долгим дифтонгом (ai) — вриддхи-ступень. Численно проверено, ждёт финального визуального подтверждения перед интеграцией в EXAMPLES[42].</div>
+        <span class="status polish">тестовый полигон · не интегрировано</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов</h2></div>
     <div class="grid">
       <a class="card wide" href="effects/effects-map.html">
         <div class="dot-row">
@@ -94,7 +152,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">03</span><h2>Эффекты</h2></div>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Эффекты</h2></div>
     <div class="grid">
       <a class="card" href="effects/rule-guna-agnayas.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
@@ -142,12 +200,26 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">04</span><h2>Материалы</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Материалы</h2></div>
     <div class="grid">
       <a class="card wide" href="reference/chalk-material-study.html">
         <div class="t">Меловой куб <span class="dev">— материаловедческий этюд</span></div>
         <div class="d">Процедурная генерация текстур мела для Three.js (зерно, фаски, вариации оттенка), без анимации — источник материального пайплайна для всех эффектов выше.</div>
       </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Инструменты разработки</h2></div>
+    <p class="lede" style="margin-bottom:16px;">Не витрина — рабочие полигоны и диагностика для дальнейшей разработки слот-движка. Ссылки раньше жили отдельной панелью внутри приложения, теперь собраны здесь.</p>
+    <div class="tool-list">
+      <a href="app/test-slot-engine-agnayas-generated.html" target="_blank"><span>agnayas — сгенерировано (guṇa+split), сравнить с рукописным</span><span class="tag">генератор</span></a>
+      <a href="app/test-slot-engine-rule7-generated.html" target="_blank"><span>āsīt — сгенерировано (approach+merge), сравнить с рукописным</span><span class="tag">генератор</span></a>
+      <a href="app/test-slot-engine-rule15-generated.html" target="_blank"><span>śādhi — сгенерировано (approach+elide), сравнить с рукописным</span><span class="tag">генератор</span></a>
+      <a href="app/test-slot-engine-rule70-generated.html" target="_blank"><span>taddhiraṇyam — сгенерировано (цепочка шагов), сравнить с рукописным</span><span class="tag">генератор</span></a>
+      <a href="app/test-slot-engine-rule71-generated.html" target="_blank"><span>vāk asti — сгенерировано, сравнить с рукописным</span><span class="tag">генератор</span></a>
+      <a href="app/test-signal-metallic.html" target="_blank"><span>серебро/золото — плоское vs металлик (сравнение палитры)</span><span class="tag">материалы</span></a>
+      <a href="app/test-slot-engine-asymmetric-dim.html" target="_blank"><span>асимметричная прозрачность притенённых кубиков — расследование ЗАКРЫТО, оставлено как диагностический эталон</span><span class="tag">диагностика</span></a>
     </div>
   </section>
 
