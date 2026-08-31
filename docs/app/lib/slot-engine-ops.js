@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { paintGlyph, buildOpposingFaceMaterials } from './chalk-module.js';
 import {
-  CUBE_SIZE, SLOT, MS_PER_360, SILVER_RGB, GROUP_COLOR, GROUP_RGB,
+  CUBE_SIZE, SLOT, MS_PER_360, SILVER_RGB, GOLD_RGB, GROUP_COLOR, GROUP_RGB,
   colorFor, ringColorFrom, clamp01, lerp, easeOutCubic, easeInOutCubic,
   easeOutBack, slotX, setOpacity,
 } from './slot-engine-core.js';
@@ -452,21 +452,34 @@ export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
    подчёркивание/скобка окончания в морфологическом разборе (привычный
    язык, не изобретённый). Держится, пока держится сама принадлежность к
    группе (та же ringHoldDur, что и у сустейн-колец — один параметр, не
-   два рассинхронизированных). Только для настоящих групп (>1 кубика) —
-   подчёркивать одну букву незачем, там и так ясно, что происходит. Общая
-   утилита операции, не частность influence — как только появится другая
-   операция, работающая с группой, эта же функция подойдёт ей без правок. */
+   два рассинхронизированных). Общая утилита операции, не частность
+   influence — как только появится другая операция, работающая с группой,
+   эта же функция подойдёт ей без правок.
+
+   op.frameSignal ('gold'|'silver', опционально) — прямой запрос
+   пользователя: часть слова, вызывающая необходимость вриддхи,
+   подчёркивается на всю длину золотой сияющей полоской (симметрично —
+   серебряной для гунации), тем же цветовым языком, что и сама буква при
+   transform (см. «Серебро/Золото» в CLAUDE.md). Без frameSignal — прежнее
+   поведение НЕ ИЗМЕНИЛОСЬ: нейтральный GROUP_COLOR и только для настоящих
+   групп (>1 кубика, подчёркивать одну букву незачем, если это не
+   специально запрошенный сигнал) — уже построенные примеры (agnayas и
+   др.) ничего не передают в frameSignal, значит рисуются как раньше. */
 /** @param {InfluenceOp} op @param {import('./slot-engine-types.js').Cube[]} sources @param {number} elapsed @param {Ctx} ctx */
 export function updateGroupFrame(op, sources, elapsed, ctx) {
   const { labelsEl } = ctx;
   const holdEnd = op._frameHoldEnd;
-  if (sources.length < 2 || elapsed < op.start || elapsed > holdEnd) {
+  const forced = op.frameSignal === 'gold' || op.frameSignal === 'silver';
+  if ((sources.length < 2 && !forced) || elapsed < op.start || elapsed > holdEnd) {
     if (op._frameEl) { op._frameEl.remove(); op._frameEl = null; }
     return;
   }
   if (!op._frameEl) {
     const el = document.createElement('div');
     el.className = 'slot-group-frame';
+    const rgb = op.frameSignal === 'gold' ? GOLD_RGB : op.frameSignal === 'silver' ? SILVER_RGB : GROUP_RGB;
+    el.style.background = `rgba(${rgb},.75)`;
+    el.style.boxShadow = `0 0 7px 1px rgba(${rgb},.55)`;
     labelsEl.appendChild(el);
     op._frameEl = el;
   }

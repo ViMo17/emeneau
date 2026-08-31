@@ -142,6 +142,35 @@ test('applyInfluence: одиночный источник — рамка НЕ с
   assert.equal(op._frameEl, undefined, 'один источник — рамки быть не должно');
 });
 
+test('applyInfluence: frameSignal:gold — рамка создаётся ДАЖЕ у одиночного источника (часть слова, требующая вриддхи, подчёркивается всегда)', () => {
+  const cubes = { 1: makeCube(1), 2: makeCube(2) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'influence', from: 1, to: 2, start: 0, waveCount: 1, waveTravel: 50, ringHoldDur: 2000, frameSignal: 'gold' };
+
+  applyInfluence(op, 500, ctx);
+  assert.ok(op._frameEl, 'frameSignal форсирует рамку даже при одном источнике');
+  assert.match(op._frameEl.style.background, /232,200,96/, 'цвет рамки — GOLD_RGB, не нейтральный GROUP_RGB');
+});
+
+test('applyInfluence: frameSignal:silver — та же логика форсирования, серебряный цвет рамки', () => {
+  const cubes = { 1: makeCube(1), 2: makeCube(2) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'influence', from: 1, to: 2, start: 0, waveCount: 1, waveTravel: 50, ringHoldDur: 2000, frameSignal: 'silver' };
+
+  applyInfluence(op, 500, ctx);
+  assert.ok(op._frameEl, 'frameSignal форсирует рамку даже при одном источнике');
+  assert.match(op._frameEl.style.background, /205,211,217/, 'цвет рамки — SILVER_RGB');
+});
+
+test('applyInfluence: без frameSignal — цвет рамки нейтральный GROUP_RGB, поведение групп не изменилось', () => {
+  const cubes = { 1: makeCube(1), 2: makeCube(2), 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'influence', from: [1, 2], to: 3, start: 0, waveCount: 1, waveTravel: 50, ringHoldDur: 2000 };
+
+  applyInfluence(op, 500, ctx);
+  assert.match(op._frameEl.style.background, /226,217,190/, 'без frameSignal — прежний нейтральный GROUP_RGB');
+});
+
 test('applyInfluence: непрерывная текстурная пульсация (заход 43) — материал источника подменяется на время ringHoldDur, возвращается к matsMain после', () => {
   const cubes = { 1: makeCube(1), 2: makeCube(2), 3: makeCube(3) };
   const ctx = makeCtx(cubes);

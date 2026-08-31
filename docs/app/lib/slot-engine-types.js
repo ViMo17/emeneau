@@ -83,6 +83,7 @@
  * @property {number} [waveCount]
  * @property {number} [waveGap]
  * @property {number} [waveTravel]
+ * @property {'gold'|'silver'} [frameSignal] - подчёркивание группы в цвет предстоящей огласовки (updateGroupFrame), без него — нейтральный GROUP_COLOR, только для групп >1
  * @property {number} [_frameHoldEnd]
  * @property {boolean} [_ringOff]
  * @property {HTMLElement | null} [_frameEl] - используется updateGroupFrame
