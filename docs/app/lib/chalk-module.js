@@ -226,13 +226,27 @@ function paintMetallicFace(sz, variant, role) {
 // блик-полоса, другая боковая и низ — тень.
 const METALLIC_ROLE_BY_FACE = { 0: 'highlight', 1: 'shadow', 2: 'top', 3: 'shadow', 4: 'top', 5: 'top' };
 
+// Буква — ТОЛЬКО на фасаде (idx4), НЕ на противолежащей грани (idx5),
+// в отличие от buildChalkMaterials выше. Прямое уточнение пользователя:
+// движок красил ОБЕ торцевые грани одним и тем же глифом (приём,
+// оправданный для landsOnOppositeFace — там при повороте ровно на 180°
+// именно противолежащая грань становится новой лицевой) — но для этой,
+// сигнальной фазы (гунация/вриддхи, полный оборот, к зрителю ВСЕГДА
+// возвращается ИСХОДНАЯ, не противолежащая грань) задняя грань никогда
+// не должна нести букву: пользователь наблюдала «мельтешение» именно
+// потому, что задняя грань, тоже расписанная, становилась видна в своих
+// собственных окнах поворота (90–270°/450–630° при двух оборотах) —
+// показывая то старую, то (после подмены) уже новую букву ВТОРОЙ раз,
+// помимо фасада. Задняя грань теперь остаётся тем же металлом БЕЗ буквы
+// всегда — «пропадание» на позиции 3 (180°, applyTransform) не требует
+// отдельного «пустого» состояния этой грани, она и так им уже была.
 /** @param {'silver'|'gold'} variant @param {number} seed @param {string} glyph */
 function buildMetallicMaterials(variant, seed, glyph) {
   const SZ = 256;
   const faces = [0, 1, 2, 3, 4, 5];
   return faces.map((idx) => {
     const cv = paintMetallicFace(SZ, variant, METALLIC_ROLE_BY_FACE[idx]);
-    if ((idx === 4 || idx === 5) && glyph) paintGlyph(cv, glyph);
+    if (idx === 4 && glyph) paintGlyph(cv, glyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     return new THREE.MeshStandardMaterial({
