@@ -142,17 +142,26 @@ function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
 // обычных кубиков) — на металле она читается как гравировка (тёмный,
 // малоотражающий участок на блестящей поверхности), не теряет
 // разборчивости, ради которой кубики вообще существуют.
-let _metallicEnvMap = null;
-function getMetallicEnvMap() {
-  if (_metallicEnvMap) return _metallicEnvMap;
-  // Временный рендерер — нужен PMREMGenerator ТОЛЬКО чтобы скомпилировать
-  // шейдер запекания, к реальной сцене примера отношения не имеет и в неё
-  // не добавляется. Строится и запекается один раз на всю страницу
-  // (ленивый модульный кэш, тот же приём, что у _cubeGeo/_shadowGeo в
-  // slot-engine-cube.js), результат — обычная текстура, переживает любое
-  // количество mount()/unmount() отдельных примеров.
-  const tempRenderer = new THREE.WebGLRenderer({ antialias: false });
-  const pmrem = new THREE.PMREMGenerator(tempRenderer);
+//
+// НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ: первая версия пекла envMap ОТДЕЛЬНЫМ
+// временным THREE.WebGLRenderer — у него свой WebGL-контекст, физически
+// не тот же самый, что рисует видимую сцену. Текстура, созданная в одном
+// WebGL-контексте, не переносится в другой (не GPU-ресурс с общим
+// доступом) — результат: чёрные кубики, envMap технически существовал, но
+// был невидим для рендерера сцены. Исправлено — getMetallicEnvMap ТЕПЕРЬ
+// принимает РЕАЛЬНЫЙ рендерер сцены параметром и печёт им же. Каждый
+// mountSlotExample создаёт СВОЙ renderer (свой WebGL-контекст на
+// пример) — значит и кэш не может быть одним модульным полем на всю
+// страницу, как у _cubeGeo/_shadowGeo (те не привязаны к контексту, это
+// геометрия/данные, не GPU-текстура), а WeakMap по конкретному renderer:
+// каждый renderer печёт envMap один раз при первом обращении, второй и
+// далее mount() с ТЕМ ЖЕ renderer переиспользуют готовое; when renderer
+// уничтожается (unmount) — запись сама уходит из WeakMap вместе с ним, без
+// ручной очистки.
+const _metallicEnvMapByRenderer = new WeakMap();
+function getMetallicEnvMap(renderer) {
+  if (_metallicEnvMapByRenderer.has(renderer)) return _metallicEnvMapByRenderer.get(renderer);
+  const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileCubemapShader();
 
   // Процедурная «комната»: тёмная сфера-фон + три плоских панели разной
@@ -177,15 +186,15 @@ function getMetallicEnvMap() {
   panel(7, -2, -5, 4, 7, 0x15161b);  // тёмная панель с другой стороны
 
   const rt = pmrem.fromScene(envScene, 0.035);
-  pmrem.dispose();
-  tempRenderer.dispose();
-  _metallicEnvMap = rt.texture;
-  return _metallicEnvMap;
+  pmrem.dispose(); // безопасно — генератор шейдера, не сам renderer и не готовая текстура
+  _metallicEnvMapByRenderer.set(renderer, rt.texture);
+  return rt.texture;
 }
 
-function buildMetallicMaterials(baseColor, seed, glyph) {
+/** @param {number} baseColor @param {number} seed @param {string} glyph @param {THREE.WebGLRenderer} renderer — ТОТ ЖЕ рендерер, что рисует сцену (envMap привязан к его WebGL-контексту, см. комментарий выше) */
+function buildMetallicMaterials(baseColor, seed, glyph, renderer) {
   const SZ = 256;
-  const envMap = getMetallicEnvMap();
+  const envMap = getMetallicEnvMap(renderer);
   const faces = [0, 1, 2, 3, 4, 5];
   return faces.map((idx) => {
     const cv = paintFlatFace(SZ, baseColor); // плоская заливка — весь «металл» теперь даёт envMap, не рисунок

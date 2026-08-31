@@ -56,9 +56,9 @@ const geo = makeChalkGeo(1.1, 1.1, 1.1);
 const SLOT = 1.6;
 const cubes = [
   { x: -1.5 * SLOT, mats: buildChalkMaterials(SILVER_COLOR, 1, 'i') },
-  { x: -0.5 * SLOT, mats: buildMetallicMaterials(SILVER_COLOR, 2, 'i') },
+  { x: -0.5 * SLOT, mats: buildMetallicMaterials(SILVER_COLOR, 2, 'i', renderer) },
   { x:  0.5 * SLOT, mats: buildChalkMaterials(SIGNAL_COLOR, 3, 'u') },
-  { x:  1.5 * SLOT, mats: buildMetallicMaterials(SIGNAL_COLOR, 4, 'u') },
+  { x:  1.5 * SLOT, mats: buildMetallicMaterials(SIGNAL_COLOR, 4, 'u', renderer) },
 ];
 cubes.forEach(c => {
   const mesh = new THREE.Mesh(geo, c.mats);
