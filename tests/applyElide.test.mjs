@@ -107,6 +107,29 @@ test('applyElide: прозрачность держится ПОЛНОЙ на в
   assert.ok(mid > 0 && mid < 1, 'только в fade прозрачность реально снижается: ' + mid);
 });
 
+test('applyElide: кубик визуально пропадает (прозрачность И масштаб) НАМНОГО быстрее полного fadeDur — синхронно с недолгими искрами, не растянуто до самого конца (прямая формулировка: «стреляет из точки, потом исчезает» — было ДВА разъединённых события)', () => {
+  const cubes = { 5: makeCube(5) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'elide', at: 5, start: 0 };
+  const fadeStart = 1300 + 800, fadeDur = 1100; // дефолты
+  const visualGoneAt = fadeStart + fadeDur / 1.8; // ×1.8 ускорение визуальной кривой
+
+  applyElide(op, visualGoneAt - 50, ctx);
+  const beforeOpacity = cubes[5].mesh.material[0].opacity;
+  const beforeScale = cubes[5].mesh.scale.x;
+  assert.ok(beforeOpacity > 0.02, 'ещё чуть видна прямо перед визуальным исчезновением: ' + beforeOpacity);
+
+  applyElide(op, visualGoneAt + 5, ctx);
+  assert.ok(cubes[5].mesh.material[0].opacity < 0.02, 'прозрачность уже практически 0 задолго до конца fadeDur(1100)');
+  assert.ok(cubes[5].mesh.scale.x < 0.2, 'масштаб уже сжался почти до нуля — кубик визуально распался, не просто тает целым');
+  assert.ok(cubes[5].mesh.scale.x < beforeScale, 'масштаб реально уменьшается вместе с прозрачностью, не остаётся на 1');
+
+  // Кубик остаётся невидимым (0/почти-0) до самого конца fadeDur — не
+  // "оживает" обратно между визуальным исчезновением и фактическим удалением.
+  applyElide(op, fadeStart + fadeDur - 1, ctx);
+  assert.ok(cubes[5].mesh.material[0].opacity < 0.02, 'остаётся невидимым вплоть до фактического удаления');
+});
+
 test('applyElide: россыпь искр (spawnSparkleBurst) запускается РОВНО один раз, на первом кадре fade — не раньше и не повторно', () => {
   const cubes = { 5: makeCube(5) };
   const labelsCalls = [];
@@ -127,9 +150,9 @@ test('applyElide: россыпь искр (spawnSparkleBurst) запускает
   applyElide(op, fadeStart + 1, ctx);
   assert.equal(op._fadeStartedAt, fadeStart + 1, 'флаг выставлен на первом кадре fade');
   const sparkleCount = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
-  assert.equal(sparkleCount, 16, 'ровно 16 искр (дефолт spawnSparkleBurst) добавлено в DOM за один запуск');
+  assert.equal(sparkleCount, 200, 'ровно 200 искр (дефолт spawnSparkleBurst) добавлено в DOM за один запуск');
 
   applyElide(op, fadeStart + 200, ctx);
   const sparkleCountAfter = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
-  assert.equal(sparkleCountAfter, 16, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
+  assert.equal(sparkleCountAfter, 200, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
 });

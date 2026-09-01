@@ -332,32 +332,45 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
 // золотой (GOLD_RGB, как и было для вриддхи), с ним — строка "R,G,B"
 // переопределяет фон/свечение (тот же приём, что и у spawnPulseRing/
 // rgbStr) — для elide передаётся нейтральный GROUP_RGB, золото остаётся
-// строго за вриддхи (см. CLAUDE.md, «Серебро/Золото»). ПРАВКА (по прямой
-// обратной связи после просмотра — «на порядок больше брызг разного
-// размера, ощущение трёх капелек, не разбрызгивания»): count по умолчанию
-// 4→16 (общий дефолт — правка коснулась и elide, и вриддхи разом, число не
-// дублируется по двум местам), размер и дистанция теперь СЛУЧАЙНЫ у КАЖДОЙ
-// искры отдельно (было — одна и та же CSS-величина у всех), свечение
-// масштабируется вместе с размером и ставится инлайн ВСЕГДА (не только при
-// переопределении цвета) — иначе крупные искры золота остались бы с тем же
-// узким статичным ореолом, что и мелкие.
+// строго за вриддхи (см. CLAUDE.md, «Серебро/Золото»).
+//
+// ВТОРАЯ ПРАВКА (по прямой обратной связи после просмотра — «кратно
+// больше, в 10-20 раз, и разнообразить размер; но главное — кубик должен
+// РАССЫПАТЬСЯ, а не стрелять из точки»): count по умолчанию 16→200.
+// Раньше ВСЕ искры стартовали из ОДНОЙ и той же точки (frontAnchor) и
+// только разлетались в разные стороны — читалось как «выстрел», не как
+// «распад». Теперь у каждой искры своя случайная СТАРТОВАЯ точка,
+// разбросанная по всей видимой площади кубика (не общий центр) — сама
+// точка появления уже выглядит как облако, не как источник-точка.
+// Ширина разброса переведена из мировых единиц в пиксели ЧЕРЕЗ РЕАЛЬНУЮ
+// проекцию камеры (вторая точка на расстоянии 1 мировой единицы, та же
+// техника, что и project() везде в движке) — не константа в пикселях,
+// иначе при разных FOV/масштабах экрана разброс был бы то теснее, то шире
+// самого кубика.
 /** @param {import('three').Vector3} atVec3 @param {Ctx} ctx @param {number} [count] @param {string} [rgbStr] */
-export function spawnSparkleBurst(atVec3, ctx, count = 16, rgbStr) {
+export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
   const { labelsEl } = ctx;
   const p = project(atVec3, ctx);
+  const pRef = project(new THREE.Vector3(atVec3.x + 1, atVec3.y, atVec3.z), ctx);
+  const pxPerUnit = Math.abs(pRef.x - p.x) || 40;
+  const spreadPx = pxPerUnit * CUBE_SIZE * 0.5; // примерно видимая полуширина грани
   const color = rgbStr ?? GOLD_RGB;
   for (let i = 0; i < count; i++) {
+    const originAngle = Math.random() * Math.PI * 2;
+    const originR = Math.random() * spreadPx;
+    const startX = p.x + Math.cos(originAngle) * originR;
+    const startY = p.y + Math.sin(originAngle) * originR * 0.85; // грань чуть шире, чем выше
     const angle = Math.random() * Math.PI * 2;
-    const dist = 20 + Math.random() * 60; // было 16–44, теперь 20–80 — заметно шире разлёт
+    const dist = 16 + Math.random() * 64; // разлёт ОТ своей стартовой точки, не от общего центра
     const dx = Math.cos(angle) * dist;
-    const dy = Math.sin(angle) * dist - 8; // лёгкий перекос вверх — искры не падают строго по кругу
+    const dy = Math.sin(angle) * dist - 6;
     const dur = 450 + Math.random() * 400;
-    const size = 3 + Math.random() * 9; // разного размера, 3–12px (было — все одинаковые 5px)
+    const size = 2.5 + Math.random() * 10; // разного размера, 2.5–12.5px
     const half = size / 2;
     const el = document.createElement('div');
     el.className = 'slot-sparkle';
-    el.style.left = p.x + 'px';
-    el.style.top = p.y + 'px';
+    el.style.left = startX + 'px';
+    el.style.top = startY + 'px';
     el.style.width = size + 'px';
     el.style.height = size + 'px';
     el.style.marginLeft = -half + 'px';
@@ -438,7 +451,18 @@ export function applyElide(op, elapsed, ctx) {
         spawnSparkleBurst(frontAnchor(cube.mesh), ctx, undefined, GROUP_RGB);
       }
       const t = clamp01((elapsed - fadeStart) / fadeDur);
-      setOpacity(cube.mesh, lerp(1, 0, t));
+      // Сам кубик исчезает (прозрачность+масштаб) НА ТОМ ЖЕ темпе, что и
+      // недолгие искры (~450-850мс), а не растянуто на весь fadeDur —
+      // иначе получается «искры разлетелись и погасли, а кубик, целый,
+      // ещё какое-то время просто тает отдельно» (прямая формулировка
+      // пользователя: «стреляет из точки, потом исчезает» — визуально
+      // ДВА разъединённых события вместо одного распада). fadeDur как
+      // ОБЩАЯ длительность (влияет на step.end/settle у уже готовых
+      // примеров) не меняется — только КРИВАЯ визуального исчезновения
+      // внутри неё ускорена (×1.8) и держится на 0 остаток fadeDur.
+      const visT = clamp01(t * 1.8);
+      setOpacity(cube.mesh, lerp(1, 0, visT));
+      cube.mesh.scale.setScalar(lerp(1, 0.12, easeOutCubic(visT)));
       if (t >= 1) {
         op._done = true;
         cube.mesh.visible = false;
@@ -449,7 +473,12 @@ export function applyElide(op, elapsed, ctx) {
     // Скачок масштаба в момент удара, спадающий за 350мс — ВНЕ веток
     // rise/hold/fade выше, идёт каждый кадр независимо от того, в какой
     // из них мы сейчас находимся (см. комментарий про класс бага вверху).
-    if (op._impactAt != null && !op._done) {
+    // elapsed<fadeStart — ТОЛЬКО до начала fade: дальше масштабом управляет
+    // сама fade-ветка (сжатие синхронно с исчезновением, см. выше), эти
+    // два источника не должны писать в один и тот же кадр — иначе fade-
+    // ветка отрабатывает первой, а этот блок (идёт ПОСЛЕ неё в коде)
+    // тут же перезаписывал бы её обратно в lerp(1.25,1,1)=1 каждый кадр.
+    if (op._impactAt != null && !op._done && elapsed < fadeStart) {
       const pt = clamp01((elapsed - op._impactAt) / 350);
       cube.mesh.scale.setScalar(lerp(1.25, 1, easeOutCubic(pt)));
     }
