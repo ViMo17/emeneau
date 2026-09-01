@@ -48,21 +48,6 @@
 
   .card.wide { grid-column: 1 / -1; }
 
-  /* Инструменты разработки — намеренно другой, более утилитарный стиль
-     (не карточка-витрина): плоский список ссылок, приглушённые тона.
-     Визуальная граница между «вот готовый результат» и «внутренний
-     инструмент проверки» должна быть видна сразу, не только по заголовку
-     секции. */
-  .tool-list { display: flex; flex-direction: column; gap: 6px; }
-  .tool-list a {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
-    text-decoration: none; color: var(--ink-dim); font-family: var(--sans); font-size: 12.5px;
-    padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px;
-    transition: border-color .15s ease, color .15s ease;
-  }
-  .tool-list a:hover { color: var(--ink); border-color: var(--line-strong); }
-  .tool-list .tag { font-size: 10px; color: var(--ink-faint); letter-spacing: .04em; white-space: nowrap; }
-
   footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
   footer a { color: var(--ink-dim); }
 
@@ -212,14 +197,49 @@
   <section>
     <div class="sec-head"><span class="sec-num">07</span><h2>Инструменты разработки</h2></div>
     <p class="lede" style="margin-bottom:16px;">Не витрина — рабочие полигоны и диагностика для дальнейшей разработки слот-движка. Ссылки раньше жили отдельной панелью внутри приложения, теперь собраны здесь.</p>
-    <div class="tool-list">
-      <a href="app/test-slot-engine-agnayas-generated.html" target="_blank"><span>agnayas — сгенерировано (guṇa+split), сравнить с рукописным</span><span class="tag">генератор</span></a>
-      <a href="app/test-slot-engine-rule7-generated.html" target="_blank"><span>āsīt — сгенерировано (approach+merge), сравнить с рукописным</span><span class="tag">генератор</span></a>
-      <a href="app/test-slot-engine-rule15-generated.html" target="_blank"><span>śādhi — сгенерировано (approach+elide), сравнить с рукописным</span><span class="tag">генератор</span></a>
-      <a href="app/test-slot-engine-rule70-generated.html" target="_blank"><span>taddhiraṇyam — сгенерировано (цепочка шагов), сравнить с рукописным</span><span class="tag">генератор</span></a>
-      <a href="app/test-slot-engine-rule71-generated.html" target="_blank"><span>vāk asti — сгенерировано, сравнить с рукописным</span><span class="tag">генератор</span></a>
-      <a href="app/test-signal-metallic.html" target="_blank"><span>серебро/золото — плоское vs металлик (сравнение палитры)</span><span class="tag">материалы</span></a>
-      <a href="app/test-slot-engine-asymmetric-dim.html" target="_blank"><span>асимметричная прозрачность притенённых кубиков — расследование ЗАКРЫТО, оставлено как диагностический эталон</span><span class="tag">диагностика</span></a>
+    <div class="grid">
+      <a class="card" href="app/test-slot-engine-agnayas-generated.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">agnayas <span class="dev">— сгенерировано</span></div>
+        <div class="d">guṇa+split, сравнить с рукописным rule3-agnayas-slots.js — проверка генератора данных.</div>
+        <span class="status plan">генератор</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule7-generated.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">āsīt <span class="dev">— сгенерировано</span></div>
+        <div class="d">approach+merge, сравнить с рукописным rule7-asit.js.</div>
+        <span class="status plan">генератор</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule15-generated.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">śādhi <span class="dev">— сгенерировано</span></div>
+        <div class="d">approach+elide, сравнить с рукописным rule15-sadhi.js.</div>
+        <span class="status plan">генератор</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule70-generated.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">taddhiraṇyam <span class="dev">— сгенерировано</span></div>
+        <div class="d">Цепочка из двух шагов, сравнить с рукописным rule70-taddhiranyam-slots.js.</div>
+        <span class="status plan">генератор</span>
+      </a>
+      <a class="card" href="app/test-slot-engine-rule71-generated.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="t">vāk asti <span class="dev">— сгенерировано</span></div>
+        <div class="d">Сравнить с рукописным rule71-vak-asti-slots.js.</div>
+        <span class="status plan">генератор</span>
+      </a>
+      <a class="card" href="app/test-signal-metallic.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-vrddhi)"></span></div>
+        <div class="t">Серебро/золото <span class="dev">— плоское vs металлик</span></div>
+        <div class="d">Сравнение палитры сигнальной грани (гунация/вриддхи) — плоская заливка против многостопового градиента с ambient occlusion.</div>
+        <span class="status plan">материалы</span>
+      </a>
+      <a class="card wide" href="app/test-slot-engine-asymmetric-dim.html" target="_blank">
+        <div class="dot-row"><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="t">Асимметричная прозрачность <span class="dev">— притенённые кубики</span></div>
+        <div class="d">10 слотов, задняя грань 100% / остальные 40% — диагностика, приведшая к находке DoubleSide-фикса. Расследование закрыто, страница оставлена как диагностический эталон приёма.</div>
+        <span class="status plan">диагностика</span>
+      </a>
     </div>
   </section>
 
