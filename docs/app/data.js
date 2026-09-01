@@ -385,6 +385,11 @@ EXAMPLES[40] = [{
 /* ═══ Блок 41–71 ═══ */
 EXAMPLES[42] = [{
   desc: 'tatra eti → tatraiti «туда идёт»',
+  // Подключение к слот-движку тем же путём, что agnayas/āsīt/śādhi/
+  // taddhiraṇyam/vāk asti — module + roleDemo, один шаг с обеих сторон
+  // (ruleNum:42 в examples/rule42-tatraiti-slots.js, tag:'42' здесь),
+  // синхронизация по позиции в массиве не нужна — шаг ровно один.
+  module: './examples/rule42-tatraiti-slots.js',
   roleDemo: { steps: [
     { tag: '42', type: 'grade', source: 'e', trigger: 'a', result: 'ai',
       text: 'Внешний аналог правила 1: a на конце tatra встречает e в начале eti — e поднимается до вриддхи ai. a — только условие, сам не меняется.' }
