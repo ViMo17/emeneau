@@ -187,6 +187,7 @@
  * @property {{x: number, y: number, z: number}} [holdOffset]
  * @property {number} [fadeDur]
  * @property {string} [impactColor] - строка "R,G,B" для rgba() (см. GROUP_RGB/SILVER_RGB), не hex-число
+ * @property {boolean} [quiet] - true = без искр/ускоренного сжатия (побочное исчезновение внутри чужого главного события, см. CLAUDE.md Часть 4); default = драматично (искры+синхронное сжатие)
  * @property {boolean} [_done]
  * @property {number} [_impactAt]
  * @property {number} [_fadeStartedAt]

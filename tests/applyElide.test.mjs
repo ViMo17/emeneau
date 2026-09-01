@@ -177,6 +177,33 @@ test('applyElide: цвет искр — СОБСТВЕННЫЙ цвет букв
   assert.ok(sparkles.every(el => el.style.background === `rgba(${expectedColor},.95)`), 'цвет фона каждой искры — собственный цвет буквы, не GROUP_RGB');
 });
 
+test('applyElide: op.quiet:true — без искр и без ускоренного сжатия (побочное исчезновение внутри чужого главного события, критерий из CLAUDE.md Часть 4)', () => {
+  const cubes = { 5: makeCube(5) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'elide', at: 5, start: 0, quiet: true };
+  const riseEnd = 1300, fadeStart = riseEnd + 800, fadeDur = 1100, fadeEnd = fadeStart + fadeDur;
+
+  applyElide(op, fadeStart + 1, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-sparkle').length, 0, 'quiet — искр нет вообще');
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-pulse-ring').length, 1, 'вспышка-удар В НАЧАЛЕ реакции (op.start) остаётся — это отдельный обязательный сигнал, не «эффект»');
+
+  // Без ускорения (×1.8) — угасание линейно на ВЕСЬ fadeDur, не быстрее.
+  applyElide(op, fadeStart + fadeDur / 2, ctx); // ровно середина fadeDur
+  const midOpacity = cubes[5].mesh.material[0].opacity;
+  assert.ok(Math.abs(midOpacity - 0.5) < 0.05, `в середине fadeDur прозрачность около 0.5 (линейно, не ускоренно): ${midOpacity}`);
+  assert.equal(cubes[5].mesh.scale.x, 1, 'quiet — масштаб НЕ сжимается, остаётся 1 (полноценный «эффект» только в драматичном варианте)');
+
+  applyElide(op, fadeEnd, ctx);
+  assert.equal(cubes[5], undefined, 'кубик всё равно полностью исчезает к концу fadeDur — только БЕЗ эффектов по пути');
+});
+
 test('applyElide: финального кольца-вспышки ПОСЛЕ угасания больше нет (убрано по прямой обратной связи — было лишним повтором сигнала после россыпи искр)', () => {
   const cubes = { 5: makeCube(5) };
   const labelsCalls = [];
