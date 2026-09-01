@@ -89,3 +89,47 @@ test('applyElide: до op.start — ничего не меняется (ранн
   assert.equal(cubes[6].mesh.position.y, 0);
   assert.equal(op._impactAt, undefined);
 });
+
+test('applyElide: прозрачность держится ПОЛНОЙ на всём rise+hold — тает только в fade (прямой запрос пользователя: буква не должна таять по дороге вниз)', () => {
+  const cubes = { 5: makeCube(5) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'elide', at: 5, start: 0 };
+  const riseEnd = 1300, fadeStart = riseEnd + 800;
+
+  applyElide(op, 50, ctx);
+  assert.equal(cubes[5].mesh.material[0].opacity, 1, 'в начале rise ещё полная непрозрачность');
+  applyElide(op, riseEnd, ctx);
+  assert.equal(cubes[5].mesh.material[0].opacity, 1, 'на границе rise→hold всё ещё полная');
+  applyElide(op, fadeStart - 1, ctx);
+  assert.equal(cubes[5].mesh.material[0].opacity, 1, 'на всём hold остаётся полной');
+  applyElide(op, fadeStart + 550, ctx); // середина fade
+  const mid = cubes[5].mesh.material[0].opacity;
+  assert.ok(mid > 0 && mid < 1, 'только в fade прозрачность реально снижается: ' + mid);
+});
+
+test('applyElide: россыпь искр (spawnSparkleBurst) запускается РОВНО один раз, на первом кадре fade — не раньше и не повторно', () => {
+  const cubes = { 5: makeCube(5) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'elide', at: 5, start: 0 };
+  const fadeStart = 1300 + 800;
+
+  applyElide(op, fadeStart - 1, ctx);
+  assert.equal(op._fadeStartedAt, undefined, 'до начала fade искры не запускались');
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-sparkle').length, 0, 'ни одной искры ещё не добавлено (импакт-кольцо в момент старта — отдельный элемент, не искра)');
+
+  applyElide(op, fadeStart + 1, ctx);
+  assert.equal(op._fadeStartedAt, fadeStart + 1, 'флаг выставлен на первом кадре fade');
+  const sparkleCount = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
+  assert.equal(sparkleCount, 6, 'ровно 6 искр добавлено в DOM за один запуск');
+
+  applyElide(op, fadeStart + 200, ctx);
+  const sparkleCountAfter = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
+  assert.equal(sparkleCountAfter, 6, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
+});

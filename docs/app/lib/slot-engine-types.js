@@ -185,11 +185,11 @@
  * @property {number} [riseDur]
  * @property {number} [holdDur]
  * @property {{x: number, y: number, z: number}} [holdOffset]
- * @property {number} [holdOpacity]
  * @property {number} [fadeDur]
  * @property {string} [impactColor] - строка "R,G,B" для rgba() (см. GROUP_RGB/SILVER_RGB), не hex-число
  * @property {boolean} [_done]
  * @property {number} [_impactAt]
+ * @property {number} [_fadeStartedAt]
  */
 
 /** @typedef {Object} SettleOp

@@ -478,9 +478,11 @@ function injectStylesOnce() {
       18%  { opacity: .6; filter: blur(1.5px) brightness(1.7); }
       100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; filter: blur(1.5px) brightness(1); }
     }
-    /* Золотая искра (вриддхи, spawnSparkleBurst) — цвет фиксированный
-       (GOLD_RGB), не переопределяется инлайном: искры только у золота,
-       переменности цвета здесь не требуется, в отличие от колец. */
+    /* Искра (spawnSparkleBurst) — золотой цвет здесь ДЕФОЛТ (вриддхи,
+       исходное назначение), переопределяется инлайн через rgbStr (тот же
+       приём, что и у колец/spawnPulseRing) — так elide красит искры
+       нейтральным GROUP_RGB при исчезновении буквы, золото остаётся строго
+       за вриддхи. */
     .slot-sparkle {
       position: absolute;
       width: 5px; height: 5px;

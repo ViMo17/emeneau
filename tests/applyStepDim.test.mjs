@@ -76,3 +76,26 @@ test('applyStepDim: пользовательский dimOpacity из data при
   applyStepDim(500, ctx);
   assert.ok(Math.abs(cubes[2].mesh.material[0].opacity - 0.5) < 1e-9, 'кастомный dimOpacity из data.dimOpacity применён');
 });
+
+test('applyStepDim: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ — слот под управлением активного elide не должен перебиваться притенением/активацией по activeSlots, даже когда сам в этом списке', () => {
+  const cube = makeCube();
+  cube.mesh.material[0].opacity = 0.4123; // произвольное значение, которое якобы держит elide в этом кадре
+  const cubes = { 4: cube };
+  const steps = [{ kind: 'rule', start: 0, end: 5000, activeSlots: [4] }]; // slot 4 АКТИВЕН — без фикса stepDim принудительно поставил бы opacity=1
+  const data = { ops: [{ type: 'elide', at: 4, start: 1000 }] };
+  const ctx = makeCtx(cubes, steps, data);
+
+  applyStepDim(1500, ctx); // elapsed >= op.start, кубик всё ещё существует
+  assert.equal(cube.mesh.material[0].opacity, 0.4123, 'opacity НЕ тронута — слот 4 пропущен, elide ведёт свою кривую сам');
+});
+
+test('applyStepDim: elide ЕЩЁ не начался (elapsed < op.start) — обычное притенение по activeSlots работает как всегда', () => {
+  const cube = makeCube();
+  const cubes = { 4: cube };
+  const steps = [{ kind: 'rule', start: 0, end: 5000, activeSlots: [4] }];
+  const data = { ops: [{ type: 'elide', at: 4, start: 1000 }] };
+  const ctx = makeCtx(cubes, steps, data);
+
+  applyStepDim(500, ctx); // elapsed < op.start=1000 — elide ещё не активен
+  assert.equal(cube.mesh.material[0].opacity, 1, 'слот активен (в activeSlots), elide ещё не начался — обычное поведение, opacity=1');
+});

@@ -323,17 +323,18 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
   setTimeout(() => ring.remove(), dur + 80);
 }
 
-// Золотая россыпь искр — прямой запрос пользователя, во время активного
-// вращения вриддхи (signal:'gold'). Несколько мелких светящихся точек
-// разлетаются от передней грани кубика в случайных направлениях и гаснут
-// — тот же язык, что и остальные DOM-оверлеи движка (project() для
-// позиции, CSS-анимация на --custom-property, самоудаление по setTimeout),
-// не новая техника, просто новая форма (частицы, не кольцо/волна).
-// Только для золота — серебро/гунация остаются без искр, различие
-// намеренное (см. CLAUDE.md, «Серебро/Золото»: не декоративное
-// разнообразие, вриддхи — более редкое и заметное событие).
-/** @param {import('three').Vector3} atVec3 @param {Ctx} ctx @param {number} [count] */
-export function spawnSparkleBurst(atVec3, ctx, count = 4) {
+// Россыпь искр — изначально прямой запрос пользователя для вриддхи
+// (signal:'gold'), позже переиспользована для elide (буква «рассыпается» в
+// момент исчезновения, см. applyElide) — тот же язык, что и остальные
+// DOM-оверлеи движка (project() для позиции, CSS-анимация на
+// --custom-property, самоудаление по setTimeout), не новая техника, просто
+// новая форма (частицы, не кольцо/волна). Цвет — необязательный: без него
+// золотой (CSS-дефолт .slot-sparkle, как и было для вриддхи), с ним —
+// строка "R,G,B" инлайн переопределяет фон/свечение (тот же приём, что и у
+// spawnPulseRing/rgbStr) — для elide передаётся нейтральный GROUP_RGB,
+// золото остаётся строго за вриддхи (см. CLAUDE.md, «Серебро/Золото»).
+/** @param {import('three').Vector3} atVec3 @param {Ctx} ctx @param {number} [count] @param {string} [rgbStr] */
+export function spawnSparkleBurst(atVec3, ctx, count = 4, rgbStr) {
   const { labelsEl } = ctx;
   const p = project(atVec3, ctx);
   for (let i = 0; i < count; i++) {
@@ -349,6 +350,10 @@ export function spawnSparkleBurst(atVec3, ctx, count = 4) {
     el.style.setProperty('--sx', dx + 'px');
     el.style.setProperty('--sy', dy + 'px');
     el.style.setProperty('--sparkle-dur', dur + 'ms');
+    if (rgbStr) {
+      el.style.background = `rgba(${rgbStr},.95)`;
+      el.style.boxShadow = `0 0 6px 1.5px rgba(${rgbStr},.65)`;
+    }
     labelsEl.appendChild(el);
     setTimeout(() => el.remove(), dur + 60);
   }
@@ -373,7 +378,6 @@ export function applyElide(op, elapsed, ctx) {
       spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB, ctx);
     }
     const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
-    const holdOpacity = op.holdOpacity ?? 0.5;
     const holdDur = op.holdDur ?? 800;
     const fadeDur = op.fadeDur ?? 1100;
     // НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ (предыдущая версия): перепутан ВЕРХНИЙ
@@ -394,18 +398,34 @@ export function applyElide(op, elapsed, ctx) {
     const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
     const riseEnd = op.start + riseDur;
+    const fadeStart = riseEnd + holdDur;
+    // Прозрачность держится ПОЛНОЙ на всём погружении+паузе (было — тает
+    // уже по дороге вниз, до 0.5 к концу подъёма) — прямой запрос
+    // пользователя: буква тонет отчётливо видимой, весь эффект «пропадания»
+    // сосредоточен в самом конце (fade), не размазан по всему пути.
     if (elapsed <= riseEnd) {
       const t = clamp01((elapsed - op.start) / riseDur);
       const te = easeInOutCubic(t);
       cube.mesh.position.lerpVectors(basePos, holdPos, te);
-      setOpacity(cube.mesh, lerp(1, holdOpacity, te));
-    } else if (elapsed <= riseEnd + holdDur) {
+      setOpacity(cube.mesh, 1);
+    } else if (elapsed <= fadeStart) {
       cube.mesh.position.copy(holdPos);
       const idle = (elapsed - riseEnd) * 0.0022;
       cube.mesh.position.y += Math.sin(idle) * 0.06; // то же лёгкое покачивание, что у split
+      setOpacity(cube.mesh, 1);
     } else {
-      const t = clamp01((elapsed - (riseEnd + holdDur)) / fadeDur);
-      setOpacity(cube.mesh, lerp(holdOpacity, 0, t));
+      // РОССЫПЬ ИСКР — ровно в момент, когда начинается финальное угасание
+      // (не раньше и не только в самом конце) — буква не просто тает, а
+      // видимо «рассыпается», прямой запрос пользователя. Нейтральный
+      // GROUP_RGB — золото/серебро зарезервированы за вриддхи/гунацией, к
+      // элизии отношения не имеют. Флаг тот же приём, что и у op._impactAt
+      // (устанавливается один раз, независимо от ветвления ниже).
+      if (!op._fadeStartedAt) {
+        op._fadeStartedAt = elapsed;
+        spawnSparkleBurst(frontAnchor(cube.mesh), ctx, 6, GROUP_RGB);
+      }
+      const t = clamp01((elapsed - fadeStart) / fadeDur);
+      setOpacity(cube.mesh, lerp(1, 0, t));
       if (t >= 1) {
         op._done = true;
         cube.mesh.visible = false;
@@ -1206,12 +1226,28 @@ export function applyStepDim(elapsed, ctx) {
   const idx = stepIndexAt(elapsed, runtimeSteps);
   const cur = runtimeSteps[idx];
   const prev = runtimeSteps[idx - 1];
+  // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ: слоты под управлением активного elide (после
+  // своего op.start, кубик ещё жив в cubes — elide сам удаляет его по
+  // завершении) сюда попадать не должны — elide ведёт СОБСТВЕННУЮ кривую
+  // прозрачности (applyElide), а притенение по activeSlots (если этот слот
+  // в списке участников — обычно да) каждый кадр перебивало её обратно в 1,
+  // выполняясь ПОСЛЕ applyElide в общем цикле рендера (см. renderAtElapsed).
+  // До этой правки elide никогда не становился видимо прозрачным ни в одном
+  // примере (śādhi, rule42, rule55) — угасание молча срабатывало только
+  // математически, экран показывал резкий скачок в невидимость в конце.
+  const elideControlled = new Set(
+    (data.ops || [])
+      .filter(op => op.type === 'elide')
+      .filter(op => op.start <= elapsed && cubes[op.at])
+      .map(op => op.at)
+  );
   const orderedSlots = Object.keys(cubes)
     .filter(key => /^\d+$/.test(key))
     .map(Number)
     .sort((a, b) => a - b); // порядок слева направо — тот самый, что просила пользователь
   const enteringReveal = prev && cur.activeSlots === 'ALL';
   orderedSlots.forEach((slot, order) => {
+    if (elideControlled.has(slot)) return;
     const cube = cubes[slot];
     let target = stepTargetOpacity(cur, slot, dimOpacity);
     if (enteringReveal) {
