@@ -127,9 +127,9 @@ test('applyElide: россыпь искр (spawnSparkleBurst) запускает
   applyElide(op, fadeStart + 1, ctx);
   assert.equal(op._fadeStartedAt, fadeStart + 1, 'флаг выставлен на первом кадре fade');
   const sparkleCount = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
-  assert.equal(sparkleCount, 6, 'ровно 6 искр добавлено в DOM за один запуск');
+  assert.equal(sparkleCount, 16, 'ровно 16 искр (дефолт spawnSparkleBurst) добавлено в DOM за один запуск');
 
   applyElide(op, fadeStart + 200, ctx);
   const sparkleCountAfter = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
-  assert.equal(sparkleCountAfter, 6, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
+  assert.equal(sparkleCountAfter, 16, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
 });

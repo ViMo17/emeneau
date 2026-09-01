@@ -329,31 +329,44 @@ export function spawnPulseRing(atVec3, dur, rgbStr, ctx) {
 // DOM-оверлеи движка (project() для позиции, CSS-анимация на
 // --custom-property, самоудаление по setTimeout), не новая техника, просто
 // новая форма (частицы, не кольцо/волна). Цвет — необязательный: без него
-// золотой (CSS-дефолт .slot-sparkle, как и было для вриддхи), с ним —
-// строка "R,G,B" инлайн переопределяет фон/свечение (тот же приём, что и у
-// spawnPulseRing/rgbStr) — для elide передаётся нейтральный GROUP_RGB,
-// золото остаётся строго за вриддхи (см. CLAUDE.md, «Серебро/Золото»).
+// золотой (GOLD_RGB, как и было для вриддхи), с ним — строка "R,G,B"
+// переопределяет фон/свечение (тот же приём, что и у spawnPulseRing/
+// rgbStr) — для elide передаётся нейтральный GROUP_RGB, золото остаётся
+// строго за вриддхи (см. CLAUDE.md, «Серебро/Золото»). ПРАВКА (по прямой
+// обратной связи после просмотра — «на порядок больше брызг разного
+// размера, ощущение трёх капелек, не разбрызгивания»): count по умолчанию
+// 4→16 (общий дефолт — правка коснулась и elide, и вриддхи разом, число не
+// дублируется по двум местам), размер и дистанция теперь СЛУЧАЙНЫ у КАЖДОЙ
+// искры отдельно (было — одна и та же CSS-величина у всех), свечение
+// масштабируется вместе с размером и ставится инлайн ВСЕГДА (не только при
+// переопределении цвета) — иначе крупные искры золота остались бы с тем же
+// узким статичным ореолом, что и мелкие.
 /** @param {import('three').Vector3} atVec3 @param {Ctx} ctx @param {number} [count] @param {string} [rgbStr] */
-export function spawnSparkleBurst(atVec3, ctx, count = 4, rgbStr) {
+export function spawnSparkleBurst(atVec3, ctx, count = 16, rgbStr) {
   const { labelsEl } = ctx;
   const p = project(atVec3, ctx);
+  const color = rgbStr ?? GOLD_RGB;
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const dist = 16 + Math.random() * 28;
+    const dist = 20 + Math.random() * 60; // было 16–44, теперь 20–80 — заметно шире разлёт
     const dx = Math.cos(angle) * dist;
     const dy = Math.sin(angle) * dist - 8; // лёгкий перекос вверх — искры не падают строго по кругу
-    const dur = 500 + Math.random() * 280;
+    const dur = 450 + Math.random() * 400;
+    const size = 3 + Math.random() * 9; // разного размера, 3–12px (было — все одинаковые 5px)
+    const half = size / 2;
     const el = document.createElement('div');
     el.className = 'slot-sparkle';
     el.style.left = p.x + 'px';
     el.style.top = p.y + 'px';
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.marginLeft = -half + 'px';
+    el.style.marginTop = -half + 'px';
     el.style.setProperty('--sx', dx + 'px');
     el.style.setProperty('--sy', dy + 'px');
     el.style.setProperty('--sparkle-dur', dur + 'ms');
-    if (rgbStr) {
-      el.style.background = `rgba(${rgbStr},.95)`;
-      el.style.boxShadow = `0 0 6px 1.5px rgba(${rgbStr},.65)`;
-    }
+    el.style.background = `rgba(${color},.95)`;
+    el.style.boxShadow = `0 0 ${(4 + size).toFixed(1)}px ${(size * 0.3).toFixed(1)}px rgba(${color},.75)`;
     labelsEl.appendChild(el);
     setTimeout(() => el.remove(), dur + 60);
   }
@@ -422,7 +435,7 @@ export function applyElide(op, elapsed, ctx) {
       // (устанавливается один раз, независимо от ветвления ниже).
       if (!op._fadeStartedAt) {
         op._fadeStartedAt = elapsed;
-        spawnSparkleBurst(frontAnchor(cube.mesh), ctx, 6, GROUP_RGB);
+        spawnSparkleBurst(frontAnchor(cube.mesh), ctx, undefined, GROUP_RGB);
       }
       const t = clamp01((elapsed - fadeStart) / fadeDur);
       setOpacity(cube.mesh, lerp(1, 0, t));

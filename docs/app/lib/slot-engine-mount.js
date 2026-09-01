@@ -478,18 +478,14 @@ function injectStylesOnce() {
       18%  { opacity: .6; filter: blur(1.5px) brightness(1.7); }
       100% { transform: scale(4.4); opacity: 0; border-width: 0.5px; filter: blur(1.5px) brightness(1); }
     }
-    /* Искра (spawnSparkleBurst) — золотой цвет здесь ДЕФОЛТ (вриддхи,
-       исходное назначение), переопределяется инлайн через rgbStr (тот же
-       приём, что и у колец/spawnPulseRing) — так elide красит искры
-       нейтральным GROUP_RGB при исчезновении буквы, золото остаётся строго
-       за вриддхи. */
+    /* Искра (spawnSparkleBurst) — размер/цвет/свечение теперь ставятся
+       ИНЛАЙН на каждой частице отдельно (разный размер и разлёт у каждой —
+       по обратной связи «на порядок больше брызг разного размера», см.
+       комментарий в самой функции) — здесь только структурные свойства,
+       общие для всех. */
     .slot-sparkle {
       position: absolute;
-      width: 5px; height: 5px;
-      margin: -2.5px 0 0 -2.5px;
       border-radius: 50%;
-      background: rgba(232,200,96,.95);
-      box-shadow: 0 0 6px 1.5px rgba(232,200,96,.65);
       pointer-events: none;
       animation: slot-sparkle-fly var(--sparkle-dur) cubic-bezier(.15,.6,.4,1) forwards;
     }
