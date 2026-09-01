@@ -11,7 +11,7 @@ import { installCanvasStub } from './helpers/canvasStub.mjs';
 
 installCanvasStub();
 
-import { applyElide } from '../docs/app/lib/slot-engine.js';
+import { applyElide, ringColorFrom, colorFor } from '../docs/app/lib/slot-engine.js';
 
 function makeCube(slot) {
   const mesh = new THREE.Object3D();
@@ -155,4 +155,43 @@ test('applyElide: россыпь искр (spawnSparkleBurst) запускает
   applyElide(op, fadeStart + 200, ctx);
   const sparkleCountAfter = labelsCalls.filter(el => el.className === 'slot-sparkle').length;
   assert.equal(sparkleCountAfter, 200, 'повторный вызов на следующем кадре НЕ добавляет искры снова — guard сработал');
+});
+
+test('applyElide: цвет искр — СОБСТВЕННЫЙ цвет буквы (ringColorFrom+colorFor), не нейтральный GROUP_RGB (прямой запрос: «как будто кубик рассыпается на части»)', () => {
+  const cubes = { 5: makeCube(5) }; // tr:'s' — согласная, свой фонетический цвет
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'elide', at: 5, start: 0 };
+  const fadeStart = 1300 + 800;
+
+  applyElide(op, fadeStart + 1, ctx);
+  const expectedColor = ringColorFrom(colorFor('s'));
+  const sparkles = labelsCalls.filter(el => el.className === 'slot-sparkle');
+  assert.ok(sparkles.length > 0, 'искры реально созданы');
+  assert.ok(sparkles.every(el => el.style.background === `rgba(${expectedColor},.95)`), 'цвет фона каждой искры — собственный цвет буквы, не GROUP_RGB');
+});
+
+test('applyElide: финального кольца-вспышки ПОСЛЕ угасания больше нет (убрано по прямой обратной связи — было лишним повтором сигнала после россыпи искр)', () => {
+  const cubes = { 5: makeCube(5) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'elide', at: 5, start: 0 };
+  const totalDur = 1300 + 800 + 1100;
+
+  applyElide(op, totalDur, ctx); // полное завершение — кубик удаляется
+  assert.equal(op._done, true);
+  const ringsAfterCompletion = labelsCalls.filter(el => el.className === 'slot-pulse-ring').length;
+  assert.equal(ringsAfterCompletion, 1, 'только ОДНО кольцо за весь прогон — импакт в момент начала реакции (op.start), финального кольца после угасания больше нет');
 });

@@ -179,13 +179,19 @@ export function applyTransform(op, elapsed, ctx) {
       // кубик активно крутится. Период (280мс) — примерно втрое чаще, чем
       // сустейн-кольца influence (тот же порядок числа, что и остальные
       // движковые интервалы, не отдельно подобранное магическое число).
+      // count=15 (не общий дефолт 200, тот — под elide, где нужен один
+      // насыщенный распад) — прямая правка по обратной связи: «феерия
+      // выстрелов из каждой грани не даёт понять, что происходит» — на
+      // вращении бургст повторяется ~14 раз за весь оборот, крупный count
+      // на каждом накапливался в избыток. Здесь — «плавное ненавязчивое
+      // сопровождение», в 10-15 раз меньше, не главный сигнал события.
       if (op.signal === 'gold') {
         const sparkleGap = 280;
         const idx = Math.floor((elapsed - activeStart) / sparkleGap);
         const key = '_sparkle' + idx;
         if (idx >= 0 && !op[key]) {
           op[key] = true;
-          spawnSparkleBurst(frontAnchor(cube.mesh), ctx);
+          spawnSparkleBurst(frontAnchor(cube.mesh), ctx, 15);
         }
       }
     }
@@ -442,13 +448,15 @@ export function applyElide(op, elapsed, ctx) {
     } else {
       // РОССЫПЬ ИСКР — ровно в момент, когда начинается финальное угасание
       // (не раньше и не только в самом конце) — буква не просто тает, а
-      // видимо «рассыпается», прямой запрос пользователя. Нейтральный
-      // GROUP_RGB — золото/серебро зарезервированы за вриддхи/гунацией, к
-      // элизии отношения не имеют. Флаг тот же приём, что и у op._impactAt
-      // (устанавливается один раз, независимо от ветвления ниже).
+      // видимо «рассыпается», прямой запрос пользователя. Цвет — СОБСТВЕННЫЙ
+      // цвет буквы (ringColorFrom(colorFor(tr)), та же формула, что у колец
+      // influence), не нейтральный GROUP_RGB — «как будто кубик рассыпается
+      // на свои же осколки», не абстрактная вспышка постороннего цвета.
+      // Флаг тот же приём, что и у op._impactAt (устанавливается один раз,
+      // независимо от ветвления ниже).
       if (!op._fadeStartedAt) {
         op._fadeStartedAt = elapsed;
-        spawnSparkleBurst(frontAnchor(cube.mesh), ctx, undefined, GROUP_RGB);
+        spawnSparkleBurst(frontAnchor(cube.mesh), ctx, undefined, ringColorFrom(colorFor(cube.tr)));
       }
       const t = clamp01((elapsed - fadeStart) / fadeDur);
       // Сам кубик исчезает (прозрачность+масштаб) НА ТОМ ЖЕ темпе, что и
@@ -466,7 +474,9 @@ export function applyElide(op, elapsed, ctx) {
       if (t >= 1) {
         op._done = true;
         cube.mesh.visible = false;
-        spawnPulseRing(frontAnchor(cube.mesh), 900, GROUP_RGB, ctx);
+        // Финальное кольцо-вспышка ПОСЛЕ угасания убрано по прямой обратной
+        // связи — россыпь искр уже полностью читает момент исчезновения,
+        // отдельное кольцо следом было лишним, отвлекающим повтором сигнала.
         delete cubes[op.at];
       }
     }

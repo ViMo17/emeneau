@@ -243,3 +243,21 @@ test('applyTransform: до op.start — ничего не меняется (ра
   assert.equal(cubes[5].mesh.rotation.y, 0);
   assert.equal(op._began, undefined);
 });
+
+test('applyTransform: золотая россыпь искр вриддхи — 15 искр за один запуск, НЕ общий дефолт spawnSparkleBurst (200, тот — под elide). Прямая обратная связь: «феерия выстрелов из каждой грани», нужно «плавное ненавязчивое сопровождение, в 10-15 раз меньше»', () => {
+  const cubes = { 4: makeCube(4) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'transform', at: 4, toGlyph: 'ai', start: 0, spinTurns: 2, signal: 'gold' };
+  const activeStart = 900; // конец anticipateDur
+
+  applyTransform(op, activeStart + 50, ctx); // первый кадр активного вращения — первая искра-пачка
+  const sparkles = labelsCalls.filter(el => el.className === 'slot-sparkle');
+  assert.equal(sparkles.length, 15, 'ровно 15 искр за один запуск (не 200 — тот дефолт зарезервирован под elide)');
+});
