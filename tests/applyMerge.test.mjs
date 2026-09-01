@@ -108,3 +108,25 @@ test('applyMerge: заход 15 — спад пика масштаба/свеч�
   assert.ok(Math.abs(cubes[3].mesh.scale.x - 1) < 1e-9, 'масштаб полностью вернулся к 1');
   assert.ok(Math.abs(cubes[3].mesh.material[0].emissiveIntensity - 0) < 1e-9, 'свечение полностью погасло');
 });
+
+test('applyMerge: op.label — пилюля-подпись появляется РОВНО один раз, на первом кадре полёта мувера', () => {
+  const cubes = { 1: makeMover(1), 3: makeTarget(3, 'a') };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'merge', from: 1, at: 3, toGlyph: 'ā', start: 0, dur: 500, label: 'Слияние' };
+
+  applyMerge(op, 0, ctx);
+  const pills = labelsCalls.filter(el => el.className === 'slot-label-pill');
+  assert.equal(pills.length, 1, 'ровно одна пилюля на первом кадре');
+  assert.equal(pills[0].textContent, 'Слияние');
+
+  applyMerge(op, 250, ctx);
+  applyMerge(op, 500, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
+});

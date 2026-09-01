@@ -127,6 +127,7 @@
  * @property {number} [dur] - переопределение длительности вращения (мс); при landsOnOppositeFace дефолт 1800, иначе spinTurns×MS_PER_360
  * @property {number} [bounceH]
  * @property {number} [toColor]
+ * @property {string} [label] - текст плавающей пилюли-подписи над кубиком на время активного вращения (см. spawnLabelPill), например "Гуна"/"Вриддхи"/"Ассимиляция"/"Озвончение"
  * @property {boolean} [_done]
  * @property {boolean} [_pulse0]
  * @property {boolean} [_pulse1]
@@ -151,6 +152,7 @@
  * @property {{x: number, y: number, z: number}} [holdOffset]
  * @property {number} [holdOpacity]
  * @property {number} [fadeDur]
+ * @property {string} [label] - текст плавающей пилюли-подписи над источником (см. spawnLabelPill), например "Полугласный"
  * @property {string} [_srcKey]
  * @property {boolean} [_pulse0]
  * @property {boolean} [_pulse1]
@@ -174,8 +176,10 @@
  * @property {number} [dur]
  * @property {number} [pulseHoldMs]
  * @property {number} [toColor]
+ * @property {string} [label] - текст плавающей пилюли-подписи над целью (см. spawnLabelPill), например "Слияние"
  * @property {boolean} [_done]
  * @property {number} [_pulsedAt]
+ * @property {boolean} [_labelSpawned]
  */
 
 /** @typedef {Object} ElideOp
@@ -188,9 +192,11 @@
  * @property {number} [fadeDur]
  * @property {string} [impactColor] - строка "R,G,B" для rgba() (см. GROUP_RGB/SILVER_RGB), не hex-число
  * @property {boolean} [quiet] - true = без искр/ускоренного сжатия (побочное исчезновение внутри чужого главного события, см. CLAUDE.md Часть 4); default = драматично (искры+синхронное сжатие)
+ * @property {string} [label] - текст плавающей пилюли-подписи ПОД кубиком (см. spawnLabelPill), например "Элизия"
  * @property {boolean} [_done]
  * @property {number} [_impactAt]
  * @property {number} [_fadeStartedAt]
+ * @property {boolean} [_labelSpawned]
  */
 
 /** @typedef {Object} SettleOp

@@ -494,6 +494,45 @@ function injectStylesOnce() {
       65%  { opacity: .9; }
       100% { transform: translate(var(--sx,0),var(--sy,0)) scale(.25); opacity: 0; }
     }
+    /* Пилюля-подпись (spawnLabelPill) — «Гуна», «Вриддхи», «Ассимиляция»,
+       «Элизия»... над (transform/merge/split) или под (elide) местом
+       действия. Тот же скруглённый вид, что и у .slot-step-chip внизу —
+       одна визуальная семья, не новый язык. ДВЕ анимации разом: конверт
+       видимости (fade, один раз, на всю --label-dur) и дыхание (breathe,
+       зациклено, фиксированный период — не зависит от длительности самого
+       события) — по прямому запросу «подрагивают, дышат, привлекают
+       внимание». translate(-50%,-50%) в каждом кадре ОБЕИХ — центрирует
+       пилюлю на точке проекции, не только в начальном состоянии. */
+    .slot-label-pill {
+      position: absolute;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      padding: 6px 15px;
+      border-radius: 999px;
+      background: rgba(58,62,72,.92);
+      color: rgba(232,228,216,.96);
+      border: 1px solid rgba(255,255,255,.18);
+      white-space: nowrap;
+      pointer-events: none;
+      transform: translate(-50%,-50%);
+      animation-name: slot-label-fade, slot-label-breathe;
+      animation-duration: var(--label-dur), 1500ms;
+      animation-timing-function: ease-in-out, ease-in-out;
+      animation-iteration-count: 1, infinite;
+      animation-fill-mode: forwards, none;
+    }
+    @keyframes slot-label-fade {
+      0%   { opacity: 0; }
+      10%  { opacity: 1; }
+      88%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes slot-label-breathe {
+      0%, 100% { transform: translate(-50%,-50%) scale(1); }
+      50%      { transform: translate(-50%,-50%) scale(1.07); }
+    }
     /* Рамка-подчёркивание под группой-нимиттой — нейтральный GROUP_COLOR,
        не фонетический; opacity управляется из JS покадрово
        (updateGroupFrame), здесь только форма/свечение. */

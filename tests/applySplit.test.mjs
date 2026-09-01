@@ -136,3 +136,32 @@ test('applySplit: угасание источника стартует по max(
   assert.equal(srcCube.mesh.visible, false, 'после fadeStart+fadeDur источник исчезает');
   assert.equal(cubes[op._srcKey], undefined, 'временный ключ источника удалён из карты cubes');
 });
+
+test('applySplit: op.label — пилюля-подпись появляется РОВНО один раз, в момент начала активного подъёма (не на паузе-осознании)', () => {
+  const cubes = { 4: makeFakeCube(4) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+    scene: { add() {} },
+  };
+  const op = {
+    type: 'split', at: 4, start: 0, label: 'Полугласный',
+    arrivals: [{ into: 'a', newSlot: 5, from: { x: -3, y: 3, z: 0 }, delay: 0, dur: 400, arcHeight: 1 }],
+  };
+  const activeStart = 900; // дефолт anticipateDur
+
+  applySplit(op, 500, ctx); // всё ещё пауза-осознание
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 0, 'на паузе-осознании пилюли ещё нет');
+
+  applySplit(op, activeStart, ctx); // первый кадр активного подъёма
+  const pills = labelsCalls.filter(el => el.className === 'slot-label-pill');
+  assert.equal(pills.length, 1, 'ровно одна пилюля в момент начала подъёма');
+  assert.equal(pills[0].textContent, 'Полугласный');
+
+  applySplit(op, activeStart + 300, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
+});

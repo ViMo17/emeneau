@@ -261,3 +261,42 @@ test('applyTransform: золотая россыпь искр вриддхи — 
   const sparkles = labelsCalls.filter(el => el.className === 'slot-sparkle');
   assert.equal(sparkles.length, 15, 'ровно 15 искр за один запуск (не 200 — тот дефолт зарезервирован под elide)');
 });
+
+test('applyTransform: op.label — пилюля-подпись появляется РОВНО один раз, в момент начала активного вращения (не раньше, на паузе-осознании)', () => {
+  const cubes = { 4: makeCube(4) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1, label: 'Гуна' };
+
+  applyTransform(op, 500, ctx); // всё ещё пауза-осознание (anticipateDur=900)
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 0, 'на паузе-осознании пилюли ещё нет');
+
+  applyTransform(op, 950, ctx); // первый кадр активной фазы
+  const pills = labelsCalls.filter(el => el.className === 'slot-label-pill');
+  assert.equal(pills.length, 1, 'ровно одна пилюля создана в момент начала вращения');
+  assert.equal(pills[0].textContent, 'Гуна');
+
+  applyTransform(op, 1200, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
+});
+
+test('applyTransform: без op.label — пилюль не создаётся вообще (поле необязательное)', () => {
+  const cubes = { 4: makeCube(4) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1 };
+  applyTransform(op, 950, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 0);
+});

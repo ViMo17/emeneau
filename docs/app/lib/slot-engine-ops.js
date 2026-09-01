@@ -107,6 +107,7 @@ export function applyTransform(op, elapsed, ctx) {
     const dur = landsOnOppositeFace ? (op.dur ?? 1800) : Math.abs(spinTurns) * MS_PER_360;
     const bounceH = op.bounceH ?? (landsOnOppositeFace ? 0.16 : 0.3);
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
+    const holdDur = op.holdDur ?? 700; // пауза-фиксация ПОСЛЕ посадки — общий дефолт, читает и label ниже, и блок приземления
 
     // transform получает ТУ ЖЕ симметричную пару пауз, что уже есть у split
     // (anticipateDur до, holdDur после) — почти каждый значимый шаг
@@ -135,6 +136,10 @@ export function applyTransform(op, elapsed, ctx) {
     if (!op._anticipateDone) {
       op._anticipateDone = true;
       cube.mesh.scale.setScalar(1);
+      // Пилюля-подпись — НАД кубиком (transform = «превращается, продолжается
+      // в новой форме»), с самого начала активного вращения, на всю его
+      // видимую длительность (оборот + пауза-фиксация после посадки).
+      if (op.label) spawnLabelPill(op.label, op.at, true, dur + holdDur, ctx);
     }
 
     // matsSignal (серебро) — не единственный вариант промежуточной фазы:
@@ -278,7 +283,6 @@ export function applyTransform(op, elapsed, ctx) {
     // отдельной активности во время паузы (кубик и так уже в покое, не
     // висит в отстойнике — покачивать нечего).
     if (op._landed) {
-      const holdDur = op.holdDur ?? 700;
       if (elapsed - op._rotationEnd >= holdDur) op._done = true;
     }
 }
@@ -391,6 +395,37 @@ export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
   }
 }
 
+// ПИЛЮЛЯ-ПОДПИСЬ — прямой запрос пользователя: во время события над (или
+// под) местом действия висит короткое слово, называющее сам эффект
+// («Гуна», «Вриддхи», «Ассимиляция», «Элизия», ...) — не заменяет текст
+// примера, а даёт зрителю сразу считываемый якорь, что сейчас происходит.
+// Тот же DOM-оверлей язык, что и у колец/искр (project() один раз при
+// создании, дальше чистая CSS-анимация, самоудаление по setTimeout) — не
+// отслеживается покадрово, лёгкий боковой дрейф кубика во время паузы/
+// вращения для читаемости не критичен (та же логика, что у колец).
+// Две ВСЕГДА действующие анимации разом (не одна): «конверт» видимости
+// (плавно появилась → плавно исчезла, ровно на всю dur, один раз) и
+// непрерывное «дыхание» (лёгкая пульсация масштабом, фиксированный
+// период, зацикленная — привлекает взгляд, не зависит от длительности
+// самого события). above=true — над точкой (превращение/слияние/распад:
+// «вверх = продолжается в новой форме», см. CLAUDE.md Часть 2), false —
+// под точкой (elide: «вниз = пропадает», тот же смысловой регистр, что и
+// у направления отстойника).
+/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx */
+export function spawnLabelPill(text, slotIndex, above, dur, ctx) {
+  const { labelsEl } = ctx;
+  const y = (above ? 1 : -1) * CUBE_SIZE * 1.6; // «1-2 кубика» от ряда, см. запрос
+  const p = project(new THREE.Vector3(slotX(slotIndex), y, 0), ctx);
+  const el = document.createElement('div');
+  el.className = 'slot-label-pill';
+  el.textContent = text;
+  el.style.left = p.x + 'px';
+  el.style.top = p.y + 'px';
+  el.style.setProperty('--label-dur', dur + 'ms');
+  labelsEl.appendChild(el);
+  setTimeout(() => el.remove(), dur + 60);
+}
+
 /** @param {ElideOp} op @param {number} elapsed @param {Ctx} ctx */
 export function applyElide(op, elapsed, ctx) {
     const { cubes } = ctx;
@@ -412,6 +447,13 @@ export function applyElide(op, elapsed, ctx) {
     const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
     const holdDur = op.holdDur ?? 800;
     const fadeDur = op.fadeDur ?? 1100;
+    // Пилюля-подпись — ПОД рядом (elide = «вниз, пропадает без следа»),
+    // на всю видимую жизнь буквы (rise+hold+fade целиком), не только на
+    // саму вспышку в начале.
+    if (op.label && !op._labelSpawned) {
+      op._labelSpawned = true;
+      spawnLabelPill(op.label, op.at, false, riseDur + holdDur + fadeDur, ctx);
+    }
     // НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ (предыдущая версия): перепутан ВЕРХНИЙ
     // КРАЙ отстойника с его ЦЕНТРОМ. FLOOR_Y (нижний край слотов, -0.55)
     // минус зазор (минимум CUBE_SIZE, «минимум 1 кубик вниз» по прямому
@@ -1054,6 +1096,16 @@ export function applySplit(op, elapsed, ctx) {
     op._anticipateDone = true;
     src.mesh.scale.setScalar(1);
     src.mesh.material = src.matsMain; // возвращаемся к обычному виду e перед самим подъёмом
+    // Пилюля-подпись — НАД источником (split = «продолжается в новой
+    // форме»), на весь путь: подъём + ожидание результатов + пауза-
+    // сравнение + угасание (та же формула compareReadyAt/fadeStart, что и
+    // в фазе 3 ниже, посчитана здесь заранее относительно activeStart).
+    if (op.label) {
+      const arrivalsList = op.arrivals || [];
+      const lastArrivalEnd = arrivalsList.length ? Math.max(...arrivalsList.map(a => a.delay + a.dur)) : 0;
+      const compareReadyDur = Math.max(riseDur, lastArrivalEnd);
+      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx);
+    }
   }
 
   // фаза 1: исходный поднимается в сторону и бледнеет — плавный разгон/
@@ -1177,6 +1229,12 @@ export function applyMerge(op, elapsed, ctx) {
     const mover = cubes[op.from];
     if (!mover) return; // источник ещё не существует/уже удалён раньше времени — не должно происходить штатно, но не роняем функцию
     const dur = op.dur ?? 1400;
+    // Пилюля-подпись — НАД целью (merge = «продолжается в новой форме»), на
+    // весь путь мувера плюс спад вспышки-удара после (600мс, см. ниже).
+    if (op.label && !op._labelSpawned) {
+      op._labelSpawned = true;
+      spawnLabelPill(op.label, op.at, true, dur + 600, ctx);
+    }
     const t = clamp01((elapsed - op.start) / dur);
     const te = easeInOutCubic(t);
     const toX = target.mesh.position.x;

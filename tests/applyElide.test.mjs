@@ -222,3 +222,27 @@ test('applyElide: финального кольца-вспышки ПОСЛЕ у
   const ringsAfterCompletion = labelsCalls.filter(el => el.className === 'slot-pulse-ring').length;
   assert.equal(ringsAfterCompletion, 1, 'только ОДНО кольцо за весь прогон — импакт в момент начала реакции (op.start), финального кольца после угасания больше нет');
 });
+
+test('applyElide: op.label — пилюля-подпись появляется РОВНО один раз, сразу в op.start (не позже, не повторно), позиционируется ПОД рядом (above=false)', () => {
+  const cubes = { 5: makeCube(5) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const op = { type: 'elide', at: 5, start: 100, label: 'Элизия' };
+
+  applyElide(op, 50, ctx); // до старта
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 0);
+
+  applyElide(op, 100, ctx);
+  const pills = labelsCalls.filter(el => el.className === 'slot-label-pill');
+  assert.equal(pills.length, 1, 'ровно одна пилюля создана в момент op.start');
+  assert.equal(pills[0].textContent, 'Элизия');
+
+  applyElide(op, 400, ctx);
+  assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
+});

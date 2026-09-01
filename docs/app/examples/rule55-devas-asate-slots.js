@@ -69,7 +69,7 @@ export const data = {
     // последняя волна influence (start+2500 при дефолтных waveCount/
     // waveGap/waveTravel) реально достигает цели — тот же буфер, что у
     // vāk asti между influence и transform.
-    { type: 'elide', at: 4, start: 6330 },
+    { type: 'elide', at: 4, start: 6330, label: 'Элизия' },
 
     // ЗАВЕРШЕНИЕ: āsate целиком (6,7,8,9) подъезжает к devā на стандартное
     // расстояние внешнего сандхи — 1 слот (было 2 после исчезновения s,
