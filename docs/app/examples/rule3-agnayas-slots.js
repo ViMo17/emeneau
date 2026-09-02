@@ -61,7 +61,7 @@ export const data = {
     { type: 'influence', from: { word: 2 }, to: 4, start: 2700, ringHoldDur: 4600 },
 
     // гунирование: i → e, на месте (слот 4)
-    { type: 'transform', at: 4, toGlyph: 'e', toColor: 0x7DCFCA, start: 5300, spinTurns: 1, label: 'Гуна' },
+    { type: 'transform', at: 4, toGlyph: 'e', toColor: 0x7DCFCA, start: 5300, spinTurns: 1, label: 'guṇa' },
 
     // иллюстрация несовместимости: весь хвост -as подходит к Е (не одна
     // буква), задерживается, пружинисто отскакивает назад — это и запускает
@@ -70,7 +70,7 @@ export const data = {
 
     // распад: e уходит в отстойник, a и y прилетают.
     {
-      type: 'split', at: 4, start: 11650, label: 'Полугласный',
+      type: 'split', at: 4, start: 11650, label: 'ayādi',
       holdOffset: { x: -1.6, y: 2.4, z: 0.4 },
       arrivals: [
         { into: 'a', newSlot: 4, from: { x: slotX(4) + 1.0, y: 2.5, z: -1.5 }, delay: 500, dur: 1600, arcHeight: 0.9 },

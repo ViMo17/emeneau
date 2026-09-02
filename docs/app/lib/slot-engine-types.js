@@ -127,7 +127,8 @@
  * @property {number} [dur] - переопределение длительности вращения (мс); при landsOnOppositeFace дефолт 1800, иначе spinTurns×MS_PER_360
  * @property {number} [bounceH]
  * @property {number} [toColor]
- * @property {string} [label] - текст плавающей пилюли-подписи над кубиком на время активного вращения (см. spawnLabelPill), например "Гуна"/"Вриддхи"/"Ассимиляция"/"Озвончение"
+ * @property {string} [label] - текст плавающей пилюли-подписи над кубиком на время активного вращения (см. spawnLabelPill), например "guṇa"/"vṛddhi"/"jaśtva" (строчными, ИАСТ — см. реестр CLAUDE.md)
+ * @property {number} [labelY] - переопределение высоты пилюли (мировые координаты) — нужно, когда несколько событий одного шага должны читаться на одном уровне, см. rule50
  * @property {boolean} [_done]
  * @property {boolean} [_pulse0]
  * @property {boolean} [_pulse1]

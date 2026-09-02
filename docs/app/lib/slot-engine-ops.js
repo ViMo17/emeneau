@@ -146,7 +146,11 @@ export function applyTransform(op, elapsed, ctx) {
       // t>=1, см. ниже, holdDur — просто пауза-фиксация уже готового
       // результата, к сигнальному цвету отношения не имеет). Исправлено —
       // длительность строго `dur`, пилюля гаснет ровно к посадке.
-      if (op.label) spawnLabelPill(op.label, op.at, true, dur, ctx);
+      // op.labelY — то же необязательное переопределение высоты, что и у
+      // SplitOp (см. applySplit) — нужно, когда два события одного шага
+      // (rule50: этот transform + соседний split) должны читаться как ОДИН
+      // уровень, а не как два вразнобой, одна выше другой.
+      if (op.label) spawnLabelPill(op.label, op.at, true, dur, ctx, op.labelY);
     }
 
     // matsSignal (серебро) — не единственный вариант промежуточной фазы:

@@ -63,14 +63,14 @@ export const data = {
     // нейтральная грань (не серебро — не гунация). clearance:-0.35 — влево,
     // к пустому зазору слева (справа — занятая I).
     { type: 'influence', from: 2, to: 4, start: 3680, ringHoldDur: 4000 },
-    { type: 'transform', at: 4, toGlyph: 'dh', start: 6280, ...TRANSFORM_KIND.assimToNeighbor, clearance: -0.35, label: 'Ассимиляция' },
+    { type: 'transform', at: 4, toGlyph: 'dh', start: 6280, ...TRANSFORM_KIND.assimToNeighbor, clearance: -0.35, label: 'ассимиляция' }, // временно кириллицей — подтверждённый санскритский термин для места-ассимиляции ещё не найден (открытый пункт CLAUDE.md)
 
     // ШАГ 2 (правило 71): t→d, вызвано уже готовым dh. Та же механика, что
     // уже отлажена на vāk asti — парная замена внутри варги, 180°,
     // нейтральная грань. clearance не переопределён — дефолт (вправо, к
     // пустому зазору) уже безопасен для этой позиции.
     { type: 'influence', from: 4, to: 2, start: 8080, ringHoldDur: 3300 },
-    { type: 'transform', at: 2, toGlyph: 'd', start: 10680, ...TRANSFORM_KIND.vargaPair, label: 'Озвончение' },
+    { type: 'transform', at: 2, toGlyph: 'd', start: 10680, ...TRANSFORM_KIND.vargaPair, label: 'jaśtva' },
 
     // settle не прописан — считается автоматически: 1с после того, как
     // последняя буква вернёт истинный цвет.
