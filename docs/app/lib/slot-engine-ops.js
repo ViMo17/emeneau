@@ -104,7 +104,15 @@ export function applyTransform(op, elapsed, ctx) {
     // (1800мс на 180°, не по общей формуле spinTurns×MS_PER_360) и меньший
     // подскок (0.16 вместо 0.3).
     const landsOnOppositeFace = Math.round(spinTurns * 2) % 2 !== 0;
-    const dur = landsOnOppositeFace ? (op.dur ?? 1800) : Math.abs(spinTurns) * MS_PER_360;
+    // op.dur — теперь общее переопределение длительности вращения, не
+    // только для landsOnOppositeFace (было раньше). Дефолт для обычного
+    // оборота не меняется (spinTurns×MS_PER_360) — ни один существующий
+    // пример его не передаёт (проверено), рег регрессии нет. Нужно
+    // rule50: аваграха — обычный 360°-оборот, но должна идти медленнее
+    // общей формулы (внимание зрителя отвлечено на соседний split), а
+    // трогать MS_PER_360 глобально означало бы замедлить ВСЕ гунации/
+    // вриддхи во всём приложении ради одного примера.
+    const dur = op.dur ?? (landsOnOppositeFace ? 1800 : Math.abs(spinTurns) * MS_PER_360);
     const bounceH = op.bounceH ?? (landsOnOppositeFace ? 0.16 : 0.3);
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
     const holdDur = op.holdDur ?? 700; // пауза-фиксация ПОСЛЕ посадки — общий дефолт, читает и label ниже, и блок приземления

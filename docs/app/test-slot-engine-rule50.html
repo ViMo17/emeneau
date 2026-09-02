@@ -6,7 +6,12 @@
 <style>
   html, body { height:100%; margin:0; background:#2A2D35; }
   #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
-  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  /* height выше, чем у остальных test-slot-engine-*.html (74vh/440px) —
+     rule50 единственный пример, где пилюли поднимаются до y=3.5 (0,5
+     кубика над верхом отстойника), при 440px это давало pixelY≈3
+     (почти у самого края кадра). Численно проверено (реальная камера/
+     project()): при 600px — pixelY≈83, комфортный запас. */
+  #anim-container { width:min(96vw,900px); height:min(80vh,600px); }
   #anim-container canvas { display: block; width: 100%; height: 100%; }
   #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);

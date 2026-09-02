@@ -124,7 +124,7 @@
  * @property {number} [clearance] - боковое раскачивание, знак = направление к пустому месту
  * @property {number} [anticipateDur] - пауза-осознание до вращения
  * @property {number} [holdDur] - пауза-фиксация после вращения
- * @property {number} [dur] - переопределение длительности вращения (мс); при landsOnOppositeFace дефолт 1800, иначе spinTurns×MS_PER_360
+ * @property {number} [dur] - переопределение длительности вращения (мс), для ЛЮБОГО spinTurns (не только landsOnOppositeFace); дефолт без переопределения — 1800 при landsOnOppositeFace, иначе spinTurns×MS_PER_360
  * @property {number} [bounceH]
  * @property {number} [toColor]
  * @property {string} [label] - текст плавающей пилюли-подписи над кубиком на время активного вращения (см. spawnLabelPill), например "guṇa"/"vṛddhi"/"jaśtva" (строчными, ИАСТ — см. реестр CLAUDE.md)

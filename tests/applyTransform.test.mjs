@@ -121,6 +121,21 @@ test('applyTransform: категория vrddhi (u→au) — 720°, активн
   assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по завершении вращения — истинный цвет, не золото навсегда');
 });
 
+test('applyTransform: op.dur переопределяет длительность ОБЫЧНОГО оборота (не только landsOnOppositeFace) — rule50, аваграха замедлена', () => {
+  const cubes = { 6: makeCube(6) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 6, toGlyph: "'", start: 0, spinTurns: 1, signal: 'blank', dur: 3000 };
+  const anticipateDur = 900;
+  const activeStart = anticipateDur;
+
+  applyTransform(op, activeStart + 2000, ctx); // t=2000/3000 — обычная формула (spinTurns×MS_PER_360=2000) уже приземлилась бы, кастомная — ещё нет
+  assert.equal(op._landed, undefined, 'на 2000мс (дефолтная длительность) кастомные 3000мс ещё НЕ должны считаться приземлением');
+
+  applyTransform(op, activeStart + 3000, ctx); // точно момент кастомного приземления
+  assert.equal(op._landed, true, 'на 3000мс (op.dur) — приземление наступило');
+  assert.equal(cubes[6].mesh.material, cubes[6].matsMain, 'истинный цвет по завершении');
+});
+
 // Точная позиционная схема по прямой раскладке пользователя: шаги по 90°
 // (позиция N = (N-1)×90°). Один оборот (гунация) — прямая замена ровно на
 // позиции 3 (180°, «зад» первого оборота), без разрыва. Два оборота
