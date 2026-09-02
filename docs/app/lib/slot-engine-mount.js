@@ -110,6 +110,14 @@ export function mountSlotExample(container, data, opts = {}) {
       ...ops
         .filter(op => op.type === 'arrive')
         .flatMap(op => (op.items || []).map(a => a.newSlot)),
+      // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule61, живая проверка): bud создаёт новый
+      // кубик в op.to, которого нет в data.initial — без этой строки его
+      // слот выпадал из finalSlots, и клон НИКОГДА не получал финальную
+      // волну READY_COLOR (см. applySettle) — оставался в истинном цвете
+      // (matsMain) навсегда, тогда как ВСЕ остальные буквы, включая
+      // источник геминации, корректно уходили в нейтральный READY_COLOR —
+      // визуально читалось как «два разных звука», а не одна и та же буква.
+      ...ops.filter(op => op.type === 'bud').map(op => op.to),
     ])].filter(s => !goneSlots.has(s)).sort((a, b) => a - b);
     const revealStagger = data.revealStagger ?? 130;
     const revealRamp = data.revealRamp ?? 700;
