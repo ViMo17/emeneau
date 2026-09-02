@@ -286,6 +286,24 @@ test('applyTransform: op.label — пилюля-подпись появляет�
   assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
 });
 
+test('applyTransform: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ — длительность пилюли РОВНО dur (оборот), НЕ dur+holdDur — иначе подпись держится ещё 700мс ПОСЛЕ того, как кубик уже вернул истинный цвет (matsMain)', () => {
+  const cubes = { 4: makeCube(4) };
+  const labelsCalls = [];
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+  const ctx = {
+    cubes, camera,
+    stageEl: { clientWidth: 900, clientHeight: 440 },
+    labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+  };
+  const dur = MS_PER_360; // spinTurns:1
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1, label: 'Гуна', holdDur: 700 };
+
+  applyTransform(op, 900, ctx); // первый кадр активной фазы — пилюля создана
+  const pill = labelsCalls.find(el => el.className === 'slot-label-pill');
+  assert.equal(pill.style['--label-dur'], dur + 'ms', `длительность пилюли должна быть ровно dur (${dur}ms), не dur+holdDur (${dur + 700}ms)`);
+});
+
 test('applyTransform: без op.label — пилюль не создаётся вообще (поле необязательное)', () => {
   const cubes = { 4: makeCube(4) };
   const labelsCalls = [];

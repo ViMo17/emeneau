@@ -16,17 +16,25 @@
   }
 
   /* ══ Предисловие (стартовый экран) ══ */
+  /* display:none — ДЕФОЛТ (было flex): реальный найденный баг — при
+     отложенном type="module" скрипте браузер красит страницу ДО того, как
+     скрипт успевает проверить localStorage и скрыть оверлей для
+     вернувшегося посетителя, из-за чего вступление на долю секунды
+     мелькало на экране даже когда его уже видели. Теперь по умолчанию
+     скрыт, JS явно показывает его ТОЛЬКО для первого визита (см. openIntro
+     в <script> ниже) — вернувшийся посетитель не видит вспышки вообще. */
   #intro-overlay {
     position: fixed;
     inset: 0;
     z-index: 500;
     background: rgba(20,20,18,.72);
     backdrop-filter: blur(2px);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 24px;
   }
+  #intro-overlay.is-open { display: flex; }
   #intro-card {
     background: #363A44;
     border: 1px solid rgba(200,188,158,.30);

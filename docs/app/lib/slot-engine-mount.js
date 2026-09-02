@@ -503,13 +503,17 @@ function injectStylesOnce() {
        события) — по прямому запросу «подрагивают, дышат, привлекают
        внимание». translate(-50%,-50%) в каждом кадре ОБЕИХ — центрирует
        пилюлю на точке проекции, не только в начальном состоянии. */
+    /* Параметры ниже — рабочие значения ПОСЛЕ правки по обратной связи
+       («шрифт 15px», «биение поменьше», «меньше размытие»). Текущие числа
+       для следующей коррекции: font-size 15px, padding 7px 16px, дыхание
+       scale 1↔1.10, свечение blur 6px/spread 1px/alpha .32. */
     .slot-label-pill {
       position: absolute;
       font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 18px; /* было 12px — по обратной связи «эффект почти не виден» */
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: .03em;
-      padding: 9px 20px;
+      padding: 7px 16px;
       border-radius: 999px;
       background: rgba(58,62,72,.94);
       color: rgba(238,234,222,.98);
@@ -530,12 +534,9 @@ function injectStylesOnce() {
       88%  { opacity: 1; }
       100% { opacity: 0; }
     }
-    /* Дыхание — заметно интенсивнее прежнего (было scale 1↔1.07, почти не
-       видно): масштаб 1↔1.18 + лёгкое свечение краёв в такт, тот же
-       период, что и раньше, просто амплитуда в разы больше. */
     @keyframes slot-label-breathe {
       0%, 100% { transform: translate(-50%,-50%) scale(1); box-shadow: 0 0 0 rgba(255,244,220,0); }
-      50%      { transform: translate(-50%,-50%) scale(1.18); box-shadow: 0 0 14px 2px rgba(255,244,220,.45); }
+      50%      { transform: translate(-50%,-50%) scale(1.10); box-shadow: 0 0 6px 1px rgba(255,244,220,.32); }
     }
     /* Рамка-подчёркивание под группой-нимиттой — нейтральный GROUP_COLOR,
        не фонетический; opacity управляется из JS покадрово

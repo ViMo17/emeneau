@@ -56,7 +56,11 @@ function makeStubCanvas() {
 function makeStubDiv() {
   return {
     className: '',
-    style: { setProperty() {} }, // обычные присваивания (style.left=...) и так работают на плейн-объекте; setProperty — отдельный метод, добавлен явно
+    // setProperty реально ЗАПИСЫВАЕТ значение под тем же именем (не
+    // просто no-op) — тесты на custom-property-длительности (--label-dur,
+    // --sparkle-dur) читают её обратно через style['--label-dur']; обычные
+    // присваивания (style.left=...) и так работают на плейн-объекте.
+    style: { setProperty(prop, val) { this[prop] = val; } },
     appendChild() {},
     remove() {},
   };

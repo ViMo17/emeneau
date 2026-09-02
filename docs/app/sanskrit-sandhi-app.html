@@ -204,17 +204,22 @@ const introStartBtn = document.getElementById('intro-start-btn');
 const introReopenBtn = document.getElementById('intro-reopen-btn');
 
 function closeIntro() {
-  introOverlay.style.display = 'none';
+  introOverlay.classList.remove('is-open');
   try { localStorage.setItem('emeneau-intro-seen', '1'); } catch (e) { /* приватный режим — просто не запомнится между визитами */ }
 }
-function openIntro() { introOverlay.style.display = 'flex'; }
+function openIntro() { introOverlay.classList.add('is-open'); }
 
 introStartBtn.addEventListener('click', closeIntro);
 introReopenBtn.addEventListener('click', openIntro);
 
+// Реальный найденный баг: базовый CSS раньше показывал оверлей ВСЕГДА
+// (display:flex), скрывая его только здесь, в отложенном скрипте — на
+// долю секунды мелькал даже у тех, кто вступление уже видел. Теперь база
+// — display:none (см. sanskrit-sandhi-app.css), показываем ЯВНО только
+// для первого визита, не наоборот.
 let introAlreadySeen = false;
 try { introAlreadySeen = localStorage.getItem('emeneau-intro-seen') === '1'; } catch (e) {}
-if (introAlreadySeen) introOverlay.style.display = 'none';
+if (!introAlreadySeen) openIntro();
 
 </script>
 </body>
