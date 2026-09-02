@@ -111,12 +111,27 @@ export function validateExampleData(data) {
             break;
           case 'split':
             need(isSlotNum(op.at), 'at должен быть номером слота');
-            need(Array.isArray(op.arrivals) && op.arrivals.length > 0, 'arrivals должен быть непустым массивом');
-            (op.arrivals || []).forEach((arr, j) => needArc(arr, `${where}.arrivals[${j}]`));
+            // Пустой arrivals — ЗАКОННЫЙ случай (rule 50, devo'sti): при
+            // «слиянии двух РАЗНЫХ звуков через отстойник» два source-кубика
+            // поднимаются каждый своим split, но общий результат прилетает
+            // только у ОДНОГО из них — у второго arrivals осознанно пуст,
+            // сам applySplit это уже поддерживает (lastArrivalEnd=0 при
+            // пустом массиве, см. applySplit). Раньше запрещалось как
+            // «наверняка забыли» — оказалось реальным сценарием, не опечаткой.
+            need(Array.isArray(op.arrivals), 'arrivals должен быть массивом (пустой — законный случай, см. rule 50)');
+            // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ: `op.arrivals || []` пропускает ЛЮБОЕ
+            // truthy-значение (например строку) дальше в .forEach — need()
+            // выше лишь ЗАПИСЫВАЕТ проблему в список, не останавливает
+            // проверку, поэтому невалидный НЕ-массив доходил до .forEach и
+            // ронял TypeError вместо понятного сообщения. Явная проверка
+            // Array.isArray здесь — не полагаться на `|| []`.
+            (Array.isArray(op.arrivals) ? op.arrivals : []).forEach((arr, j) => needArc(arr, `${where}.arrivals[${j}]`));
             break;
           case 'arrive':
             need(Array.isArray(op.items) && op.items.length > 0, 'items должен быть непустым массивом');
-            (op.items || []).forEach((item, j) => needArc(item, `${where}.items[${j}]`));
+            // Тот же класс бага, что у split.arrivals выше — не полагаться
+            // на `op.items || []`, оно пропускает любое truthy не-массивом.
+            (Array.isArray(op.items) ? op.items : []).forEach((item, j) => needArc(item, `${where}.items[${j}]`));
             break;
           case 'merge':
             need(isSlotNum(op.from), 'from должен быть номером слота');

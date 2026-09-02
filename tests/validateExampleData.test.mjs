@@ -87,6 +87,20 @@ test('validateExampleData: split.arrivals с полными валидными �
   assert.deepEqual(problems, []);
 });
 
+test('validateExampleData: split.arrivals ПУСТОЙ массив — законный случай (rule 50, слияние двух РАЗНЫХ звуков через отстойник — общий результат прилетает у соседнего split, не у этого), не ошибка', () => {
+  const problems = validateExampleData(baseData({
+    ops: [{ type: 'split', at: 1, start: 0, arrivals: [] }],
+  }));
+  assert.deepEqual(problems, []);
+});
+
+test('validateExampleData: split.arrivals отсутствует вовсе или не массив — по-прежнему поймано', () => {
+  const problems1 = validateExampleData(baseData({ ops: [{ type: 'split', at: 1, start: 0 }] }));
+  assert.ok(problems1.some(p => p.includes('arrivals')), problems1.join('\n'));
+  const problems2 = validateExampleData(baseData({ ops: [{ type: 'split', at: 1, start: 0, arrivals: 'oops' }] }));
+  assert.ok(problems2.some(p => p.includes('arrivals')), problems2.join('\n'));
+});
+
 test('validateExampleData: influence.from принимает число, {word}, массив — все три валидны', () => {
   assert.deepEqual(validateExampleData(baseData({ ops: [{ type: 'influence', from: 1, to: 2, start: 0 }] })), []);
   assert.deepEqual(validateExampleData(baseData({ ops: [{ type: 'influence', from: { word: 1 }, to: 2, start: 0 }] })), []);
