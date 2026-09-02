@@ -422,8 +422,8 @@ export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
 // «вверх = продолжается в новой форме», см. CLAUDE.md Часть 2), false —
 // под точкой (elide: «вниз = пропадает», тот же смысловой регистр, что и
 // у направления отстойника).
-/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx @param {number} [yOverride] */
-export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride) {
+/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx @param {number} [yOverride] @param {number} [xOverride] */
+export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride, xOverride) {
   const { labelsEl } = ctx;
   // yOverride — для случаев, где кубик поднимается выше обычной высоты
   // ряда (split, отстойник до y≈2.4) — фиксированная «1-2 кубика над
@@ -438,7 +438,13 @@ export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride) {
   // below (elide), у above (transform/merge/split) направление бокового
   // раскачивания/полёта разное по знаку в разных примерах, единого
   // безопасного сдвига там нет.
-  const x = above ? 0 : CUBE_SIZE * 0.9;
+  // xOverride — аналогично yOverride: для случаев, где прилетающий
+  // результат (split.arrivals) пролетает через ту же зону, что и пилюля
+  // (rule50: «o» прилетает СПРАВА и приземляется ровно под слотом — сдвиг
+  // пилюли ВЛЕВО категорически исключает пересечение, а не приблизительно
+  // уменьшает его, т.к. траектория прилёта математически монотонна и
+  // никогда не заходит левее целевого слота).
+  const x = xOverride ?? (above ? 0 : CUBE_SIZE * 0.9);
   const p = project(new THREE.Vector3(slotX(slotIndex) + x, y, 0), ctx);
   const el = document.createElement('div');
   el.className = 'slot-label-pill';
@@ -1140,7 +1146,7 @@ export function applySplit(op, elapsed, ctx) {
       // формулы для всех split нет). Дефолт без op.labelY — прежний,
       // проверенный (CUBE_SIZE*1.6, см. spawnLabelPill) — не трогает уже
       // подтверждённые примеры (agnayas); rule50 передаёт labelY явно.
-      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx, op.labelY);
+      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx, op.labelY, op.labelX);
     }
   }
 
