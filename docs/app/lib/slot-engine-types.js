@@ -153,6 +153,7 @@
  * @property {number} [holdOpacity]
  * @property {number} [fadeDur]
  * @property {string} [label] - текст плавающей пилюли-подписи над источником (см. spawnLabelPill), например "Полугласный"
+ * @property {number} [labelY] - переопределение высоты пилюли (мировые координаты) — только когда дефолт (CUBE_SIZE*1.6) конфликтует с геометрией КОНКРЕТНОГО примера (arrivals/holdOffset), см. rule50
  * @property {string} [_srcKey]
  * @property {boolean} [_pulse0]
  * @property {boolean} [_pulse1]

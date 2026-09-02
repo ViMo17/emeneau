@@ -1124,11 +1124,19 @@ export function applySplit(op, elapsed, ctx) {
       const arrivalsList = op.arrivals || [];
       const lastArrivalEnd = arrivalsList.length ? Math.max(...arrivalsList.map(a => a.delay + a.dur)) : 0;
       const compareReadyDur = Math.max(riseDur, lastArrivalEnd);
-      // Высота — выше верхней точки отстойника (holdOffset.y + примерно
-      // высота кубика с запасом), не универсальный дефолт «над рядом» —
-      // источник во время подъёма проходит через y=0..holdOffset.y,
-      // фиксированная низкая высота пилюли оказывалась бы у него на пути.
-      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx, holdOffset.y + CUBE_SIZE);
+      // op.labelY — необязательное per-op переопределение высоты пилюли.
+      // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ: генерическая формула «holdOffset.y+CUBE_SIZE»
+      // здесь ранее применялась КО ВСЕМ split с label одинаково — на
+      // тесном окне (900x440, тестовый полигон) это давало мировой y=3.5,
+      // который проецируется в считаные пиксели от верхнего края кадра
+      // (реальной камерой проверено: pixelY≈3.4 из 440) — пилюля физически
+      // уходила за пределы видимой области. Более того, безопасная высота
+      // ЗАВИСИТ от геометрии arrivals конкретного примера (у agnayas
+      // arrival «y» поднимается до мировых y≈3.7 — единой безопасной
+      // формулы для всех split нет). Дефолт без op.labelY — прежний,
+      // проверенный (CUBE_SIZE*1.6, см. spawnLabelPill) — не трогает уже
+      // подтверждённые примеры (agnayas); rule50 передаёт labelY явно.
+      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx, op.labelY);
     }
   }
 
