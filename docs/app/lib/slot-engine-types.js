@@ -185,6 +185,23 @@
  * @property {boolean} [_labelSpawned]
  */
 
+/** @typedef {Object} BudOp
+ * @property {'bud'} type
+ * @property {number} from - слот источника, откуда «отпочковывается» клон
+ * @property {number} to - слот, куда клон прилетает (обычно пустой на момент старта)
+ * @property {string} toGlyph - глиф клона; тот же, что у источника, для настоящей геминации (см. rule61)
+ * @property {number} start
+ * @property {number} [dur]
+ * @property {number} [flashDecay] - длительность спада вспышки на источнике (мс), тот же темп, что holdDur у merge
+ * @property {number} [pulseHoldMs]
+ * @property {string} [label] - текст плавающей пилюли-подписи над источником (см. spawnLabelPill)
+ * @property {number} [labelY]
+ * @property {number} [labelX]
+ * @property {boolean} [_done]
+ * @property {Cube} [_clone]
+ * @property {number} [_flashAt]
+ */
+
 /** @typedef {Object} ElideOp
  * @property {'elide'} type
  * @property {number} at
@@ -220,7 +237,7 @@
  * @property {number} [ramp]
  */
 
-/** @typedef {InfluenceOp|ApproachOp|TransformOp|SplitOp|ArriveOp|MergeOp|ElideOp|SettleOp|DimOp} SlotOp */
+/** @typedef {InfluenceOp|ApproachOp|TransformOp|SplitOp|ArriveOp|MergeOp|BudOp|ElideOp|SettleOp|DimOp} SlotOp */
 
 /** Данные примера — то, что приходит из docs/app/examples/ruleN-*.js и
  * проверяется validateExampleData ДО первого кадра. Поля ниже, КРОМЕ

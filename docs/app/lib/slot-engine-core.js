@@ -239,6 +239,19 @@ export function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.po
 export function easeInCubic(t) { return t * t * t; }
 /** @param {number} t @returns {number} */
 export function easeOutBack(t) { const s = 2.4; return 1 + s * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2); }
+// НАСТОЯЩАЯ 0→1 функция с перелётом-и-пружинкой (стандартная формула
+// Пеннера, c1/c3 — РАЗНЫЕ коэффициенты). НЕ то же самое, что easeOutBack
+// выше — та спроектирована специально под связку `shift*(1-te)` в
+// applyApproach (там f(0)=1, f(1)=1, горб посередине — не 0→1 прогресс) и
+// для прямого lerp(from,to,t) не годится (реальный найденный баг при
+// разработке applyBud: клон мгновенно оказывался в точке назначения на
+// t=0, потому что easeOutBack(0)=1, а не 0). Эта функция — для любого
+// будущего места, где нужен настоящий 0→1 прогресс с лёгким перелётом.
+/** @param {number} t @returns {number} */
+export function easeOutBackProgress(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
 /** @param {number} t @returns {number} */
 export function easeOutBounce(t) {
   const n1 = 7.5625, d1 = 2.75;

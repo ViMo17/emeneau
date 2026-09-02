@@ -34,7 +34,7 @@ function isSlotRef(ref) {
   }
   return false;
 }
-const KNOWN_OP_TYPES = new Set(['influence', 'approach', 'transform', 'split', 'arrive', 'merge', 'elide', 'settle', 'dim']);
+const KNOWN_OP_TYPES = new Set(['influence', 'approach', 'transform', 'split', 'arrive', 'merge', 'bud', 'elide', 'settle', 'dim']);
 
 /** @param {import('./slot-engine-types.js').ExampleData} data @returns {string[]} список проблем, пустой массив если данные корректны */
 export function validateExampleData(data) {
@@ -136,6 +136,11 @@ export function validateExampleData(data) {
           case 'merge':
             need(isSlotNum(op.from), 'from должен быть номером слота');
             need(isSlotNum(op.at), 'at должен быть номером слота');
+            need(typeof op.toGlyph === 'string' && !!op.toGlyph, 'toGlyph должен быть непустой строкой');
+            break;
+          case 'bud':
+            need(isSlotNum(op.from), 'from должен быть номером слота');
+            need(isSlotNum(op.to), 'to должен быть номером слота');
             need(typeof op.toGlyph === 'string' && !!op.toGlyph, 'toGlyph должен быть непустой строкой');
             break;
           case 'elide':

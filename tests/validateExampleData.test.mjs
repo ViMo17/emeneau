@@ -69,6 +69,18 @@ test('validateExampleData: merge без toGlyph/from/at — все три пой
   assert.ok(problems.some(p => p.includes('toGlyph')), problems.join('\n'));
 });
 
+test('validateExampleData: bud без toGlyph/from/to — все три поймано', () => {
+  const problems = validateExampleData(baseData({ ops: [{ type: 'bud', start: 0 }] }));
+  assert.ok(problems.some(p => p.includes('from должен')), problems.join('\n'));
+  assert.ok(problems.some(p => p.includes('to должен')), problems.join('\n'));
+  assert.ok(problems.some(p => p.includes('toGlyph')), problems.join('\n'));
+});
+
+test('validateExampleData: bud с валидными полями (включая одинаковый toGlyph у источника и клона — геминация) — без проблем', () => {
+  const problems = validateExampleData(baseData({ ops: [{ type: 'bud', from: 1, to: 2, toGlyph: 'n', start: 0 }] }));
+  assert.deepEqual(problems, []);
+});
+
 test('validateExampleData: split.arrivals без delay/dur — поймано (NaN без дефолта в реальном коде)', () => {
   const problems = validateExampleData(baseData({
     ops: [{ type: 'split', at: 1, start: 0, arrivals: [{ into: 'a', newSlot: 2, from: { x: 0, y: 0, z: 0 } }] }],

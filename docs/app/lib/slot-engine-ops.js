@@ -8,7 +8,7 @@ import { paintGlyph, buildOpposingFaceMaterials, buildMetallicMaterials } from '
 import {
   CUBE_SIZE, SLOT, MS_PER_360, SILVER_RGB, GOLD_RGB, GROUP_COLOR, GROUP_RGB,
   colorFor, ringColorFrom, clamp01, lerp, easeOutCubic, easeInOutCubic,
-  easeOutBack, slotX, setOpacity,
+  easeOutBack, easeOutBackProgress, slotX, setOpacity,
 } from './slot-engine-core.js';
 import { makeCube, regenMats, disposeMatSet } from './slot-engine-cube.js';
 import { resolveSlotRef } from './slot-engine-words.js';
@@ -24,6 +24,7 @@ import { stepIndexAt, stepTargetOpacity } from './slot-engine-steps.js';
  * @typedef {import('./slot-engine-types.js').SplitOp} SplitOp
  * @typedef {import('./slot-engine-types.js').ArriveOp} ArriveOp
  * @typedef {import('./slot-engine-types.js').MergeOp} MergeOp
+ * @typedef {import('./slot-engine-types.js').BudOp} BudOp
  * @typedef {import('./slot-engine-types.js').SettleOp} SettleOp
  * @typedef {import('./slot-engine-types.js').DimOp} DimOp
  */
@@ -1320,6 +1321,76 @@ export function applyMerge(op, elapsed, ctx) {
     target.mesh.scale.setScalar(lerp(1.35, 1, e));
     target.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, e); });
   }
+}
+
+/* BUD (отпочкование) — зеркало `merge`, не вариант `split`. В merge
+   существующий мувер едет по прямой (высота ряда) к цели и ИСЧЕЗАЕТ при
+   контакте, вспышка — на ЦЕЛИ в момент касания (конец пути). Здесь —
+   наоборот: источник остаётся на месте, клон ПОЯВЛЯЕТСЯ ровно в его
+   позиции (визуально ещё не отделился) и едет по прямой к своему слоту,
+   вспышка — на ИСТОЧНИКЕ в момент появления клона (начало пути, не конец
+   — тот же принцип «момент начала реакции нуждается в отдельном сигнале»,
+   что и у elide). Прямой запрос пользователя: «как будто исходная буква
+   пульсирует, вспыхивает расширяясь на мгновенье — и от неё горизонтально
+   отпочковывается такая же буква... как капля отрывается от другой капли,
+   но форма куба должна оставаться основной» — три уже проверенных приёма
+   (вспышка-в-начале из elide, спад свечения из merge, пружинка easeOutBack
+   из отскока approach) впервые собраны в одной операции, не изобретаются
+   заново. Первый реальный тест гэпа DOUBLE (гемина́ция) — источник и клон
+   получают ОДИНАКОВЫЙ toGlyph, движок не делает для этого ничего особого
+   (просто makeCube с тем же глифом, что и у источника).
+   { type:'bud', from, to, toGlyph, start, dur=1200, flashDecay=600 } */
+/** @param {BudOp} op @param {number} elapsed @param {Ctx} ctx */
+export function applyBud(op, elapsed, ctx) {
+  const { cubes, scene } = ctx;
+  if (elapsed < op.start) return;
+  const source = cubes[op.from];
+  if (!source) return;
+  const dur = op.dur ?? 1200;
+  const flashDecay = op.flashDecay ?? 600; // тот же темп спада, что у merge
+
+  if (!op._clone) {
+    // Клон появляется РОВНО на месте источника — визуально ещё не
+    // отделился, читается как «источник ещё дрожит, из него уже
+    // проступает копия», не «два независимых кубика с самого начала».
+    const nc = makeCube(op.toGlyph, op.to * 97 + 41);
+    nc._fallDone = true;
+    nc.mesh.position.set(slotX(op.from), 0, 0);
+    scene.add(nc.mesh);
+    scene.add(nc.shadow);
+    cubes[op.to] = nc;
+    op._clone = nc;
+
+    if (op.label) spawnLabelPill(op.label, op.from, true, dur + flashDecay, ctx, op.labelY, op.labelX);
+
+    spawnPulseRing(frontAnchor(source.mesh), op.pulseHoldMs ?? 1300, GROUP_RGB, ctx);
+    source.mesh.scale.setScalar(1.35);
+    source.mesh.material.forEach(m => { m.emissive.setHex(GROUP_COLOR); m.emissiveIntensity = 0.9; });
+    op._flashAt = elapsed;
+  }
+
+  // Спад вспышки источника — ВНЕ guard'а выше, идёт каждый кадр независимо
+  // от того, долетел ли уже клон (тот же класс бага, что и в applyMerge/
+  // applyTransform — финализация и продолжающийся спад не должны сидеть
+  // за одним и тем же early-return).
+  if (op._flashAt != null) {
+    const ft = clamp01((elapsed - op._flashAt) / flashDecay);
+    const fe = easeOutCubic(ft);
+    source.mesh.scale.setScalar(lerp(1.35, 1, fe));
+    source.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, fe); });
+  }
+
+  // Полёт клона — по прямой (высота ряда, БЕЗ дуги — то же скольжение
+  // вдоль полосы, что и у мувера в merge, зеркально по направлению),
+  // easeOutBackProgress (НЕ easeOutBack — та не 0→1 функция, см. её
+  // комментарий в slot-engine-core.js) даёт лёгкий перелёт-и-пружинку на
+  // прибытии («оторвалось и слегка спружинило», не мёртвая остановка).
+  const nc = op._clone;
+  const t = clamp01((elapsed - op.start) / dur);
+  const te = easeOutBackProgress(t);
+  nc.mesh.position.x = lerp(slotX(op.from), slotX(op.to), te);
+  nc.shadow.position.x = nc.mesh.position.x;
+  if (t >= 1) op._done = true;
 }
 
 // Двойной прыжок: основной высокий взлёт (t 0–0.6, амплитуда bounceH) и

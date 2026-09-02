@@ -22,7 +22,7 @@ const EXPECTED_EXPORTS = [
   'GROUP_COLOR', 'TRANSFORM_KIND', 'tokenize', 'slotX', 'centeredStart',
   'centerSlots', 'halfWorldW', 'computeFitFov', 'colorFor', 'clamp01',
   'lerp', 'easeOutCubic', 'easeInOutCubic',
-  'easeInCubic', 'easeOutBack', 'easeOutBounce', 'easeFall',
+  'easeInCubic', 'easeOutBack', 'easeOutBackProgress', 'easeOutBounce', 'easeFall',
   // words
   'computeWordGroups', 'resolveSlotRef',
   // steps
@@ -31,7 +31,7 @@ const EXPECTED_EXPORTS = [
   'validateExampleData',
   // ops
   'applyTransform', 'applyElide', 'applyInfluence', 'applyApproach',
-  'flyArcPosition', 'applySplit', 'applyArrive', 'applyMerge', 'applySettle',
+  'flyArcPosition', 'applySplit', 'applyArrive', 'applyMerge', 'applyBud', 'applySettle',
   'applyDim', 'applyStepDim', 'project', 'frontAnchor', 'spawnPulseRing', 'spawnSparkleBurst', 'spawnLabelPill',
   // mount
   'mountSlotExample',

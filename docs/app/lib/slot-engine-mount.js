@@ -11,7 +11,7 @@ import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
 import { validateExampleData } from './slot-engine-validate.js';
 import {
   applyInfluence, applyApproach, applyTransform, applySplit, applyArrive,
-  applyMerge, applyElide, applySettle, applyDim, applyStepDim, disposePulseFace,
+  applyMerge, applyBud, applyElide, applySettle, applyDim, applyStepDim, disposePulseFace,
 } from './slot-engine-ops.js';
 
 /**
@@ -333,6 +333,7 @@ export function mountSlotExample(container, data, opts = {}) {
       else if (op.type === 'split') applySplit(op, elapsed, ctx);
       else if (op.type === 'arrive') applyArrive(op, elapsed, ctx);
       else if (op.type === 'merge') applyMerge(op, elapsed, ctx);
+      else if (op.type === 'bud') applyBud(op, elapsed, ctx);
       else if (op.type === 'elide') applyElide(op, elapsed, ctx);
       else if (op.type === 'settle') applySettle(op, elapsed, ctx);
       else if (op.type === 'dim') applyDim(op, elapsed, ctx);
