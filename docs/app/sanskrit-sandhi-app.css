@@ -967,8 +967,8 @@
   }
   #role-steps-text {
     font-family: 'Helvetica Neue', sans-serif;
-    font-size: 15px; /* было 13px — заход 22, тот же прирост, что у guna-rationale-text рядом */
-    line-height: 1.55;
+    font-size: 18px; /* было 15px — по прямой обратной связи «сейчас мелко» */
+    line-height: 1.5;
     color: #2A241C;
   }
   .guna-table {

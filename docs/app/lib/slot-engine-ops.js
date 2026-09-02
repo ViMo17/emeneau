@@ -415,7 +415,15 @@ export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
 export function spawnLabelPill(text, slotIndex, above, dur, ctx) {
   const { labelsEl } = ctx;
   const y = (above ? 1 : -1) * CUBE_SIZE * 1.6; // «1-2 кубика» от ряда, см. запрос
-  const p = project(new THREE.Vector3(slotX(slotIndex), y, 0), ctx);
+  // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (по скриншоту пользователя, rule15): elide
+  // ВСЕГДА сползает вбок влево (holdOffset.x отрицательный, -0.45, во
+  // всех примерах без исключения) — пилюля без горизонтального сдвига
+  // оказывалась ровно над тонущим кубиком. Сдвиг вправо — ТОЛЬКО для
+  // below (elide), у above (transform/merge/split) направление бокового
+  // раскачивания/полёта разное по знаку в разных примерах, единого
+  // безопасного сдвига там нет.
+  const x = above ? 0 : CUBE_SIZE * 0.9;
+  const p = project(new THREE.Vector3(slotX(slotIndex) + x, y, 0), ctx);
   const el = document.createElement('div');
   el.className = 'slot-label-pill';
   el.textContent = text;

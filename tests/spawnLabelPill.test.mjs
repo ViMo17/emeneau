@@ -61,3 +61,13 @@ test('spawnLabelPill: смещение по X относительно сосе�
   const x4 = parseFloat(ctx2.created[0].style.left);
   assert.ok(x4 > x3, 'слот 4 правее слота 3 на экране (после проекции — тот же порядок, что и в мировых координатах)');
 });
+
+test('spawnLabelPill: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule15, по скриншоту) — below (elide) сдвинута вправо относительно above на том же слоте, не сидит прямо над тонущим кубиком (тот всегда сползает влево, holdOffset.x<0 во всех примерах)', () => {
+  const ctxAbove = makeCtx();
+  spawnLabelPill('Гуна', 4, true, 5000, ctxAbove);
+  const ctxBelow = makeCtx();
+  spawnLabelPill('Элизия', 4, false, 5000, ctxBelow);
+  const xAbove = parseFloat(ctxAbove.created[0].style.left);
+  const xBelow = parseFloat(ctxBelow.created[0].style.left);
+  assert.ok(xBelow > xAbove, `below должна проецироваться правее above на том же слоте (${xBelow} > ${xAbove})`);
+});

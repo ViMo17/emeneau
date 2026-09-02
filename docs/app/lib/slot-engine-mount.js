@@ -506,19 +506,20 @@ function injectStylesOnce() {
     .slot-label-pill {
       position: absolute;
       font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 12px;
+      font-size: 18px; /* было 12px — по обратной связи «эффект почти не виден» */
       font-weight: 700;
       letter-spacing: .03em;
-      padding: 6px 15px;
+      padding: 9px 20px;
       border-radius: 999px;
-      background: rgba(58,62,72,.92);
-      color: rgba(232,228,216,.96);
-      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(58,62,72,.94);
+      color: rgba(238,234,222,.98);
+      border: 1.5px solid rgba(255,255,255,.28);
+      box-shadow: 0 0 0 rgba(255,255,255,0); /* стартовое значение для анимации свечения ниже */
       white-space: nowrap;
       pointer-events: none;
       transform: translate(-50%,-50%);
       animation-name: slot-label-fade, slot-label-breathe;
-      animation-duration: var(--label-dur), 1500ms;
+      animation-duration: var(--label-dur), 1400ms;
       animation-timing-function: ease-in-out, ease-in-out;
       animation-iteration-count: 1, infinite;
       animation-fill-mode: forwards, none;
@@ -529,9 +530,12 @@ function injectStylesOnce() {
       88%  { opacity: 1; }
       100% { opacity: 0; }
     }
+    /* Дыхание — заметно интенсивнее прежнего (было scale 1↔1.07, почти не
+       видно): масштаб 1↔1.18 + лёгкое свечение краёв в такт, тот же
+       период, что и раньше, просто амплитуда в разы больше. */
     @keyframes slot-label-breathe {
-      0%, 100% { transform: translate(-50%,-50%) scale(1); }
-      50%      { transform: translate(-50%,-50%) scale(1.07); }
+      0%, 100% { transform: translate(-50%,-50%) scale(1); box-shadow: 0 0 0 rgba(255,244,220,0); }
+      50%      { transform: translate(-50%,-50%) scale(1.18); box-shadow: 0 0 14px 2px rgba(255,244,220,.45); }
     }
     /* Рамка-подчёркивание под группой-нимиттой — нейтральный GROUP_COLOR,
        не фонетический; opacity управляется из JS покадрово
