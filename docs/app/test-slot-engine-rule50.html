@@ -6,12 +6,16 @@
 <style>
   html, body { height:100%; margin:0; background:#2A2D35; }
   #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
-  /* height выше, чем у остальных test-slot-engine-*.html (74vh/440px) —
-     rule50 единственный пример, где пилюли поднимаются до y=3.5 (0,5
-     кубика над верхом отстойника), при 440px это давало pixelY≈3
-     (почти у самого края кадра). Численно проверено (реальная камера/
-     project()): при 600px — pixelY≈83, комфортный запас. */
-  #anim-container { width:min(96vw,900px); height:min(80vh,600px); }
+  /* РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ: временно увеличенная высота (600px, ради
+     запаса для пилюль на y=3.5) меняла аспект камеры (computeFitFov)
+     настолько, что становился виден верхний край, откуда падают кубики
+     (FALL_START_Y=3.6, у ВСЕХ примеров калиброван «чуть выше видимого
+     края» именно для стандартного аспекта 900x440, не 900x600) — по
+     живой проверке пользователем. Возвращено к стандартной высоте
+     (та же, что у всех остальных test-slot-engine-*.html) — пример уже
+     интегрирован в приложение (EXAMPLES[50]), финальная проверка запаса
+     пилюль — там, на реальном контейнере `.eff-stage`, не здесь. */
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
   #anim-container canvas { display: block; width: 100%; height: 100%; }
   #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
     font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
