@@ -418,10 +418,15 @@ export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
 // «вверх = продолжается в новой форме», см. CLAUDE.md Часть 2), false —
 // под точкой (elide: «вниз = пропадает», тот же смысловой регистр, что и
 // у направления отстойника).
-/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx */
-export function spawnLabelPill(text, slotIndex, above, dur, ctx) {
+/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx @param {number} [yOverride] */
+export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride) {
   const { labelsEl } = ctx;
-  const y = (above ? 1 : -1) * CUBE_SIZE * 1.6; // «1-2 кубика» от ряда, см. запрос
+  // yOverride — для случаев, где кубик поднимается выше обычной высоты
+  // ряда (split, отстойник до y≈2.4) — фиксированная «1-2 кубика над
+  // рядом» проходила бы СКВОЗЬ восходящий кубик на середине подъёма
+  // (реальный найденный баг, rule50: держатель отстойника выше пилюли).
+  // Дефолт не меняется — только явная передача извне поднимает планку.
+  const y = yOverride ?? (above ? 1 : -1) * CUBE_SIZE * 1.6; // «1-2 кубика» от ряда, см. запрос
   // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (по скриншоту пользователя, rule15): elide
   // ВСЕГДА сползает вбок влево (holdOffset.x отрицательный, -0.45, во
   // всех примерах без исключения) — пилюля без горизонтального сдвига
@@ -1119,7 +1124,11 @@ export function applySplit(op, elapsed, ctx) {
       const arrivalsList = op.arrivals || [];
       const lastArrivalEnd = arrivalsList.length ? Math.max(...arrivalsList.map(a => a.delay + a.dur)) : 0;
       const compareReadyDur = Math.max(riseDur, lastArrivalEnd);
-      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx);
+      // Высота — выше верхней точки отстойника (holdOffset.y + примерно
+      // высота кубика с запасом), не универсальный дефолт «над рядом» —
+      // источник во время подъёма проходит через y=0..holdOffset.y,
+      // фиксированная низкая высота пилюли оказывалась бы у него на пути.
+      spawnLabelPill(op.label, op.at, true, compareReadyDur + holdDur + fadeDur, ctx, holdOffset.y + CUBE_SIZE);
     }
   }
 
