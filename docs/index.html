@@ -57,11 +57,41 @@
 
   .card.wide { grid-column: 1 / -1; }
 
+  .dot-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--sans); font-size: 13.5px; color: var(--ink-dim); margin-bottom: 22px; }
+  .dot-legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .dot-legend .dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+
+  /* ── Карта эффектов (слитая с effects-map.html) ── */
+  .axes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .axis-card { border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; background: var(--stage-2); }
+  .axis-card .k { font-family: var(--sans); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
+  .axis-card .v { font-size: 16.5px; line-height: 1.55; }
+  .swatch-legend { display: flex; flex-wrap: wrap; gap: 9px 20px; margin-top: 12px; }
+  .swatch-legend .item { display: flex; align-items: center; gap: 8px; font-family: var(--sans); font-size: 13.5px; color: var(--ink-dim); }
+  .swatch-legend .sw { width: 15px; height: 15px; border-radius: 4px; flex: none; }
+
+  .eff-row { display: grid; grid-template-columns: 52px 1fr; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .eff-row:last-child { border-bottom: none; }
+  .eff-swatch { width: 42px; height: 42px; border-radius: 10px; position: relative; box-shadow: inset 0 -2px 3px rgba(34,31,26,.16), inset 0 1px 1px rgba(255,255,255,.45); }
+  .eff-swatch::after { content: attr(data-glyph); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 600; font-size: 15px; color: rgba(34,31,26,.66); }
+  .eff-swatch.split { overflow: hidden; }
+  .eff-swatch.split .h2 { position: absolute; top: 0; right: 0; bottom: 0; width: 50%; }
+  .eff-term { font-family: var(--display); font-weight: 560; font-size: 20px; margin-bottom: 4px; }
+  .eff-term .dev { font-family: var(--dev); color: var(--ink-dim); font-size: 18px; margin-left: 4px; font-weight: 400; }
+  .eff-where { font-family: var(--sans); font-size: 13.5px; color: var(--ink-faint); margin-bottom: 12px; line-height: 1.55; }
+  .eff-steps { font-size: 15.5px; color: var(--ink); display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 11px; }
+  .eff-steps .step { background: var(--stage); border: 1px solid var(--line); border-radius: 20px; padding: 3px 13px; font-size: 14px; white-space: nowrap; }
+  .eff-steps .arr { color: var(--ink-faint); font-size: 13px; }
+  .eff-links { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 4px; }
+  .eff-links a { font-family: var(--sans); font-size: 13.5px; color: var(--accent); text-decoration: none; }
+  .eff-links a:hover { text-decoration: underline; }
+  .eff-links a.dim { color: var(--ink-faint); }
+
   footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 16px; color: var(--ink-faint); line-height: 1.7; }
   footer a { color: var(--accent); }
 
-  @media (max-width: 920px) { .grid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 35px; } body { font-size: 19px; } }
+  @media (max-width: 920px) { .grid { grid-template-columns: 1fr 1fr; } .axes { grid-template-columns: 1fr; } }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 35px; } body { font-size: 19px; } .eff-row { grid-template-columns: 40px 1fr; } }
 </style>
 </head>
 <body>
@@ -85,6 +115,16 @@
 
   <section>
     <div class="sec-head"><span class="sec-num">02</span><h2>Слот-движок · готовые примеры</h2><span style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-left:auto;">9 правил</span></div>
+    <div class="dot-legend">
+      <span><span class="dot" style="background:var(--c-stem)"></span>согласный/основа</span>
+      <span><span class="dot" style="background:var(--c-stem); opacity:.42"></span>выпадение (lopa)</span>
+      <span><span class="dot" style="background:var(--c-guna)"></span>гуна</span>
+      <span><span class="dot" style="background:var(--c-vrddhi)"></span>вриддхи</span>
+      <span><span class="dot" style="background:var(--c-weak)"></span>слабая ступень</span>
+      <span><span class="dot" style="background:var(--c-new)"></span>новый сегмент</span>
+      <span><span class="dot" style="background:var(--c-ending)"></span>граница/окончание</span>
+      <span style="color:var(--ink-faint);">— подробнее в разделе 04 ниже</span>
+    </div>
     <div class="grid">
       <a class="card" href="app/test-slot-engine.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
@@ -99,19 +139,19 @@
         <span class="status done">интегрировано · EXAMPLES[7]</span>
       </a>
       <a class="card" href="app/test-slot-engine-rule15.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-stem); opacity:.42"></span></div>
         <div class="t">śādhi <span class="dev">— правило 15</span></div>
         <div class="d">śās- «учить» + dhi → śādhi «учи!». Правило 15: конечный s основы подвергается элизии перед начальным dh окончания — без замены выпавшего звука.</div>
         <span class="status done">интегрировано · EXAMPLES[15]</span>
       </a>
       <a class="card" href="app/test-slot-engine-rule70.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-ending)"></span><span class="dot" style="background:var(--c-ending)"></span></div>
         <div class="t">taddhiraṇyam <span class="dev">— правила 70–71</span></div>
         <div class="d">tat + hiraṇyam «золото» → taddhiraṇyam «то золото». Цепочка из двух правил: h после t становится звонким придыхательным dh (70), затем t перед новым dh тоже озвончается — d (71).</div>
         <span class="status done">интегрировано · EXAMPLES[70]</span>
       </a>
       <a class="card" href="app/test-slot-engine-rule71.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-ending)"></span></div>
         <div class="t">vāk asti <span class="dev">— правило 71</span></div>
         <div class="d">vāk «речь» + asti «есть» → vāg asti. Внешнее сандхи: граница слов не схлопывается, k озвончается перед гласным a (k→g), окончание -k само не движется.</div>
         <span class="status done">интегрировано · EXAMPLES[71]</span>
@@ -123,13 +163,13 @@
         <span class="status done">интегрировано · EXAMPLES[42]</span>
       </a>
       <a class="card" href="app/test-slot-engine-rule55.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-new)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-stem); opacity:.42"></span></div>
         <div class="t">devās āsate <span class="dev">— правило 55</span></div>
         <div class="d">devās «боги» (им.п.мн.ч.) + āsate «сидят» → devā āsate «боги сидят». Внешнее сандхи: финальный -s исчезает перед звонким звуком на границе слов, граница не схлопывается.</div>
         <span class="status done">интегрировано · EXAMPLES[55]</span>
       </a>
       <a class="card wide" href="app/test-slot-engine-rule50.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-new)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-new)"></span><span class="dot" style="background:var(--c-ending)"></span></div>
         <div class="t">devo'sti <span class="dev">— правило 50, первое слияние разных звуков</span></div>
         <div class="d">devas «бог» + asti «есть» → devo'sti «бог есть». Окончание -as (два разных звука) сливается в o; отдельно от этого начальное a слова asti становится аваграхой.</div>
         <span class="status done">интегрировано · EXAMPLES[50]</span>
@@ -147,7 +187,7 @@
     <div class="sec-head"><span class="sec-num">03</span><h2>Слот-движок · в работе</h2></div>
     <div class="grid">
       <a class="card wide" href="app/test-slot-engine-rule1.html">
-        <div class="dot-row"><span class="dot" style="background:var(--c-vrddhi)"></span><span class="dot" style="background:var(--c-weak)"></span></div>
+        <div class="dot-row"><span class="dot" style="background:var(--c-vrddhi)"></span><span class="dot" style="background:var(--c-stem); opacity:.42"></span></div>
         <div class="t">devau <span class="dev">— правило 1, автоматическая постройка по номерам</span></div>
         <div class="d">deva- «бог» + au → devau «(оба) бога». a и au совместно заменяются одним результатом (Pāṇini 6.1.88, eka-ādeśa) — здесь он совпадает с au, предельной вриддхи-ступенью: a и au равнозначно пульсируют, затем одновременно a улетает вниз и au придвигается на её место.</div>
         <span class="status polish">тестовый полигон · не интегрировано</span>
@@ -156,19 +196,154 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов</h2></div>
-    <div class="grid">
-      <a class="card wide" href="effects/effects-map.html">
-        <div class="dot-row">
-          <span class="dot" style="background:var(--c-guna)"></span>
-          <span class="dot" style="background:var(--c-vrddhi)"></span>
-          <span class="dot" style="background:var(--c-weak)"></span>
-          <span class="dot" style="background:var(--c-new)"></span>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
+    <p class="lede" style="font-size:16px; margin-bottom:22px;">У Эмено правила даны единообразно, но за ними стоят разные операции Панини. Кодируем взаимодействие по двум независимым осям: цвет — тип затрагиваемого сегмента, движение — тип операции. Полный, построчно сверенный с Уитни/Панини реестр всех 71 правила — <code>docs/reference/interaction-registry.md</code> в репозитории; здесь — верхнеуровневая сводка по типам операций, не по номерам правил.</p>
+
+    <div class="axes">
+      <div class="axis-card">
+        <div class="k">Ось 1 — цвет</div>
+        <div class="v">Тип сегмента в событии — не абстрактная схема, а буквально те же тона, что и в самом слот-движке (серебро гунации, золото вриддхи).
+          <div class="swatch-legend">
+            <span class="item"><span class="sw" style="background:var(--c-stem)"></span>согласный/основа</span>
+            <span class="item"><span class="sw" style="background:var(--c-stem); opacity:.42"></span>выпадение (lopa)</span>
+            <span class="item"><span class="sw" style="background:var(--c-guna)"></span>гуна</span>
+            <span class="item"><span class="sw" style="background:var(--c-vrddhi)"></span>вриддхи</span>
+            <span class="item"><span class="sw" style="background:var(--c-weak)"></span>слабая ступень</span>
+            <span class="item"><span class="sw" style="background:var(--c-new)"></span>новый сегмент</span>
+            <span class="item"><span class="sw" style="background:var(--c-ending)"></span>граница/окончание</span>
+          </div>
         </div>
-        <div class="t">Взаимодействия कार्य <span class="dev">— полный перечень</span></div>
-        <div class="d">Полный перечень взаимодействий между буквами, встречающихся в упражнениях Эмено: цвет кодирует ступень гласного, движение — тип операции над сегментом. Статус реализации по каждой.</div>
-      </a>
+      </div>
+      <div class="axis-card">
+        <div class="k">Ось 2 — движение</div>
+        <div class="v">Тип операции: оборот на месте — замена звука; обратный оборот — ослабление; подъём в отстойник — распад/слияние; уход вниз — выпадение; отпочкование — геминация.</div>
+      </div>
     </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-guna)" data-glyph="e"></div>
+      <div>
+        <div class="eff-term">Гуна <span class="dev">गुण</span></div>
+        <div class="eff-where">Эмено 1–2, 6, 8, 10, 12, 24 · Pāṇini 6.1.87 ād guṇaḥ (+ 6.1.88 vṛddhir eci для «потолка», правило 1) · i→e, u→o, ṛ→ar</div>
+        <div class="eff-steps"><span class="step">серебрится</span><span class="arr">→</span><span class="step">оборот 360°</span><span class="arr">→</span><span class="step">гуна</span></div>
+        <span class="status done">реализовано на слот-движке</span>
+        <div class="eff-links">
+          <a href="app/test-slot-engine.html">→ agni-+as→agnayas (rule3, EXAMPLES[3])</a>
+          <a href="app/test-slot-engine-rule1.html">→ deva-+au→devau (rule1, «потолок» — eka-ādeśa)</a>
+          <a class="dim" href="effects/rule-guna-agnayas.html">→ старый прототип</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-vrddhi)" data-glyph="ai"></div>
+      <div>
+        <div class="eff-term">Вриддхи <span class="dev">वृद्धि</span></div>
+        <div class="eff-where">Эмено, правило 42 · Pāṇini 6.1.88 vṛddhir eci · e→ai (tatra+eti→tatraiti)</div>
+        <div class="eff-steps"><span class="step">волна-пульс + золотится</span><span class="arr">→</span><span class="step">оборот 720°</span><span class="arr">→</span><span class="step">искры золотом</span><span class="arr">→</span><span class="step">вриддхи (ai)</span></div>
+        <span class="status done">реализовано на слот-движке</span>
+        <div class="eff-links">
+          <a href="app/test-slot-engine-rule42.html">→ tatra-+eti→tatraiti (rule42, EXAMPLES[42]) — первая настоящая вриддхи</a>
+          <a class="dim" href="effects/rule-vriddhi-stauti.html">→ старый прототип, stu-+-ti→stauti (упр. 10)</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-weak)" data-glyph="i"></div>
+      <div>
+        <div class="eff-term">Слабая ступень · сампрасарана <span class="dev">सम्प्रसारण</span></div>
+        <div class="eff-where">Эмено, упр. 19 (корень 15) · Pāṇini 6.1.108 · yaj- + -tvā: ya → i</div>
+        <div class="eff-steps"><span class="step">волна-пульс + бледнеет</span><span class="arr">→</span><span class="step">обратный оборот</span><span class="arr">→</span><span class="step">слабая ступень (i)</span></div>
+        <span class="status done">реализовано (старый прототип)</span>
+        <div class="eff-links"><a class="dim" href="effects/rule-samprasarana-yaj-tvaa.html">→ демо: yaj- + -tvā → iṣṭvā</a></div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch split" style="background:var(--c-stem)" data-glyph="n"><div class="h2" style="background:var(--c-ending)"></div></div>
+      <div>
+        <div class="eff-term">Замена согласного · ассимиляция <span class="dev">आदेश</span></div>
+        <div class="eff-where">Эмено, правила 70–71 · ДВЕ разные операции Панини: озвончение внутри варги — jaśtva, Pāṇini 8.2.39 jhalāṃ jaśjhaśi (180°, к противолежащей грани варги); место-ассимиляция вне варги — Pāṇini 8.4.xx область (360°, точный номер сутры ещё не найден)</div>
+        <div class="eff-steps"><span class="step">волна-пульс + дрожь</span><span class="arr">→</span><span class="step">поворот 180°/360°</span><span class="arr">→</span><span class="step">перекрас в цвет соседа</span></div>
+        <span class="status done">реализовано на слот-движке (обе операции)</span>
+        <div class="eff-links">
+          <a href="app/test-slot-engine-rule70.html">→ tat+hiraṇyam→taddhiraṇyam (rule70/71, обе операции в цепочке)</a>
+          <a href="app/test-slot-engine-rule71.html">→ vāk+asti→vāgasti (rule71, jaśtva отдельно)</a>
+          <a class="dim" href="effects/rule-assimilation-varga-t-d.html">→ старый прототип, t→d</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-stem); opacity:.42" data-glyph="s"></div>
+      <div>
+        <div class="eff-term">Выпадение <span class="dev">लोप</span></div>
+        <div class="eff-where">Слот-движок: rule15 (śādhi), rule42 (quiet), rule50, rule55, rule61 — механика `elide` (бледнеет → уходит вниз, искры собственного цвета в момент угасания)</div>
+        <div class="eff-steps"><span class="step">бледнеет</span><span class="arr">→</span><span class="step">уходит вниз</span><span class="arr">→</span><span class="step">искры</span></div>
+        <span class="status done">реализовано (слот-движок)</span>
+        <div class="eff-links">
+          <a href="app/test-slot-engine-rule15.html">→ śās-+dhi→śādhi (rule15, EXAMPLES[15]) — «чистый» случай</a>
+          <a href="app/test-slot-engine-rule55.html">→ devās+āsate→devā āsate (rule55, EXAMPLES[55]) — внешняя граница слов</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-new)" data-glyph="nn"></div>
+      <div>
+        <div class="eff-term">Удвоение · редупликация <span class="dev">द्वित्व</span></div>
+        <div class="eff-where">Слот-движок rule61 (hasan+agacchat→hasannagacchat, n→nn) — операция `bud`, зеркало merge: источник вспыхивает и остаётся, клон появляется на его месте и едет отдельно. rule10/49 (ch→cch, Whitney §227/§227a со ссылкой на Pāṇini — точный номер сутры не найден) — тоже истинное удвоение, но с деаспирацией первой копии — нужен `bud` + отдельный шаг «придыхание перемещается» (Whitney §154), визуальная механика ещё не спроектирована</div>
+        <div class="eff-steps"><span class="step">отпочковывает копию вбок</span><span class="arr">+</span><span class="step">деаспирация (не спроектировано)</span></div>
+        <span class="status polish">частично — n→nn готово, ch→cch в проекте</span>
+        <div class="eff-links"><a href="app/test-slot-engine-rule61.html">→ hasan+agacchat→hasannagacchat (rule61, EXAMPLES[61])</a></div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-trigger)" data-glyph="a"></div>
+      <div>
+        <div class="eff-term">Аугмент <span class="dev">आगम</span></div>
+        <div class="eff-where">Эмено 23 (аорист a-), 10 (вставка -ī-) · Pāṇini 6.4.71, iṭ</div>
+        <div class="eff-steps"><span class="step">новый кубик вклинивается</span><span class="arr">→</span><span class="step">раздвигает соседей</span></div>
+        <span class="status plan">запланировано</span>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-stem)" data-glyph="ā"></div>
+      <div>
+        <div class="eff-term">Удлинение (одинаковых гласных) <span class="dev">दीर्घ</span></div>
+        <div class="eff-where">Эмено, правило 7 · Pāṇini 6.1.101 akaḥ savarṇe dīrghaḥ · a+a→ā (āsīt) — ОДИНАКОВЫЕ гласные сливаются в долгий; правила 17, 43 (компенсаторное удлинение при потере согласного) отдельно не построены</div>
+        <div class="eff-steps"><span class="step">едущий кубик</span><span class="arr">→</span><span class="step">вспышка в момент контакта</span><span class="arr">→</span><span class="step">долгий гласный</span></div>
+        <span class="status polish">частично — savarṇadīrgha готово (rule7), компенсаторное удлинение (17/43) — нет</span>
+        <div class="eff-links"><a href="app/test-slot-engine-rule7.html">→ a+as+īt→āsīt (rule7, EXAMPLES[7]) — механика `merge`</a></div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-new)" data-glyph="o"></div>
+      <div>
+        <div class="eff-term">Слияние (РАЗНЫХ гласных) <span class="dev">एकादेश</span></div>
+        <div class="eff-where">Эмено, правило 50 · Pāṇini 6.1.113 область (термин ещё не найден, НЕ savarṇadīrgha — та формула строго для ОДИНАКОВЫХ гласных, см. строку выше) · -as+a→o (devas+asti→devo'sti)</div>
+        <div class="eff-steps"><span class="step">оба источника поднимаются</span><span class="arr">→</span><span class="step">общий результат прилетает у одного</span></div>
+        <span class="status done">реализовано на слот-движке</span>
+        <div class="eff-links"><a href="app/test-slot-engine-rule50.html">→ devas+asti→devo'sti (rule50, EXAMPLES[50]) — первый пример слияния двух РАЗНЫХ звуков</a></div>
+      </div>
+    </div>
+
+    <div class="eff-row">
+      <div class="eff-swatch" style="background:var(--c-ending)" data-glyph="'"></div>
+      <div>
+        <div class="eff-term">Аваграха (замена видимым символом) <span class="dev">अवग्रह</span></div>
+        <div class="eff-where">Эмено, правило 50, W175a · начальное a слова asti — nimitta (причина слияния -as→o в соседнем слове, см. строку «Слияние» выше, ДРУГАЯ буква) — само отмечается знаком элизии: НЕ исчезает совсем, а становится ДРУГИМ видимым символом (не lopa/выпадение — сравни строку «Выпадение» выше)</div>
+        <div class="eff-steps"><span class="step">оборот 360°, нейтральная грань</span><span class="arr">→</span><span class="step">заменяется знаком '</span></div>
+        <span class="status done">реализовано на слот-движке</span>
+        <div class="eff-links"><a href="app/test-slot-engine-rule50.html">→ devas+asti→devo'sti (rule50, тот же пример, что «Слияние» выше)</a></div>
+      </div>
+    </div>
+
+    <p class="d" style="margin-top:22px; font-size:14px;"><b style="color:var(--ink);">Как читать статус.</b> «реализовано на слот-движке» — эффект собран и (кроме особо отмеченных случаев) интегрирован в приложение через <code>EXAMPLES[]</code>. «реализовано (старый прототип)» — только в замороженном прототипе (<code>docs/effects/*.html</code>), не на слот-движке. «частично» — какая-то часть операции построена, другая ждёт своего захода. «запланировано» — механика описана, но ещё не в коде.</p>
   </section>
 
   <section>
