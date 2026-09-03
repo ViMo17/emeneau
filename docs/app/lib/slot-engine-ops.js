@@ -116,7 +116,27 @@ export function applyTransform(op, elapsed, ctx) {
     const dur = op.dur ?? (landsOnOppositeFace ? 1800 : Math.abs(spinTurns) * MS_PER_360);
     const bounceH = op.bounceH ?? (landsOnOppositeFace ? 0.16 : 0.3);
     const clearance = op.clearance ?? 0.35; // боковой отъезд от соседа на время вращения
+    // homeX — мировая позиция, вокруг которой идёт вращение и куда кубик
+    // садится. По умолчанию slotX(op.at) (кубик крутится на своём слоте,
+    // как всегда) — op.atX нужен ТОЛЬКО когда кубик перед transform'ом
+    // физически переехал (например, слился с соседом посреди зазора через
+    // merge) и теперь стоит не там, куда указывает его slot-ключ в cubes{}
+    // (ключ не меняется от approach/merge — см. rule1, слияние a+au на
+    // общем зазоре).
+    const homeX = op.atX ?? slotX(op.at);
     const holdDur = op.holdDur ?? 700; // пауза-фиксация ПОСЛЕ посадки — общий дефолт, читает и label ниже, и блок приземления
+    // signalHoldDur — сигнальный цвет (серебро/золото/нейтраль) держится
+    // ЕЩЁ signalHoldDur ПОСЛЕ остановки вращения, прежде чем кубик
+    // перекрасится в истинный цвет столбца — раньше переключение было
+    // МГНОВЕННЫМ ровно в кадр посадки (t>=1), из-за чего сам факт «шла
+    // огласовка» читался только во время вращения, ни секундой дольше
+    // (прямая правка пользователя: «процесс гуна/вриддхи должен быть
+    // виден — окрашивание длится и после остановки, потом перекрашивается
+    // в цвет алфавита»). НЕ трогает позицию/вращение (те уже зафиксированы
+    // в момент посадки) — только момент возврата material=matsMain и,
+    // соответственно, момент op._done (holdDur теперь отсчитывается ПОСЛЕ
+    // signalHoldDur, не вместо него — общая пауза после посадки длиннее).
+    const signalHoldDur = op.signalHoldDur ?? 500;
 
     // transform получает ТУ ЖЕ симметричную пару пауз, что уже есть у split
     // (anticipateDur до, holdDur после) — почти каждый значимый шаг
@@ -198,7 +218,7 @@ export function applyTransform(op, elapsed, ctx) {
     // СЛЕДУЮЩЕМ кадре после самого приземления.
     if (!op._landed) {
       cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
-      cube.mesh.position.x = slotX(op.at) + Math.sin(t * Math.PI) * clearance;
+      cube.mesh.position.x = homeX + Math.sin(t * Math.PI) * clearance;
       cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
       // Золотая россыпь искр — только вриддхи (signal:'gold'), только пока
       // кубик активно крутится. Период (280мс) — примерно втрое чаще, чем
@@ -279,7 +299,7 @@ export function applyTransform(op, elapsed, ctx) {
       op._landed = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
-      cube.mesh.position.x = slotX(op.at);
+      cube.mesh.position.x = homeX;
       if (landsOnOppositeFace) {
         // matsMain/matsBlank/... пересобираются под новую букву ТОЛЬКО
         // теперь, после приземления — нужно для будущих операций на этом
@@ -287,23 +307,38 @@ export function applyTransform(op, elapsed, ctx) {
         // текущего разворота (тот уже полностью показан через _oppositeMats
         // выше). Временный набор граней уничтожается — иначе утечка
         // текстур, тот же класс бага, что уже был найден и исправлен для
-        // regenMats/lazily-собираемых наборов.
+        // regenMats/lazily-собираемых наборов. У landsOnOppositeFace НЕТ
+        // отдельной сигнальной фазы (весь разворот уже показан через
+        // _oppositeMats, не через matsSignal/matsGold) — signalHoldDur ей
+        // не подходит: material переключается на matsMain СРАЗУ, а
+        // _oppositeMats уничтожается тут же (не спустя signalHoldDur —
+        // иначе material ссылался бы на уже уничтоженный набор).
         regenMats(cube, op.toGlyph, op._pendingColor);
         disposeMatSet(cube._oppositeMats);
         cube._oppositeMats = null;
+        cube.mesh.material = cube.matsMain;
+        op._colorReverted = true; // блок signalHoldDur ниже её не касается
       }
-      cube.mesh.material = cube.matsMain; // возвращает себе истинный цвет столбца
+      // Для НЕ landsOnOppositeFace material НЕ возвращается к matsMain
+      // здесь — сигнальный цвет держится ещё signalHoldDur (см. блок
+      // ниже), позиция/вращение уже зафиксированы, менять больше нечего.
       op._rotationEnd = elapsed;
     }
-    // Пауза-фиксация: кубик уже полностью финализирован (см. выше), просто
-    // держится в этом состоянии ещё holdDur — op._done откладывается на
-    // это время, не срабатывает мгновенно в момент посадки. Даёт зрителю
-    // время увидеть результат, прежде чем следующий шаг/операция начнёт
-    // что-то ещё менять — тот же смысл, что у holdDur в split, просто без
-    // отдельной активности во время паузы (кубик и так уже в покое, не
-    // висит в отстойнике — покачивать нечего).
+    // Сигнальный цвет держится ЕЩЁ signalHoldDur после остановки вращения
+    // — ровно один раз переключается на истинный цвет столбца.
+    if (op._landed && !op._colorReverted && elapsed - op._rotationEnd >= signalHoldDur) {
+      op._colorReverted = true;
+      cube.mesh.material = cube.matsMain; // возвращает себе истинный цвет столбца
+    }
+    // Пауза-фиксация: кубик уже полностью финализирован (позиция/вращение
+    // с момента посадки, цвет — с момента signalHoldDur выше), держится в
+    // истинном цвете ещё holdDur — op._done откладывается на
+    // signalHoldDur+holdDur суммарно, не срабатывает мгновенно в момент
+    // посадки. Даёт зрителю время увидеть результат, прежде чем следующий
+    // шаг/операция начнёт что-то ещё менять — тот же смысл, что у holdDur
+    // в split, просто без отдельной активности во время паузы.
     if (op._landed) {
-      if (elapsed - op._rotationEnd >= holdDur) op._done = true;
+      if (elapsed - op._rotationEnd >= signalHoldDur + holdDur) op._done = true;
     }
 }
 
@@ -939,7 +974,14 @@ export function applyApproach(op, elapsed, ctx) {
   const retreatDur = retreat ? (op.retreatDur ?? 950) : 0; // было 700
   const distance = op.distance ?? 0.5;
   const jitterAmp = op.jitterAmp ?? 0.16;
-  const baseXs = slots.map(s => slotX(s));
+  // baseXs — стартовая позиция каждого мувера. По умолчанию slotX(slot)
+  // (мувер стоит на своём канонiчном слоте) — op.fromX (необязательный
+  // массив, тот же порядок, что и movers/slots) переопределяет её, когда
+  // мувер к этому моменту уже физически стоит НЕ на своём слоте (например,
+  // слился с соседом на общем зазоре через merge — ключ в cubes{} не
+  // меняется от merge/approach, см. rule1). Без fromX поведение не меняется
+  // ни на йоту — ни один существующий пример его не передаёт.
+  const baseXs = slots.map((s, i) => op.fromX?.[i] ?? slotX(s));
   const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
 
   // Если distance большая (закрыть исходный зазор И занять место
@@ -1315,8 +1357,19 @@ export function applyMerge(op, elapsed, ctx) {
   // кадр после слияния независимо от op._done — тот же класс бага, что и
   // выше (финализация и продолжающийся спад НЕ должны сидеть за одним и
   // тем же early-return, иначе масштаб застревает на пике навсегда).
-  if (op._pulsedAt != null) {
+  // НАЙДЕННЫЙ БАГ (численная симуляция, при подготовке rule1 — merge с
+  // ПОСЛЕДУЮЩИМ transform на том же кубике): без `_decayDone` этот блок
+  // продолжал ЛЕЗТЬ в `target.mesh.material.forEach` НАВСЕГДА, даже спустя
+  // много секунд после того, как спад уже полностью завершился (pt=1,
+  // clamp01 держит его там) — а к тому моменту последующий transform уже
+  // не раз переприсваивал `target.mesh.material` на временные/уничтоженные
+  // наборы (blank-стадия вриддхи), и обращение к ним падало. Одноразовый
+  // `_decayDone` останавливает блок РОВНО ОДИН РАЗ, когда спад уже
+  // применён и завершён — не мешает самому спаду (тот всё ещё видит каждый
+  // промежуточный кадр, кроме самого последнего лишнего).
+  if (op._pulsedAt != null && !op._decayDone) {
     const pt = clamp01((elapsed - op._pulsedAt) / 600);
+    if (pt >= 1) op._decayDone = true;
     const e = easeOutCubic(pt);
     target.mesh.scale.setScalar(lerp(1.35, 1, e));
     target.mesh.material.forEach(m => { m.emissiveIntensity = lerp(0.9, 0, e); });

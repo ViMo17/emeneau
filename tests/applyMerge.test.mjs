@@ -130,3 +130,20 @@ test('applyMerge: op.label — пилюля-подпись появляется 
   applyMerge(op, 500, ctx);
   assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
 });
+
+test('applyMerge: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule1, merge с последующим transform на том же кубике) — спад пика перестаёт трогать material после того, как сам полностью завершился, не лезет туда НАВСЕГДА', () => {
+  const cubes = { 1: makeMover(1), 3: makeTarget(3, 'a') };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'merge', from: 1, at: 3, toGlyph: 'ā', start: 0, dur: 500 };
+
+  applyMerge(op, 500, ctx); // слияние — спад начинается (op._pulsedAt=500)
+  applyMerge(op, 500 + 600, ctx); // ровно конец спада (600мс) — _decayDone должен выставиться
+
+  // Имитация того, что происходит в rule1: следующая операция (transform)
+  // на ТОМ ЖЕ кубике переприсваивает material на что-то, у чего нет
+  // forEach (например, временный blank-набор, а затем целиком снятая
+  // ссылка). Без `_decayDone` applyMerge на СЛЕДУЮЩЕМ кадре упал бы здесь
+  // — этот тест ловит именно эту регрессию, не гипотетическую.
+  cubes[3].mesh.material = undefined;
+  assert.doesNotThrow(() => applyMerge(op, 500 + 600 + 1000, ctx), 'спад больше не трогает material спустя много кадров после своего завершения');
+});

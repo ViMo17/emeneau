@@ -16,7 +16,7 @@ import { installCanvasStub } from './helpers/canvasStub.mjs';
 
 installCanvasStub();
 
-import { applyTransform, TRANSFORM_KIND, MS_PER_360, easeOutCubic } from '../docs/app/lib/slot-engine.js';
+import { applyTransform, TRANSFORM_KIND, MS_PER_360, easeOutCubic, slotX } from '../docs/app/lib/slot-engine.js';
 
 function makeCube(slot) {
   const mesh = new THREE.Object3D(); // достаточно для position/rotation/quaternion — не нужен настоящий Mesh с геометрией
@@ -99,7 +99,7 @@ test('applyTransform: категория vargaPair (k→g) — обе буквы
 
   applyTransform(op, activeStart + dur, ctx); // точно момент завершения вращения
   assert.equal(cubes[3].tr, 'g', 'к моменту приземления regenMats уже применён');
-  assert.equal(cubes[3].mesh.material, cubes[3].matsMain, 'по завершении вращения — истинный цвет (ссылка на актуальный matsMain)');
+  assert.equal(cubes[3].mesh.material, cubes[3].matsMain, 'landsOnOppositeFace — истинный цвет СРАЗУ по завершении, нет сигнальной фазы, signalHoldDur не применяется');
   assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот сброшен в 0 по завершении');
   assert.equal(cubes[3]._oppositeMats, null, 'временный набор граней уничтожен после приземления — не висит без ссылок');
   assert.equal(op._done, undefined, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: _done не должен выставляться сразу по завершении вращения — есть ещё пауза-фиксация (holdDur)');
@@ -118,7 +118,10 @@ test('applyTransform: категория vrddhi (u→au) — 720°, активн
 
   applyTransform(op, activeStart + dur, ctx); // точно момент приземления
   assert.equal(cubes[2].tr, 'au', 'к моменту приземления regenMats уже применён');
-  assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по завершении вращения — истинный цвет, не золото навсегда');
+  assert.equal(cubes[2].mesh.material, cubes[2].matsGold, 'по завершении вращения — цвет ЕЩЁ золотой (signalHoldDur), не истинный сразу');
+
+  applyTransform(op, activeStart + dur + 500, ctx); // signalHoldDur (дефолт 500) спустя посадку
+  assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по истечении signalHoldDur — истинный цвет, не золото навсегда');
 });
 
 test('applyTransform: op.dur переопределяет длительность ОБЫЧНОГО оборота (не только landsOnOppositeFace) — rule50, аваграха замедлена', () => {
@@ -133,7 +136,10 @@ test('applyTransform: op.dur переопределяет длительност
 
   applyTransform(op, activeStart + 3000, ctx); // точно момент кастомного приземления
   assert.equal(op._landed, true, 'на 3000мс (op.dur) — приземление наступило');
-  assert.equal(cubes[6].mesh.material, cubes[6].matsMain, 'истинный цвет по завершении');
+  assert.equal(cubes[6].mesh.material, cubes[6].matsBlank, 'signal:blank — материал ЕЩЁ matsBlank по завершении (signalHoldDur), не истинный сразу');
+
+  applyTransform(op, activeStart + 3000 + 500, ctx); // signalHoldDur (дефолт 500) спустя посадку
+  assert.equal(cubes[6].mesh.material, cubes[6].matsMain, 'по истечении signalHoldDur — истинный цвет по завершении');
 });
 
 // Точная позиционная схема по прямой раскладке пользователя: шаги по 90°
@@ -226,21 +232,40 @@ test('applyTransform: РЕГРЕССИЯ — поворот не откатыв�
   assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот остаётся нулевым на протяжении всей паузы-фиксации');
 });
 
-test('applyTransform: пауза-фиксация (holdDur) — _done выставляется РОВНО через holdDur после завершения вращения, не раньше', () => {
+test('applyTransform: пауза-фиксация (signalHoldDur+holdDur) — _done выставляется РОВНО через signalHoldDur+holdDur после завершения вращения, не раньше', () => {
   const cubes = { 4: makeCube(4) };
   const ctx = makeCtx(cubes);
   const op = { type: 'transform', at: 4, toGlyph: 'dh', start: 0, ...TRANSFORM_KIND.assimToNeighbor };
-  const anticipateDur = 900, dur = 1 * MS_PER_360, holdDur = 700; // все дефолты
+  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 500, holdDur = 700; // все дефолты
   const rotationEnd = anticipateDur + dur;
+  const totalHold = signalHoldDur + holdDur;
 
   applyTransform(op, rotationEnd, ctx); // момент завершения вращения
   assert.equal(op._done, undefined, 'сразу по завершении вращения — ещё не done, идёт пауза-фиксация');
 
-  applyTransform(op, rotationEnd + holdDur - 1, ctx); // за 1мс до конца паузы-фиксации
+  applyTransform(op, rotationEnd + totalHold - 1, ctx); // за 1мс до конца паузы-фиксации
   assert.equal(op._done, undefined, 'за 1мс до конца паузы-фиксации — всё ещё не done');
 
-  applyTransform(op, rotationEnd + holdDur, ctx); // ровно момент конца паузы
-  assert.equal(op._done, true, 'ровно по истечении holdDur после завершения вращения — done');
+  applyTransform(op, rotationEnd + totalHold, ctx); // ровно момент конца паузы
+  assert.equal(op._done, true, 'ровно по истечении signalHoldDur+holdDur после завершения вращения — done');
+});
+
+test('applyTransform: signalHoldDur — цвет остаётся сигнальным ЕЩЁ signalHoldDur после посадки, переключается на matsMain ровно один раз', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'dh', start: 0, ...TRANSFORM_KIND.assimToNeighbor };
+  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 500; // все дефолты
+  const rotationEnd = anticipateDur + dur;
+
+  applyTransform(op, rotationEnd, ctx); // момент посадки
+  const signalMat = cubes[4].mesh.material;
+  assert.notEqual(signalMat, cubes[4].matsMain, 'сразу по посадке материал ещё сигнальный, не matsMain');
+
+  applyTransform(op, rotationEnd + signalHoldDur - 1, ctx);
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsMain, 'за 1мс до конца signalHoldDur — всё ещё сигнальный');
+
+  applyTransform(op, rotationEnd + signalHoldDur, ctx);
+  assert.equal(cubes[4].mesh.material, cubes[4].matsMain, 'ровно по истечении signalHoldDur — переключился на matsMain');
 });
 
 test('applyTransform: несуществующий слот — тихо ничего не делает, не падает', () => {
@@ -332,4 +357,22 @@ test('applyTransform: без op.label — пилюль не создаётся �
   const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1 };
   applyTransform(op, 950, ctx);
   assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 0);
+});
+
+test('applyTransform: op.atX — вращается и садится в переопределённой мировой позиции, не в slotX(at) (rule1: кубик физически переехал ДО transform через merge на общий зазор)', () => {
+  const cubes = { 6: makeCube(6) };
+  const ctx = makeCtx(cubes);
+  const gapX = slotX(4); // кубик логически на слоте 6, но физически стоит на слоте 4 (общий зазор)
+  cubes[6].mesh.position.x = gapX;
+  const op = { type: 'transform', at: 6, atX: gapX, toGlyph: 'au', start: 0, spinTurns: 1, clearance: 0.35 };
+  const anticipateDur = 900;
+  const activeStart = anticipateDur;
+  const dur = 1 * MS_PER_360;
+
+  applyTransform(op, activeStart + dur * 0.25, ctx); // середина оборота, боковое раскачивание активно
+  assert.notEqual(cubes[6].mesh.position.x, slotX(6), 'НЕ раскачивается вокруг своего номинального слота (6)');
+  assert.ok(Math.abs(cubes[6].mesh.position.x - gapX) <= 0.35 + 1e-9, 'раскачивание — вокруг atX (зазора), с амплитудой не больше clearance');
+
+  applyTransform(op, activeStart + dur, ctx); // точно момент посадки
+  assert.equal(cubes[6].mesh.position.x, gapX, 'садится ровно в atX, не в slotX(at)');
 });

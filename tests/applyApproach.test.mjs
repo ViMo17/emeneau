@@ -166,3 +166,22 @@ test('applyApproach: holdPulse (заход 33/41) — непрерывная т�
   assert.equal(op._pulseOff, true, 'пульсация выключается ровно в момент выхода из паузы');
   assert.equal(cubes[1].mesh.material, cubes[1].matsMain, 'материал возвращается к истинному matsMain');
 });
+
+test('applyApproach: op.fromX — стартует от переопределённой позиции, не от slotX(slot) (rule1: мувер физически уже не на своём слоте после merge на общий зазор)', () => {
+  const cubes = { 6: makeCube(6) }; // ключ — слот 6, но физически кубик уже стоит на слоте 4 (общий зазор)
+  const gapX = slotX(4);
+  cubes[6].mesh.position.x = gapX;
+  const ctx = makeCtx(cubes);
+  const op = {
+    type: 'approach', mover: 6, target: 3, fromX: [gapX], start: 0,
+    approachDur: 1000, distance: 1.0, retreat: false, pulse: false,
+  };
+  const dir = Math.sign(slotX(3) - gapX);
+
+  applyApproach(op, 0, ctx);
+  assert.equal(cubes[6].mesh.position.x, gapX, 'на самом старте — ровно fromX, не slotX(6)');
+
+  applyApproach(op, 1000, ctx); // конец approachDur
+  assert.ok(Math.abs(cubes[6].mesh.position.x - (gapX + SLOT * 1.0 * dir)) < 1e-6, 'полная дистанция считается от fromX, не от slotX(6)');
+  assert.notEqual(cubes[6].mesh.position.x, slotX(6) + SLOT * 1.0 * dir, 'НЕ там, где оказался бы мувер, стартуя от своего номинального слота');
+});
