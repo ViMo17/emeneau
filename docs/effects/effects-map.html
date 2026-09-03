@@ -240,6 +240,7 @@
     <div class="eyebrow">Систематизация сандхи · грамматика Панини</div>
     <h1>Карта взаимодействий <span class="dev">— कार्य</span><br>из правил Панини в упражнениях Эмено</h1>
     <p class="lede">У Эмено правила даны единообразно, но за ними стоят <b>разные операции Панини</b>. Чтобы кубики не сливались в один жест, кодируем взаимодействие по двум независимым осям: <b>цвет</b> несёт ступень гласного, <b>движение</b> — тип операции.</p>
+    <p class="lede" style="margin-top:14px;"><b>Эта страница старше слот-движка</b> — задумана до `EXAMPLES[]`/`mountSlotExample`, статусы ниже не отражали слот-движковую работу до этой правки. Актуальный, живой реестр взаимодействий (все 71 правило, сверка с Уитни/Панини по каждому построенному примеру) — <code>docs/reference/interaction-registry.md</code> в репозитории, не эта страница; здесь — только верхнеуровневая сверка статусов.</p>
 
     <div class="axes">
       <div class="axis-card">
@@ -335,12 +336,13 @@
       <div class="swatch" style="background: var(--c-stem); opacity: 0.4" data-glyph="s"></div>
       <div class="body">
         <div class="term">Выпадение <span class="dev">लोप</span></div>
-        <div class="where">Эмено 14; правила 42, 52 · сброс носового (añj→akta), s между стопами</div>
+        <div class="where">Слот-движок: rule15 (śādhi), rule42 (quiet), rule50, rule55, rule61 — механика `elide` (бледнеет → уходит вниз, искры собственного цвета в момент угасания)</div>
         <div class="effect">
           <span class="step">бледнеет</span><span class="arr">→</span>
-          <span class="step">уходит вниз сквозь пол</span>
+          <span class="step">уходит вниз сквозь пол</span><span class="arr">→</span>
+          <span class="step">искры</span>
         </div>
-        <span class="tag plan">запланировано</span>
+        <span class="tag done">реализовано (слот-движок)</span>
       </div>
     </div>
 
@@ -348,12 +350,12 @@
       <div class="swatch" style="background: var(--c-stem)" data-glyph="da"></div>
       <div class="body">
         <div class="term">Удвоение · редупликация <span class="dev">द्वित्व</span></div>
-        <div class="where">Эмено 5, 9, 16–18, 21–23 · перфект, десидератив, интенсив; P. 6.1.1</div>
+        <div class="where">Слот-движок rule61 (hasan+agacchat→hasannagacchat, n→nn) — новая операция `bud`, зеркало merge: источник вспыхивает и остаётся, клон появляется на его месте и едет отдельно. Именно «отпочковывает копию вбок», как и задумано здесь изначально. rule10/49 (ch→cch, P. 6.1.1 область/Whitney §227) — ТОЖЕ истинное удвоение (не отдельная, не связанная замена букв, как ошибочно решено было раньше), но с деаспирацией первой копии — нужен `bud` + отдельный видимый шаг «придыхание перемещается со второй копии на первую» (см. Whitney §154, §227), визуальная механика этого шага ещё не спроектирована.</div>
         <div class="effect">
           <span class="step">отпочковывает копию вбок</span><span class="arr">+</span>
-          <span class="step">деаспирация / палатализация редупликанта</span>
+          <span class="step">деаспирация / перемещение придыхания (не спроектировано)</span>
         </div>
-        <span class="tag plan">запланировано</span>
+        <span class="tag partial">частично — n→nn готово, ch→cch в проекте</span>
       </div>
     </div>
 
