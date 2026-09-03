@@ -72,7 +72,16 @@ export const data = {
   ],
 
   steps: [
-    { kind: 'rule', ruleNum: 1, start: 2700, end: 14000, activeSlots: [START + 3, START + 4, START + 5], color: 0xAE987A, primary: true },
+    // end:11450 — ровно момент, когда финальный approach ниже завершается
+    // (10450+1000), не с искусственным запасом (было 14000 — держало
+    // притенённые d/e/v в приглушённом виде ещё ~2.5с ПОСЛЕ того, как
+    // devau уже физически собралось; прямая обратная связь по скриншоту
+    // «задержка на этом месте некрасиво»/«восстановление прозрачности
+    // сразу»). Волна проявления и settle по-прежнему считаются от этой
+    // точки СТАНДАРТНОЙ формулой (revealStagger/revealRamp/settleDelay),
+    // не сокращены отдельно — та же формула, что у всех остальных
+    // примеров, только без лишнего запаса перед ней.
+    { kind: 'rule', ruleNum: 1, start: 2700, end: 11450, activeSlots: [START + 3, START + 4, START + 5], color: 0xAE987A, primary: true },
   ],
 
   ops: [
@@ -113,17 +122,17 @@ export const data = {
     // slotX(START+5), куда указывает ключ au в cubes{}) — см. находку выше.
     { type: 'transform', at: START + 5, atX: slotX(START + 4), toGlyph: 'au', start: 6200, anticipateDur: 0, ...TRANSFORM_KIND.vrddhi, label: 'vṛddhi' },
 
-    // au закрывает оставшийся зазор до v — СТРОГО после посадки transform
-    // (t=1: 6200+4000=10200, anticipateDur:0 убрал 900мс из формулы) и
-    // после signalHoldDur (цвет уже вернулся в истинный, 10200+500=10700)
-    // — даёт зрителю увидеть готовый результат, прежде чем он тронется с
-    // места. fromX — au ФИЗИЧЕСКИ уже на зазоре (не на своём slotX(at)) —
-    // тот же найденный конфликт, что и у transform, только для approach
-    // (baseXs иначе вычислялся бы от slotX(START+5), откуда au давно
-    // уехала). distance:1.0 — от зазора (слот 5) до места a (слот 4).
-    { type: 'approach', movers: [START + 5], target: START + 3, fromX: [slotX(START + 4)], start: 10700, approachDur: 1000, distance: 1.0, retreat: false, pulse: false, jitterAmp: 0 },
+    // au закрывает оставшийся зазор до v — РОВНО в момент, когда цвет уже
+    // вернулся в истинный (10200+250=10450, signalHoldDur) — БЕЗ
+    // дополнительной паузы (была на 250мс позже, 10700, — прямая
+    // обратная связь по скриншоту: «задержка на этом месте некрасиво»).
+    // fromX — au ФИЗИЧЕСКИ уже на зазоре (не на своём slotX(at)) — тот же
+    // найденный конфликт, что и у transform, только для approach (baseXs
+    // иначе вычислялся бы от slotX(START+5), откуда au давно уехала).
+    // distance:1.0 — от зазора (слот 5) до места a (слот 4).
+    { type: 'approach', movers: [START + 5], target: START + 3, fromX: [slotX(START + 4)], start: 10450, approachDur: 1000, distance: 1.0, retreat: false, pulse: false, jitterAmp: 0 },
 
-    // settle не прописан — считается автоматически.
+    // settle не прописан — считается автоматически, от step.end ниже.
   ],
 };
 
