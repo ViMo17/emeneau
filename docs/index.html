@@ -4,54 +4,64 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>эмено · визуальная грамматика сандхи</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,440;9..144,560&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Tiro+Devanagari+Sanskrit&family=Work+Sans:wght@400;500;600&display=swap">
 <style>
+  /* «Рукописная бумага · индиго» — тёплая бумага, индиго как единственный
+     яркий акцент (исторический краситель южноазиатских тканей/переплётов),
+     куркума вторым тоном. Металлы гуны/вриддхи (серебро/золото) остаются
+     узнаваемыми поверх бумаги, не тускнеют. */
   :root {
-    --stage: #363A44; --stage-2: #3E434F;
-    --ink: #E8E4D8; --ink-dim: #A7A99F; --ink-faint: #6E7178;
-    --line: rgba(232,228,216,0.12); --line-strong: rgba(232,228,216,0.22);
-    --c-stem: #C0E898; --c-guna: #F5D547; --c-vrddhi: #F0A24E;
-    --c-weak: #EDE7DA; --c-new: #7DCFCA; --c-ending: #F0BF88; --c-trigger: #E0876F;
-    --serif: 'Georgia', 'Times New Roman', serif;
-    --sans: 'Helvetica Neue', Arial, sans-serif;
+    --stage: #F3EEE2; --stage-2: #E9E2D2;
+    --ink: #221F1A; --ink-dim: #6B655A; --ink-faint: #948C7C;
+    --line: rgba(34,31,26,0.13); --line-strong: rgba(34,31,26,0.24);
+    --c-stem: #5C7A52; --c-guna: #8A8D92; --c-vrddhi: #9A6B2E;
+    --c-weak: #B5AC98; --c-new: #2E7B74; --c-ending: #BE8A3E; --c-trigger: #B85A3E;
+    --accent: #2B3A6B;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --display: 'Fraunces', 'Source Serif 4', Georgia, serif;
+    --dev: 'Tiro Devanagari Sanskrit', 'Source Serif 4', serif;
+    --sans: 'Work Sans', 'Helvetica Neue', Arial, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--stage); color: var(--ink); font-family: var(--serif); line-height: 1.6; padding: 48px 20px 80px; }
-  .wrap { max-width: 860px; margin: 0 auto; }
+  body { background: var(--stage); color: var(--ink); font-family: var(--serif); line-height: 1.6; padding: 52px 24px 84px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
 
   .eyebrow { font-family: var(--sans); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px; }
-  h1 { font-size: 30px; font-weight: 400; line-height: 1.3; letter-spacing: -.01em; margin-bottom: 16px; }
-  h1 .dev { opacity: .75; font-size: 24px; }
-  .lede { font-size: 15.5px; color: var(--ink-dim); max-width: 620px; margin-bottom: 8px; }
-  .lede b { color: var(--ink); font-weight: 400; }
+  h1 { font-family: var(--display); font-weight: 560; font-size: 34px; line-height: 1.28; letter-spacing: -.01em; margin-bottom: 18px; text-wrap: balance; }
+  h1 .dev { font-family: var(--dev); opacity: .72; font-size: 27px; }
+  .lede { font-size: 15.5px; color: var(--ink-dim); max-width: 66ch; margin-bottom: 8px; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lede a { color: var(--accent); }
 
-  section { margin-top: 44px; }
-  .sec-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); margin-bottom: 18px; }
-  .sec-num { font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--ink-faint); letter-spacing: .1em; }
-  .sec-head h2 { font-size: 19px; font-weight: 400; }
+  section { margin-top: 46px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); margin-bottom: 20px; }
+  .sec-num { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--accent); letter-spacing: .1em; }
+  .sec-head h2 { font-family: var(--display); font-weight: 560; font-size: 20px; }
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .card {
     display: block; text-decoration: none; color: inherit;
-    border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
-    background: var(--stage-2); transition: transform .15s ease, border-color .15s ease;
+    border: 1px solid var(--line); border-radius: 12px; padding: 19px 21px;
+    background: var(--stage-2); transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
-  .card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+  .card:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: 0 8px 20px rgba(34,31,26,.08); }
   .card .dot-row { display: flex; gap: 5px; margin-bottom: 10px; }
   .card .dot { width: 9px; height: 9px; border-radius: 3px; }
-  .card .t { font-size: 16px; margin-bottom: 5px; }
-  .card .t .dev { color: var(--ink-dim); font-size: 15px; margin-left: 4px; }
-  .card .d { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
+  .card .t { font-family: var(--display); font-weight: 560; font-size: 16.5px; margin-bottom: 5px; }
+  .card .t .dev { font-family: var(--dev); font-weight: 400; color: var(--ink-dim); font-size: 15px; margin-left: 4px; }
+  .card .d { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); line-height: 1.55; }
   .card .status { display: inline-block; margin-top: 10px; font-family: var(--sans); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 9px; border-radius: 20px; }
-  .status.done { background: rgba(192,232,152,.12); color: var(--c-stem); border: 1px solid rgba(192,232,152,.28); }
-  .status.plan { background: rgba(167,169,159,.10); color: var(--ink-dim); border: 1px solid var(--line); }
-  .status.polish { background: rgba(240,162,78,.12); color: var(--c-vrddhi); border: 1px solid rgba(240,162,78,.28); }
+  .status.done { background: rgba(46,123,116,.10); color: var(--c-new); border: 1px solid rgba(46,123,116,.25); }
+  .status.plan { background: rgba(107,101,90,.10); color: var(--ink-dim); border: 1px solid var(--line); }
+  .status.polish { background: rgba(154,107,46,.12); color: var(--c-vrddhi); border: 1px solid rgba(154,107,46,.28); }
 
   .card.wide { grid-column: 1 / -1; }
 
-  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
-  footer a { color: var(--ink-dim); }
+  footer { margin-top: 58px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
+  footer a { color: var(--accent); }
 
-  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+  @media (max-width: 920px) { .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 26px; } }
 </style>
 </head>
 <body>
