@@ -185,3 +185,22 @@ test('applyApproach: op.fromX — стартует от переопределё
   assert.ok(Math.abs(cubes[6].mesh.position.x - (gapX + SLOT * 1.0 * dir)) < 1e-6, 'полная дистанция считается от fromX, не от slotX(6)');
   assert.notEqual(cubes[6].mesh.position.x, slotX(6) + SLOT * 1.0 * dir, 'НЕ там, где оказался бы мувер, стартуя от своего номинального слота');
 });
+
+test('applyApproach: op.blankAtProgress — буква на грани исчезает РОВНО один раз, как только сближение прошло заданную долю пути, не раньше', () => {
+  const cubes = { 1: makeCube(1) };
+  cubes[1].matsBlank = 'matsBlank';
+  const ctx = makeCtx(cubes);
+  const op = {
+    type: 'approach', mover: 1, target: 3, start: 0,
+    approachDur: 1000, distance: 1.0, retreat: false, pulse: false, blankAtProgress: 0.5,
+  };
+
+  applyApproach(op, 499, ctx);
+  assert.notEqual(cubes[1].mesh.material, cubes[1].matsBlank, 'за 1мс до половины пути — буква ещё видна');
+
+  applyApproach(op, 500, ctx);
+  assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'ровно на половине пути — буква уже исчезла');
+
+  applyApproach(op, 900, ctx); // сближение продолжается — не должно вернуть букву обратно
+  assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'остаётся пустой до конца approach, не мигает обратно');
+});

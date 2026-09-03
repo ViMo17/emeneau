@@ -78,13 +78,24 @@ export const data = {
   ops: [
     // Взаимное пульсирование — оба встречных influence с ОДИНАКОВЫМИ
     // параметрами (start/ringHoldDur) — синхронно, ни один не «главнее».
-    { type: 'influence', from: START + 3, to: START + 5, start: 2700, ringHoldDur: 4000 },
-    { type: 'influence', from: START + 5, to: START + 3, start: 2700, ringHoldDur: 4000 },
+    // ringHoldDur:2600 (не дольше) — сустейн-пульс должен погаснуть РОВНО
+    // к началу физического сближения (5300): найденный конфликт — пульс
+    // непрерывно перерисовывает переднюю грань (setFacePulse) КАЖДЫЙ
+    // кадр, и если он ещё активен к моменту blankAtProgress ниже, он тут
+    // же перетирает поставленный matsBlank обратно (тот же класс
+    // «перезапись material каждый кадр», что уже дважды находился в этой
+    // сессии — position.x у transform/approach, здесь то же самое, но
+    // material).
+    { type: 'influence', from: START + 3, to: START + 5, start: 2700, ringHoldDur: 2600 },
+    { type: 'influence', from: START + 5, to: START + 3, start: 2700, ringHoldDur: 2600 },
 
     // au сдвигается на зазор (слот 5) — дистанция 1.0 (половина исходных
     // 2), тот же старт/длительность, что и у слияния a ниже — оба
-    // прибывают ОДНОВРЕМЕННО.
-    { type: 'approach', movers: [START + 5], target: START + 4, start: 5300, approachDur: 900, distance: 1.0, retreat: false, pulse: false, jitterAmp: 0 },
+    // прибывают ОДНОВРЕМЕННО. blankAtProgress:0.5 — буква на грани
+    // исчезает, как только сближение прошло половину пути (прямой запрос
+    // пользователя: «как только кубики наполовину соприкоснулись,
+    // надписи должны исчезнуть», не ждать до самой посадки/вращения).
+    { type: 'approach', movers: [START + 5], target: START + 4, start: 5300, approachDur: 900, distance: 1.0, retreat: false, pulse: false, jitterAmp: 0, blankAtProgress: 0.5 },
 
     // a доезжает до au (merge) — au к этому моменту уже стоит на зазоре
     // (target.mesh.position.x читается динамически каждый кадр, поэтому a
@@ -92,7 +103,8 @@ export const data = {
     // тоже эффективно 1.0 слот, та же длительность. toGlyph:'au' — та же
     // буква, glyph не меняется здесь, замена случится позже, через
     // transform. label:'ekādeśa' — a равнозначный участник, не условие.
-    { type: 'merge', from: START + 3, at: START + 5, toGlyph: 'au', start: 5300, dur: 900, label: 'ekādeśa' },
+    // blankAtProgress:0.5 — тот же приём, что и у au выше.
+    { type: 'merge', from: START + 3, at: START + 5, toGlyph: 'au', start: 5300, dur: 900, label: 'ekādeśa', blankAtProgress: 0.5 },
 
     // Вриддхи — начинается СРАЗУ по завершении слияния (5300+900=6200),
     // без своей паузы-осознания (anticipateDur:0 — вспышка merge уже

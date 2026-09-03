@@ -120,7 +120,7 @@ test('applyTransform: категория vrddhi (u→au) — 720°, активн
   assert.equal(cubes[2].tr, 'au', 'к моменту приземления regenMats уже применён');
   assert.equal(cubes[2].mesh.material, cubes[2].matsGold, 'по завершении вращения — цвет ЕЩЁ золотой (signalHoldDur), не истинный сразу');
 
-  applyTransform(op, activeStart + dur + 500, ctx); // signalHoldDur (дефолт 500) спустя посадку
+  applyTransform(op, activeStart + dur + 250, ctx); // signalHoldDur (дефолт 250) спустя посадку
   assert.equal(cubes[2].mesh.material, cubes[2].matsMain, 'по истечении signalHoldDur — истинный цвет, не золото навсегда');
 });
 
@@ -138,7 +138,7 @@ test('applyTransform: op.dur переопределяет длительност
   assert.equal(op._landed, true, 'на 3000мс (op.dur) — приземление наступило');
   assert.equal(cubes[6].mesh.material, cubes[6].matsBlank, 'signal:blank — материал ЕЩЁ matsBlank по завершении (signalHoldDur), не истинный сразу');
 
-  applyTransform(op, activeStart + 3000 + 500, ctx); // signalHoldDur (дефолт 500) спустя посадку
+  applyTransform(op, activeStart + 3000 + 250, ctx); // signalHoldDur (дефолт 250) спустя посадку
   assert.equal(cubes[6].mesh.material, cubes[6].matsMain, 'по истечении signalHoldDur — истинный цвет по завершении');
 });
 
@@ -236,7 +236,7 @@ test('applyTransform: пауза-фиксация (signalHoldDur+holdDur) — _d
   const cubes = { 4: makeCube(4) };
   const ctx = makeCtx(cubes);
   const op = { type: 'transform', at: 4, toGlyph: 'dh', start: 0, ...TRANSFORM_KIND.assimToNeighbor };
-  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 500, holdDur = 700; // все дефолты
+  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 250, holdDur = 700; // все дефолты
   const rotationEnd = anticipateDur + dur;
   const totalHold = signalHoldDur + holdDur;
 
@@ -254,7 +254,7 @@ test('applyTransform: signalHoldDur — цвет остаётся сигналь
   const cubes = { 4: makeCube(4) };
   const ctx = makeCtx(cubes);
   const op = { type: 'transform', at: 4, toGlyph: 'dh', start: 0, ...TRANSFORM_KIND.assimToNeighbor };
-  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 500; // все дефолты
+  const anticipateDur = 900, dur = 1 * MS_PER_360, signalHoldDur = 250; // все дефолты
   const rotationEnd = anticipateDur + dur;
 
   applyTransform(op, rotationEnd, ctx); // момент посадки

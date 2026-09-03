@@ -136,7 +136,7 @@ export function applyTransform(op, elapsed, ctx) {
     // в момент посадки) — только момент возврата material=matsMain и,
     // соответственно, момент op._done (holdDur теперь отсчитывается ПОСЛЕ
     // signalHoldDur, не вместо него — общая пауза после посадки длиннее).
-    const signalHoldDur = op.signalHoldDur ?? 500;
+    const signalHoldDur = op.signalHoldDur ?? 250; // было 500 — по прямой обратной связи «долго»
 
     // transform получает ТУ ЖЕ симметричную пару пауз, что уже есть у split
     // (anticipateDur до, holdDur после) — почти каждый значимый шаг
@@ -1063,6 +1063,22 @@ export function applyApproach(op, elapsed, ctx) {
   const peakEnd = peakStart + holdDur;
   const retreatEnd = peakEnd + retreatDur;
 
+  // Буква на грани мувера исчезает, как только сближение прошло долю
+  // op.blankAtProgress (0..1) от approachDur — прямой запрос пользователя:
+  // «как только кубики наполовину соприкоснулись, надписи должны
+  // исчезнуть», не ждать до самой посадки/слияния. Переключается РОВНО
+  // один раз (op._blanked), на matsBlank (тот же приём, что и везде для
+  // «кубик виден, буквы нет» — TRANSFORM_KIND.vargaPair/assimToNeighbor,
+  // rule50 avagraha). Необязательное поле — ни один существующий пример
+  // его не передаёт, поведение остальных approach не меняется.
+  if (op.blankAtProgress != null && !op._blanked && elapsed >= op.start) {
+    const approachProgress = clamp01((elapsed - op.start) / approachDur);
+    if (approachProgress >= op.blankAtProgress) {
+      op._blanked = true;
+      movers.forEach(m => { m.mesh.material = m.matsBlank; });
+    }
+  }
+
   if (elapsed < op.start || elapsed > retreatEnd) {
     if (elapsed > retreatEnd) {
       // retreat:false — остаёмся у цели (shift), а не возвращаемся домой (0)
@@ -1333,6 +1349,14 @@ export function applyMerge(op, elapsed, ctx) {
     const toX = target.mesh.position.x;
     mover.mesh.position.x = lerp(slotX(op.from), toX, te);
     mover.shadow.position.x = mover.mesh.position.x;
+    // Буква на грани мувера исчезает на полпути к цели — тот же приём и
+    // то же обоснование, что и у approach (см. applyApproach) — «кубики
+    // наполовину соприкоснулись» относится и к полёту мувера здесь, не
+    // только к approach-сближению до него.
+    if (op.blankAtProgress != null && !op._blanked && t >= op.blankAtProgress) {
+      op._blanked = true;
+      mover.mesh.material = mover.matsBlank;
+    }
     if (t >= 1) {
       op._done = true;
       mover.mesh.visible = false;

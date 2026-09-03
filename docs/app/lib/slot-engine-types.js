@@ -94,6 +94,8 @@
  * @property {SlotRef} [movers]
  * @property {SlotRef} [mover] - movers ИЛИ mover, не оба обязательны
  * @property {number[]} [fromX] - переопределение стартовой мировой позиции по мувер-индексу (тот же порядок, что movers/slots) — нужно, когда мувер уже физически не на своём слоте (например, после merge на общем зазоре); по умолчанию slotX(slot)
+ * @property {number} [blankAtProgress] - доля approachDur (0..1), по достижении которой буква на грани мувера(ов) исчезает (matsBlank) — «кубики наполовину соприкоснулись»
+ * @property {boolean} [_blanked]
  * @property {number} target
  * @property {number} start
  * @property {number} [approachDur]
@@ -125,7 +127,7 @@
  * @property {'silver'|'gold'|'blank'} [signal]
  * @property {number} [clearance] - боковое раскачивание, знак = направление к пустому месту
  * @property {number} [anticipateDur] - пауза-осознание до вращения
- * @property {number} [signalHoldDur] - сигнальный цвет (серебро/золото/нейтраль) держится ЕЩЁ это время после остановки вращения, прежде чем перекраситься в истинный цвет; дефолт 500
+ * @property {number} [signalHoldDur] - сигнальный цвет (серебро/золото/нейтраль) держится ЕЩЁ это время после остановки вращения, прежде чем перекраситься в истинный цвет; дефолт 250
  * @property {number} [holdDur] - пауза-фиксация ПОСЛЕ signalHoldDur (в истинном цвете) — op._done срабатывает через signalHoldDur+holdDur после посадки
  * @property {number} [dur] - переопределение длительности вращения (мс), для ЛЮБОГО spinTurns (не только landsOnOppositeFace); дефолт без переопределения — 1800 при landsOnOppositeFace, иначе spinTurns×MS_PER_360
  * @property {number} [bounceH]
@@ -184,9 +186,11 @@
  * @property {number} [pulseHoldMs]
  * @property {number} [toColor]
  * @property {string} [label] - текст плавающей пилюли-подписи над целью (см. spawnLabelPill), например "Слияние"
+ * @property {number} [blankAtProgress] - доля dur (0..1), по достижении которой буква на грани мувера исчезает (matsBlank) — «кубики наполовину соприкоснулись»
  * @property {boolean} [_done]
  * @property {number} [_pulsedAt]
  * @property {boolean} [_decayDone]
+ * @property {boolean} [_blanked]
  * @property {boolean} [_labelSpawned]
  */
 

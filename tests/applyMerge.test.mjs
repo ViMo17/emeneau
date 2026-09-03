@@ -147,3 +147,19 @@ test('applyMerge: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule1, merge с п
   cubes[3].mesh.material = undefined;
   assert.doesNotThrow(() => applyMerge(op, 500 + 600 + 1000, ctx), 'спад больше не трогает material спустя много кадров после своего завершения');
 });
+
+test('applyMerge: op.blankAtProgress — буква мувера исчезает РОВНО один раз на заданной доле полёта, не раньше', () => {
+  const cubes = { 1: makeMover(1), 3: makeTarget(3, 'a') };
+  cubes[1].matsBlank = 'matsBlank';
+  const ctx = makeCtx(cubes);
+  const op = { type: 'merge', from: 1, at: 3, toGlyph: 'ā', start: 0, dur: 1000, blankAtProgress: 0.5 };
+
+  applyMerge(op, 499, ctx);
+  assert.notEqual(cubes[1].mesh.material, cubes[1].matsBlank, 'за 1мс до половины полёта — буква ещё видна');
+
+  applyMerge(op, 500, ctx);
+  assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'ровно на половине полёта — буква уже исчезла');
+
+  applyMerge(op, 900, ctx);
+  assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'остаётся пустой до самого слияния, не мигает обратно');
+});
