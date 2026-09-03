@@ -376,3 +376,32 @@ test('applyTransform: op.atX — вращается и садится в пер�
   applyTransform(op, activeStart + dur, ctx); // точно момент посадки
   assert.equal(cubes[6].mesh.position.x, gapX, 'садится ровно в atX, не в slotX(at)');
 });
+
+test('applyTransform: op.clearanceZ — выдвигает кубик на зрителя во время вращения (пик на середине, 0 на старте/посадке) — rule2: сосед вплотную, без зазора', () => {
+  const cubes = { 5: makeCube(5) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 5, toGlyph: 'e', start: 0, spinTurns: 1, clearanceZ: 0.3 };
+  const anticipateDur = 900;
+  const activeStart = anticipateDur;
+  const dur = 1 * MS_PER_360;
+
+  applyTransform(op, activeStart, ctx); // старт активной фазы
+  assert.equal(cubes[5].mesh.position.z, 0, 'на старте вращения — z=0, ещё не выдвинут');
+
+  applyTransform(op, activeStart + dur * 0.5, ctx); // середина вращения — пик
+  assert.ok(Math.abs(cubes[5].mesh.position.z - 0.3) < 1e-9, 'на середине вращения — z ровно на пике clearanceZ');
+
+  applyTransform(op, activeStart + dur, ctx); // посадка
+  assert.equal(cubes[5].mesh.position.z, 0, 'по завершении вращения — z сброшен обратно в 0');
+});
+
+test('applyTransform: без op.clearanceZ — z всегда 0 (дефолт, поведение всех существующих примеров не меняется)', () => {
+  const cubes = { 5: makeCube(5) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 5, toGlyph: 'e', start: 0, spinTurns: 1 };
+  const activeStart = 900;
+  const dur = 1 * MS_PER_360;
+
+  applyTransform(op, activeStart + dur * 0.5, ctx);
+  assert.equal(cubes[5].mesh.position.z, 0, 'без clearanceZ — z не трогается вообще');
+});

@@ -163,3 +163,25 @@ test('applyMerge: op.blankAtProgress — буква мувера исчезае�
   applyMerge(op, 900, ctx);
   assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'остаётся пустой до самого слияния, не мигает обратно');
 });
+
+test('applyMerge: op.labelY/labelX — переопределяют позицию пилюли (rule1: разводит пилюли ekādeśa/vṛddhi, чтобы не сливались в одну)', () => {
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+
+  function run(labelY, labelX) {
+    const cubes = { 1: makeMover(1), 3: makeTarget(3, 'a') };
+    const labelsCalls = [];
+    const ctx = {
+      cubes, camera,
+      stageEl: { clientWidth: 900, clientHeight: 440 },
+      labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+    };
+    const op = { type: 'merge', from: 1, at: 3, toGlyph: 'ā', start: 0, dur: 500, label: 'ekādeśa', labelY, labelX };
+    applyMerge(op, 0, ctx);
+    return labelsCalls.find(el => el.className === 'slot-label-pill');
+  }
+
+  const defaultPill = run(undefined, undefined);
+  const loweredPill = run(0.88, undefined);
+  assert.notEqual(loweredPill.style.top, defaultPill.style.top, 'labelY реально сдвигает пилюлю по вертикали — иначе две пилюли одного шага слипаются в одну');
+});

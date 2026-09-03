@@ -66,27 +66,54 @@ export const data = {
   ],
 
   steps: [
-    { kind: 'rule', ruleNum: 2, start: 2700, end: 10500, activeSlots: [START + 3, START + 4, START + 5, START + 6], color: 0xAE987A, primary: true },
+    // T (START+6) НЕ в activeSlots — она не участник самой гунации (a+ī→e),
+    // просто рядом стоящее окончание; притенена, пока не тронется с места
+    // (прямая обратная связь: «Т не становится прозрачным»).
+    { kind: 'rule', ruleNum: 2, start: 2700, end: 9550, activeSlots: [START + 3, START + 4, START + 5], color: 0xAE987A, primary: true },
   ],
 
   ops: [
     // Взаимное пульсирование — a и ī равнозначны, ни один не «главнее».
-    { type: 'influence', from: START + 3, to: START + 5, start: 2700, ringHoldDur: 4000 },
-    { type: 'influence', from: START + 5, to: START + 3, start: 2700, ringHoldDur: 4000 },
+    // ringHoldDur:2600 (не 4000) — сустейн-пульс должен погаснуть С
+    // ЗАПАСОМ до начала активной фазы transform (activeStart=6200):
+    // найден тот же конфликт, что уже был у rule1 — непрерывная
+    // перерисовка грани (setFacePulse) КАЖДЫЙ кадр перетирает серебряный
+    // сигнал, пока окно ringHoldDur ещё открыто (прямая обратная связь:
+    // «гунирование не красится в серебро» — вот почему). ВТОРАЯ, более
+    // тонкая находка: если ringHoldDur заканчивается РОВНО в activeStart
+    // (пробовала 3500 → конец 6200), момент «выключения» пульса
+    // (setFacePulse(null) → material=matsMain) срабатывает на СЛЕДУЮЩЕМ
+    // кадре ПОСЛЕ activeStart и перетирает уже поставленный transform'ом
+    // matsSignal обратно — конфликт на стыке, не только при полном
+    // перекрытии окон. Запас (2600, кончается на 5300 — старте самого
+    // transform, ДО его 900мс паузы-осознания) устраняет обе причины
+    // разом.
+    { type: 'influence', from: START + 3, to: START + 5, start: 2700, ringHoldDur: 2600 },
+    { type: 'influence', from: START + 5, to: START + 3, start: 2700, ringHoldDur: 2600 },
 
-    // ī → e, дефолтная гуна (spinTurns:1, серебро), НА МЕСТЕ.
-    { type: 'transform', at: START + 5, toGlyph: 'e', start: 5300, spinTurns: 1, label: 'guṇa' },
+    // ī → e, дефолтная гуна (spinTurns:1, серебро), НА МЕСТЕ. clearanceZ —
+    // ī и t падают СЛИТНО, без зазора (см. выше) — на диагональных углах
+    // вращения куб иначе физически проходил бы сквозь текстуру t (прямая
+    // обратная связь: «гунирование при поворотах проходит через текстуру
+    // кубика Т» — реальная геометрия, не иллюзия: угол вращающегося куба
+    // на 45° дальше от центра, чем грань в покое, а зазор между ī и t
+    // меньше этой разницы). Выдвигаем на зрителя на время вращения.
+    { type: 'transform', at: START + 5, toGlyph: 'e', start: 5300, spinTurns: 1, clearanceZ: 0.3, label: 'guṇa' },
 
     // a поглощается — драматичный elide (это и есть содержание правила),
     // label:'ekādeśa'.
     { type: 'elide', at: START + 3, start: 6500, quiet: true, label: 'ekādeśa' },
 
     // e и t сближаются с основой ВМЕСТЕ, одним approach на два мувера —
-    // они и так уже слитны друг с другом, движутся единым куском.
-    // Старт строго после посадки transform (t=1, 5300+900+2000=8200).
-    { type: 'approach', movers: [START + 5, START + 6], target: START + 3, start: 8300, approachDur: 1100, distance: 2.0, retreat: false, pulse: false, jitterAmp: 0 },
+    // они и так уже слитны друг с другом, движутся единым куском. Старт —
+    // РОВНО момент возврата истинного цвета (8200 посадка + 250
+    // signalHoldDur = 8450), без зазора (тот же принцип, что и в rule1 —
+    // «после снятия серебра и проявления цвета буквы сразу»).
+    { type: 'approach', movers: [START + 5, START + 6], target: START + 3, start: 8450, approachDur: 1100, distance: 2.0, retreat: false, pulse: false, jitterAmp: 0 },
 
-    // settle не прописан — считается автоматически.
+    // settle не прописан — считается автоматически, от step.end ниже
+    // (плотно, без искусственного запаса — 8450+1100=9550, ровно момент
+    // завершения approach).
   ],
 };
 

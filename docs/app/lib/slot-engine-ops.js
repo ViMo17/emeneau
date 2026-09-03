@@ -219,6 +219,18 @@ export function applyTransform(op, elapsed, ctx) {
     if (!op._landed) {
       cube.mesh.position.y = Math.sin(t * Math.PI) * bounceH;
       cube.mesh.position.x = homeX + Math.sin(t * Math.PI) * clearance;
+      // clearanceZ — выдвижение НА ЗРИТЕЛЯ (+Z) на время вращения, тот же
+      // колокол sin(t·π), что и bounceH/clearance (0 в начале/конце, пик
+      // на середине). НАЙДЕННЫЙ РЕАЛЬНЫЙ БАГ (rule2, живая проверка): при
+      // соседе ВПЛОТНУЮ (без зазора — см. «ī и t падают слитно») угловая
+      // точка вращающегося куба на диагональных углах (~45°/135°) реально
+      // дальше от центра (CUBE_SIZE·√2/2), чем его же грань в состоянии
+      // покоя (CUBE_SIZE/2) — при зазоре меньше этой разницы (СУЩЕСТВЕННО
+      // меньше SLOT-CUBE_SIZE) угол физически проходит СКВОЗЬ текстуру
+      // соседа. Раздвигание по X (clearance) не спасает — сосед стоит по
+      // ДРУГУЮ сторону, чем куда качается X. Дефолт 0 — ни один
+      // существующий пример его не передаёт, поведение не меняется.
+      cube.mesh.position.z = Math.sin(t * Math.PI) * (op.clearanceZ ?? 0);
       cube.mesh.rotation.y = -1 * easeOutCubic(t) * Math.PI * 2 * spinTurns;
       // Золотая россыпь искр — только вриддхи (signal:'gold'), только пока
       // кубик активно крутится. Период (280мс) — примерно втрое чаще, чем
@@ -299,6 +311,7 @@ export function applyTransform(op, elapsed, ctx) {
       op._landed = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;
+      cube.mesh.position.z = 0;
       cube.mesh.position.x = homeX;
       if (landsOnOppositeFace) {
         // matsMain/matsBlank/... пересобираются под новую букву ТОЛЬКО
@@ -1342,7 +1355,7 @@ export function applyMerge(op, elapsed, ctx) {
     // весь путь мувера плюс спад вспышки-удара после (600мс, см. ниже).
     if (op.label && !op._labelSpawned) {
       op._labelSpawned = true;
-      spawnLabelPill(op.label, op.at, true, dur + 600, ctx);
+      spawnLabelPill(op.label, op.at, true, dur + 600, ctx, op.labelY, op.labelX);
     }
     const t = clamp01((elapsed - op.start) / dur);
     const te = easeInOutCubic(t);

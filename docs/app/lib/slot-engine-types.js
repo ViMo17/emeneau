@@ -125,7 +125,8 @@
  * @property {number} [atX] - мировая позиция вращения/посадки, если кубик физически переехал ДО transform (например, слился с соседом на общем зазоре через merge) — по умолчанию slotX(at)
  * @property {number} [spinTurns] - 0.5=180° парная замена, 1=360° гуна/ассимиляция, 2=720° вриддхи (см. TRANSFORM_KIND)
  * @property {'silver'|'gold'|'blank'} [signal]
- * @property {number} [clearance] - боковое раскачивание, знак = направление к пустому месту
+ * @property {number} [clearance] - боковое раскачивание (X), знак = направление к пустому месту
+ * @property {number} [clearanceZ] - выдвижение на зрителя (+Z) во время вращения, тот же колокол sin(t·π), что и clearance/bounceH — нужно, когда сосед стоит ВПЛОТНУЮ (без зазора), чтобы диагональные углы вращающегося куба физически не проходили сквозь его текстуру; дефолт 0
  * @property {number} [anticipateDur] - пауза-осознание до вращения
  * @property {number} [signalHoldDur] - сигнальный цвет (серебро/золото/нейтраль) держится ЕЩЁ это время после остановки вращения, прежде чем перекраситься в истинный цвет; дефолт 250
  * @property {number} [holdDur] - пауза-фиксация ПОСЛЕ signalHoldDur (в истинном цвете) — op._done срабатывает через signalHoldDur+holdDur после посадки
@@ -186,6 +187,8 @@
  * @property {number} [pulseHoldMs]
  * @property {number} [toColor]
  * @property {string} [label] - текст плавающей пилюли-подписи над целью (см. spawnLabelPill), например "Слияние"
+ * @property {number} [labelY] - переопределение высоты пилюли — нужно, когда в одном шаге есть ДРУГОЕ событие со своей пилюлью, чтобы обе читались раздельно, не сливались в одну (см. rule1: merge ekādeśa + следующий transform vṛddhi)
+ * @property {number} [labelX]
  * @property {number} [blankAtProgress] - доля dur (0..1), по достижении которой буква на грани мувера исчезает (matsBlank) — «кубики наполовину соприкоснулись»
  * @property {boolean} [_done]
  * @property {number} [_pulsedAt]
