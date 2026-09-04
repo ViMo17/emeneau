@@ -178,8 +178,11 @@ export function applyTransform(op, elapsed, ctx) {
       // op.labelY — то же необязательное переопределение высоты, что и у
       // SplitOp (см. applySplit) — нужно, когда два события одного шага
       // (rule50: этот transform + соседний split) должны читаться как ОДИН
-      // уровень, а не как два вразнобой, одна выше другой.
-      if (op.label) spawnLabelPill(op.label, op.at, true, dur, ctx, op.labelY);
+      // уровень, а не как два вразнобой, одна выше другой. xWorldOverride —
+      // homeX (та же, что использует само вращение/посадка), не slotX(at) —
+      // если кубик уже физически переехал до transform'а (см. atX), пилюля
+      // должна висеть НАД НИМ, не над его номинальным слотом-ключом.
+      if (op.label) spawnLabelPill(op.label, op.at, true, dur, ctx, op.labelY, undefined, homeX);
     }
 
     // matsSignal (серебро) — не единственный вариант промежуточной фазы:
@@ -479,8 +482,8 @@ export function spawnSparkleBurst(atVec3, ctx, count = 200, rgbStr) {
 // «вверх = продолжается в новой форме», см. CLAUDE.md Часть 2), false —
 // под точкой (elide: «вниз = пропадает», тот же смысловой регистр, что и
 // у направления отстойника).
-/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx @param {number} [yOverride] @param {number} [xOverride] */
-export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride, xOverride) {
+/** @param {string} text @param {number} slotIndex @param {boolean} above @param {number} dur @param {Ctx} ctx @param {number} [yOverride] @param {number} [xOverride] @param {number} [xWorldOverride] */
+export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride, xOverride, xWorldOverride) {
   const { labelsEl } = ctx;
   // yOverride — для случаев, где кубик поднимается выше обычной высоты
   // ряда (split, отстойник до y≈2.4) — фиксированная «1-2 кубика над
@@ -502,7 +505,17 @@ export function spawnLabelPill(text, slotIndex, above, dur, ctx, yOverride, xOve
   // уменьшает его, т.к. траектория прилёта математически монотонна и
   // никогда не заходит левее целевого слота).
   const x = xOverride ?? (above ? 0 : CUBE_SIZE * 0.9);
-  const p = project(new THREE.Vector3(slotX(slotIndex) + x, y, 0), ctx);
+  // xWorldOverride — АБСОЛЮТНАЯ мировая X-позиция, заменяющая slotX(slotIndex)+x
+  // целиком (не складывается с ним). НАЙДЕННЫЙ РЕАЛЬНЫЙ БАГ (rule2, живая
+  // проверка, скриншот пользователя: «пилюли не на одной линии»): merge/
+  // transform привязывают пилюлю к slotX(op.at) — НОМИНАЛЬНОМУ слоту-ключу
+  // кубика в cubes{}, а не к его ФАКТИЧЕСКОЙ текущей позиции — если кубик
+  // уже физически переехал (approach на общий зазор ДО merge/transform, см.
+  // atX/fromX), пилюля повисает НАД СТАРЫМ местом (в rule2 — буквально над
+  // соседним кубиком t), не над самим событием. Абсолютная мировая X — та
+  // же цель, что и atX у transform, просто для DOM-оверлея пилюли.
+  const worldX = xWorldOverride ?? (slotX(slotIndex) + x);
+  const p = project(new THREE.Vector3(worldX, y, 0), ctx);
   const el = document.createElement('div');
   el.className = 'slot-label-pill';
   el.textContent = text;
@@ -864,7 +877,16 @@ export function applyInfluence(op, elapsed, ctx) {
   // одного (настоящая группа-нимитта, см. GROUP_COLOR выше); для одиночной
   // буквы-источника прежнее поведение сохранено — тонировка в её
   // собственный фонетический цвет (там нечего объединять, один кубик).
-  const ringRgb = sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr));
+  // op.ringRgb — явное переопределение (строка "R,G,B"): нужно для
+  // ВЗАИМНОЙ пары РАВНОЗНАЧНЫХ участников (два встречных influence, каждый
+  // с ОДНИМ источником) — без override каждая сторона тонируется в СВОЙ
+  // фонетический цвет (a≠au/ī), и хотя тайминг у обеих РОВНО одинаковый
+  // (общий elapsed на кадр, доказано по коду), разный цвет читается как
+  // «не согласовано, не одно событие» (прямая обратная связь: «не
+  // синхронизированы кольца пульсации»). Общий ringRgb на обеих сторонах
+  // пары — визуально «одно дышащее целое», как уже сделано для настоящих
+  // групп >1 источников.
+  const ringRgb = op.ringRgb ?? (sources.length > 1 ? GROUP_RGB : ringColorFrom(colorFor(sources[0].tr)));
   // Каждый источник группы пульсирует кольцом В СВОЕЙ ЖЕ ГРАНИ (текстурная
   // пульсация, не отдельные DOM-вспышки по таймеру — единый язык с
   // approach.holdPulse), синхронно — одна и та же формула cyclePos на всех
@@ -1353,9 +1375,21 @@ export function applyMerge(op, elapsed, ctx) {
     const dur = op.dur ?? 1400;
     // Пилюля-подпись — НАД целью (merge = «продолжается в новой форме»), на
     // весь путь мувера плюс спад вспышки-удара после (600мс, см. ниже).
+    // xWorldOverride — ЖИВАЯ target.mesh.position.x, не slotX(op.at): цель
+    // сама может быть УЖЕ физически переехавшей до merge (собственный
+    // approach на общий зазор, см. rule1/rule2) — пилюля должна висеть НАД
+    // ней там, где она реально стоит, не над номинальным слотом-ключом.
+    // НО только когда op.labelX НЕ передан явно — если target's approach
+    // стартует в ТОТ ЖЕ elapsed, что и сам merge (обычный случай), на
+    // первом кадре target ЕЩЁ не сдвинулась (te=0), и «живая» позиция
+    // совпадает со СТАРЫМ местом — ложное срабатывание найдено численно
+    // (rule1/rule2: пилюля всё равно висела не там). Явный op.labelX
+    // (относительное смещение от slotX(op.at), например slotX(зазора) −
+    // slotX(op.at)) должен ПОБЕЖДАТЬ автоматику, не наоборот.
     if (op.label && !op._labelSpawned) {
       op._labelSpawned = true;
-      spawnLabelPill(op.label, op.at, true, dur + 600, ctx, op.labelY, op.labelX);
+      const liveX = op.labelX != null ? undefined : target.mesh.position.x;
+      spawnLabelPill(op.label, op.at, true, dur + 600, ctx, op.labelY, op.labelX, liveX);
     }
     const t = clamp01((elapsed - op.start) / dur);
     const te = easeInOutCubic(t);

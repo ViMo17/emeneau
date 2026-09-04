@@ -184,3 +184,23 @@ test('applyInfluence: непрерывная текстурная пульсац
   applyInfluence(op, 2100, ctx); // за пределами ringHoldDur
   assert.equal(cubes[1].mesh.material, cubes[1].matsMain, 'по истечении ringHoldDur — возврат к истинному matsMain (та же ссылка)');
 });
+
+test('applyInfluence: op.ringRgb — переопределяет цвет кольца на грани источника (rule1/rule2: общий тон на обе стороны взаимной пары, не свой фонетический цвет у каждой)', () => {
+  const cubes = { 1: makeCube(1), 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'influence', from: 1, to: 3, start: 0, waveCount: 1, waveTravel: 50, ringHoldDur: 2000, ringRgb: '160,160,160' };
+
+  applyInfluence(op, 500, ctx);
+  const strokeStyle = cubes[1]._pulseFace.canvas.getContext('2d').strokeStyle;
+  assert.match(strokeStyle, /160,160,160/, 'кольцо рисуется явно переданным ringRgb, не собственным фонетическим цветом источника');
+});
+
+test('applyInfluence: без op.ringRgb — прежнее поведение (собственный фонетический цвет единственного источника), ни один существующий пример не сломан', () => {
+  const cubes = { 1: makeCube(1), 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'influence', from: 1, to: 3, start: 0, waveCount: 1, waveTravel: 50, ringHoldDur: 2000 };
+
+  applyInfluence(op, 500, ctx);
+  const strokeStyle = cubes[1]._pulseFace.canvas.getContext('2d').strokeStyle;
+  assert.doesNotMatch(strokeStyle, /160,160,160/, 'без переопределения ringRgb остаётся собственным (не тем магическим тестовым значением)');
+});

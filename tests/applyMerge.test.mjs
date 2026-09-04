@@ -185,3 +185,35 @@ test('applyMerge: op.labelY/labelX — переопределяют позици
   const loweredPill = run(0.88, undefined);
   assert.notEqual(loweredPill.style.top, defaultPill.style.top, 'labelY реально сдвигает пилюлю по вертикали — иначе две пилюли одного шага слипаются в одну');
 });
+
+test('applyMerge: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule1/rule2, живая проверка: «пилюли не на одной линии») — явный op.labelX побеждает автоматическую «живую позицию» цели, когда та ещё не успела сдвинуться на том же кадре', () => {
+  const camera = new THREE.PerspectiveCamera(32, 900 / 440, 0.1, 100);
+  camera.position.set(0, 3.2, 9.5); camera.lookAt(0, 0.4, 0); camera.updateMatrixWorld();
+
+  function run(targetX, labelX) {
+    const cubes = { 1: makeMover(1), 3: makeTarget(3, 'a') };
+    cubes[3].mesh.position.x = targetX; // имитация: target уже физически на другом месте
+    const labelsCalls = [];
+    const ctx = {
+      cubes, camera,
+      stageEl: { clientWidth: 900, clientHeight: 440 },
+      labelsEl: { appendChild(el) { labelsCalls.push(el); } },
+    };
+    const op = { type: 'merge', from: 1, at: 3, toGlyph: 'ā', start: 0, dur: 500, label: 'ekādeśa', labelX };
+    applyMerge(op, 0, ctx);
+    return labelsCalls.find(el => el.className === 'slot-label-pill');
+  }
+
+  // target СЕЙЧАС физически на x=1.8 (не на своём номинальном слоте 3).
+  // Без явного labelX — пилюля следует за ЖИВОЙ позицией (x=1.8).
+  const liveTracking = run(1.8, undefined);
+  // С явным labelX — пилюля игнорирует живую позицию цели полностью,
+  // всегда та же самая (относительно slotX(at)), независимо от того, где
+  // цель физически стоит В ЭТОТ КОНКРЕТНЫЙ момент (нужно, когда target и
+  // merge стартуют в один elapsed — на первом кадре target ещё te=0, не
+  // сдвинулась, «живая» позиция ложно совпала бы со старым местом).
+  const explicitA = run(1.8, -1.2);
+  const explicitB = run(3.0, -1.2); // РАЗНАЯ живая позиция цели...
+  assert.equal(explicitA.style.left, explicitB.style.left, 'с явным labelX результат НЕ зависит от текущей живой позиции цели вообще');
+  assert.notEqual(liveTracking.style.left, explicitA.style.left, 'без labelX и с labelX — разные пути вычисления, сравнение осмысленно (не тождественны случайно)');
+});

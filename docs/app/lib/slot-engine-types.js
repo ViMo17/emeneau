@@ -80,6 +80,7 @@
  * @property {number} start
  * @property {number} [ringHoldDur]
  * @property {number} [ringPulsePeriod]
+ * @property {string} [ringRgb] - явное переопределение цвета кольца, строка "R,G,B" (см. ringColorFrom/GROUP_RGB) — по умолчанию: GROUP_RGB при нескольких источниках, иначе собственный фонетический цвет единственного источника; используется, чтобы дать ОБЩИЙ цвет ДВУМ встречным influence одной равнозначной пары (иначе разный цвет читается как несогласованность, хотя тайминг общий)
  * @property {number} [waveCount]
  * @property {number} [waveGap]
  * @property {number} [waveTravel]
