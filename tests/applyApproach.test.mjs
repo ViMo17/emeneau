@@ -204,3 +204,27 @@ test('applyApproach: op.blankAtProgress — буква на грани исче�
   applyApproach(op, 900, ctx); // сближение продолжается — не должно вернуть букву обратно
   assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'остаётся пустой до конца approach, не мигает обратно');
 });
+
+test('applyApproach: blankAtProgress на ДВУХ отдельных однослотовых op — гаснет только тот мувер, чей op его задал, второй (тот же timing/target, но без поля) остаётся видимым (rule2, найденный баг: общий многомуверный op гасил ВСЕХ разом)', () => {
+  const cubes = { 1: makeCube(1), 2: makeCube(2) };
+  cubes[1].matsBlank = 'matsBlank1';
+  cubes[2].matsBlank = 'matsBlank2';
+  const ctx = makeCtx(cubes);
+  const opBlank = {
+    type: 'approach', mover: 1, target: 4, start: 0,
+    approachDur: 1000, distance: 1.0, retreat: false, pulse: false, blankAtProgress: 0.5,
+  };
+  const opPlain = {
+    type: 'approach', mover: 2, target: 4, start: 0,
+    approachDur: 1000, distance: 1.0, retreat: false, pulse: false,
+  };
+
+  applyApproach(opBlank, 500, ctx);
+  applyApproach(opPlain, 500, ctx);
+  assert.equal(cubes[1].mesh.material, cubes[1].matsBlank, 'мувер с blankAtProgress — погас на середине пути');
+  assert.notEqual(cubes[2].mesh.material, cubes[2].matsBlank, 'сосед БЕЗ blankAtProgress в том же кадре — буква видна');
+
+  applyApproach(opBlank, 1000, ctx);
+  applyApproach(opPlain, 1000, ctx);
+  assert.notEqual(cubes[2].mesh.material, cubes[2].matsBlank, 'до конца собственного approach — сосед без флага так и не гаснет');
+});
