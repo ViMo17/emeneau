@@ -201,6 +201,7 @@ EXAMPLES[32] = [
 ];
 EXAMPLES[2] = [{
   desc: 'bhava- «быть» + -ī- (суффикс opt.) + -t (окончание 3 sg.) → bhavet «был бы»',
+  module: './examples/rule2-bhavet-slots.js',
   roleDemo: { steps: [
     { tag: '2', type: 'grade', source: 'ī', trigger: 'a', result: 'e',
       gunaCells: ['gc-weak-i', 'gc-guna-i'],

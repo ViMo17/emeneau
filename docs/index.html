@@ -100,21 +100,21 @@
   <div class="eyebrow">Систематизация санскритской грамматики</div>
   <h1>M.B. Emeneau <span class="dev">— सन्धि</span><br>сандхи Эмено как визуальная грамматика</h1>
   <p class="lede">Учебное приложение и набор изолированных 3D-демонстраций, показывающих операции сандхи из «Sanskrit Sandhi and Exercises» М. Б. Эмено, Б.А. ван Нотен (1968) — сборнику практических правил и упражнений по освоению фонетических принципов санскрита. Меловые кубики, WebGL/Three.js, без сборки — каждый файл открывается прямо в браузере.</p>
-  <p class="lede"><b>Текущее состояние:</b> 64 из 71 правила кликабельны в приложении (подсветка источник/триггер/результат); 11 правил — полноценная 3D-анимация на слот-движке (10 интегрировано, 1 на тестовом полигоне) — раздел 02 ниже. Сверка формулировок с Уитни и Панини идёт по каждому новому правилу — сутры указаны в карточках и в <a href="effects/effects-map.html" style="color:var(--ink-dim);">карте эффектов</a>.</p>
+  <p class="lede"><b>Текущее состояние:</b> 64 из 71 правила кликабельны в приложении (подсветка источник/триггер/результат); 11 правил — полноценная 3D-анимация на слот-движке, все интегрированы — раздел 02 ниже. Сверка формулировок с Уитни и Панини идёт по каждому новому правилу — сутры указаны в карточках и в <a href="effects/effects-map.html" style="color:var(--ink-dim);">карте эффектов</a>.</p>
 
   <section>
     <div class="sec-head"><span class="sec-num">01</span><h2>Приложение</h2></div>
     <div class="grid">
       <a class="card wide" href="app/sanskrit-sandhi-app.html">
         <div class="t">Сандхи Эмено <span class="dev">— тренажёр</span></div>
-        <div class="d">71 правило внешнего и внутреннего сандхи. 64 из 71 — кликабельная подсветка источник/триггер/результат прямо на алфавитной панели, таблица гуна/вриддхи. 10 правил — полноценная 3D-анимация (слот-движок, ниже) уже интегрированы прямо здесь.</div>
+        <div class="d">71 правило внешнего и внутреннего сандхи. 64 из 71 — кликабельная подсветка источник/триггер/результат прямо на алфавитной панели, таблица гуна/вриддхи. 11 правил — полноценная 3D-анимация (слот-движок, ниже) уже интегрированы прямо здесь.</div>
         <span class="status done">основной файл</span>
       </a>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">02</span><h2>Слот-движок · готовые примеры</h2><span style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-left:auto;">10 правил</span></div>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Слот-движок · готовые примеры</h2><span style="font-family:var(--sans); font-size:11px; color:var(--ink-faint); margin-left:auto;">11 правил</span></div>
     <div class="dot-legend">
       <span><span class="dot" style="background:var(--c-stem)"></span>согласный/основа</span>
       <span><span class="dot" style="background:var(--c-stem); opacity:.42"></span>выпадение (lopa)</span>
@@ -123,7 +123,7 @@
       <span><span class="dot" style="background:var(--c-weak)"></span>слабая ступень</span>
       <span><span class="dot" style="background:var(--c-new)"></span>новый сегмент</span>
       <span><span class="dot" style="background:var(--c-ending)"></span>граница/окончание</span>
-      <span style="color:var(--ink-faint);">— подробнее в разделе 04 ниже</span>
+      <span style="color:var(--ink-faint);">— подробнее в разделе 03 ниже</span>
     </div>
     <div class="grid">
       <a class="card" href="app/test-slot-engine.html">
@@ -186,23 +186,17 @@
         <div class="d">hasan «смеющийся» + agacchat «шёл» → hasannagacchat «шёл смеясь». После краткого гласного конечный n удваивается перед следующим гласным — новая операция движка `bud` («отпочкование», зеркало merge).</div>
         <span class="status done">интегрировано · EXAMPLES[61]</span>
       </a>
-    </div>
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="sec-num">03</span><h2>Слот-движок · в работе</h2></div>
-    <div class="grid">
       <a class="card wide" href="app/test-slot-engine-rule2.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-stem); opacity:.42"></span></div>
-        <div class="t">bhavet <span class="dev">— правило 2</span></div>
+        <div class="t">bhavet <span class="dev">— правило 2, второе eka-ādeśa через слияние</span></div>
         <div class="d">bhava- «быть» + -ī- (показатель оптатива) + -t (оконч. 3 sg.) → bhavet «был бы». Тот же eka-ādeśa, что у правила 1: a и ī физически сдвигаются навстречу друг другу и сливаются (merge), затем ī реально гунируется в e (transform, серебро); t падает слитно с ī, движется вместе с ней.</div>
-        <span class="status polish">тестовый полигон · не интегрировано</span>
+        <span class="status done">интегрировано · EXAMPLES[2]</span>
       </a>
     </div>
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
     <p class="lede" style="font-size:16px; margin-bottom:22px;">У Эмено правила даны единообразно, но за ними стоят разные операции Панини. Кодируем взаимодействие по двум независимым осям: цвет — тип затрагиваемого сегмента, движение — тип операции. Полный, построчно сверенный с Уитни/Панини реестр всех 71 правила — <code>docs/reference/interaction-registry.md</code> в репозитории; здесь — верхнеуровневая сводка по типам операций, не по номерам правил.</p>
 
     <div class="axes">
@@ -353,7 +347,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">05</span><h2>Эффекты</h2></div>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Эффекты</h2></div>
     <div class="grid">
       <a class="card" href="effects/rule-guna-agnayas.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
@@ -401,7 +395,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">06</span><h2>Материалы</h2></div>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Материалы</h2></div>
     <div class="grid">
       <a class="card wide" href="reference/chalk-material-study.html">
         <div class="t">Меловой куб <span class="dev">— материаловедческий этюд</span></div>
@@ -411,7 +405,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">07</span><h2>Инструменты разработки</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Инструменты разработки</h2></div>
     <p class="lede" style="margin-bottom:16px;">Не витрина — рабочие полигоны и диагностика для дальнейшей разработки слот-движка. Ссылки раньше жили отдельной панелью внутри приложения, теперь собраны здесь.</p>
     <div class="grid">
       <a class="card" href="app/test-slot-engine-agnayas-generated.html" target="_blank">
