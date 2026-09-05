@@ -138,7 +138,16 @@ export const data = {
     // сыграла эту роль, вторая пауза подряд читалась бы как заминка, не
     // нарастание). atX — мировая позиция зазора (слот START+4, НЕ
     // slotX(START+5), куда указывает ключ au в cubes{}) — см. находку выше.
-    { type: 'transform', at: START + 5, atX: slotX(START + 4), toGlyph: 'au', start: 6200, anticipateDur: 0, ...TRANSFORM_KIND.vrddhi, label: 'vṛddhi' },
+    // startBlank:true — та же находка, что и в rule2 («перед вращением на
+    // серебристой грани опять появляется буква»): au уже погашена
+    // (blankAtProgress на своём approach), но merge на последнем кадре
+    // пересобирает matsMain/matsGold заново с буквой при завершении —
+    // без startBlank сигнальная (золотая) фаза на мгновение «оживляла» бы
+    // уже спрятанную au ещё до начала оборота. Здесь эффект был менее
+    // заметен, чем в rule2 (toGlyph у merge и transform совпадают — 'au'
+    // не меняется), но тот же класс бага — правка перенесена сюда для
+    // единообразия. См. общий разбор в applyTransform (slot-engine-ops.js).
+    { type: 'transform', at: START + 5, atX: slotX(START + 4), toGlyph: 'au', start: 6200, anticipateDur: 0, startBlank: true, ...TRANSFORM_KIND.vrddhi, label: 'vṛddhi' },
 
     // au закрывает оставшийся зазор до v — РОВНО в момент, когда цвет уже
     // вернулся в истинный (10200+250=10450, signalHoldDur) — БЕЗ

@@ -136,12 +136,13 @@
  * @property {number} [toColor]
  * @property {string} [label] - текст плавающей пилюли-подписи над кубиком на время активного вращения (см. spawnLabelPill), например "guṇa"/"vṛddhi"/"jaśtva" (строчными, ИАСТ — см. реестр CLAUDE.md)
  * @property {number} [labelY] - переопределение высоты пилюли (мировые координаты) — нужно, когда несколько событий одного шага должны читаться на одном уровне, см. rule50
+ * @property {boolean} [startBlank] - кубик уже погашен (matsBlank) ДО начала вращения предшествующим approach/merge с blankAtProgress — сигнальная фаза начинает СРАЗУ с пустой грани (тот же временный набор, что и штатная disappear-стадия), не перерисовывает старую букву; дефолт false, см. rule1/rule2
  * @property {boolean} [_done]
  * @property {boolean} [_pulse0]
  * @property {boolean} [_pulse1]
  * @property {boolean} [_anticipateDone]
  * @property {boolean} [_began]
- * @property {boolean} [_disappeared] - старая буква сменилась на пустую грань (только при multi-turn, см. applyTransform)
+ * @property {boolean} [_disappeared] - старая буква сменилась на пустую грань (multi-turn, ИЛИ сразу при startBlank, см. applyTransform)
  * @property {boolean} [_revealed]
  * @property {boolean} [_landed]
  * @property {boolean} [_colorReverted]

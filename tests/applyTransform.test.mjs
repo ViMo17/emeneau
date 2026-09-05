@@ -209,6 +209,37 @@ test('applyTransform: вриддхи (2 оборота) — буква гасн�
   assert.equal(cubes[4].mesh.material, cubes[4].matsGold, 'материал — реальный matsGold с новым глифом, не временный');
 });
 
+test('applyTransform: op.startBlank — сигнальная фаза начинается СРАЗУ с пустой грани, старая буква НЕ показывается заново (rule1/rule2, найденный баг: «перед вращением на серебристой грани опять появляется буква», предшествующий approach/merge уже погасил её через blankAtProgress)', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1, signal: 'silver', startBlank: true };
+  const activeStart = 900;
+
+  applyTransform(op, activeStart + 1, ctx); // самый первый кадр активной фазы, до какого-либо вращения
+  assert.equal(cubes[4].tr, 'k', 'глиф ещё не сменился (regenMats не вызывался)');
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsSignal, 'материал НЕ полноценный matsSignal со старой буквой');
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsMain, 'и не matsMain со старой буквой');
+  assert.equal(op._disappeared, true, 'сразу считается "уже погашенным" — обычная disappear-стадия не нужна повторно');
+
+  const dur = 1 * MS_PER_360;
+  const revealT = tForDeg(1, 180);
+  const revealElapsed = activeStart + revealT * dur;
+  applyTransform(op, revealElapsed + 15, ctx);
+  assert.equal(cubes[4].tr, 'e', 'reveal по-прежнему срабатывает штатно, на той же позиции (180°)');
+  assert.equal(cubes[4].mesh.material, cubes[4].matsSignal, 'после reveal — полноценный сигнальный материал с новым глифом');
+});
+
+test('applyTransform: без op.startBlank (дефолт false) — поведение НЕ меняется, старая буква видна с самого начала активной фазы, как раньше', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'e', start: 0, spinTurns: 1, signal: 'silver' };
+  const activeStart = 900;
+
+  applyTransform(op, activeStart + 1, ctx);
+  assert.equal(cubes[4].mesh.material, cubes[4].matsSignal, 'материал сразу полноценный matsSignal (со старой буквой) — регрессии нет');
+  assert.equal(op._disappeared, undefined, 'обычная disappear-стадия НЕ предвосхищается заранее');
+});
+
 test('applyTransform: РЕГРЕССИЯ — поворот не откатывается назад на кадрах ПОСЛЕ приземления (найдено численной симуляцией)', () => {
   // Реальный найденный баг: rotation.y пересчитывался БЕЗУСЛОВНО на каждом
   // кадре по формуле -1×easeOutCubic(t)×2π×spinTurns, где t зажат в 1

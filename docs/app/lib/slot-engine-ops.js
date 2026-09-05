@@ -206,6 +206,36 @@ export function applyTransform(op, elapsed, ctx) {
         cube._oppositeMats = buildOpposingFaceMaterials(cube.color, cube.seed + 5, cube.tr, op.toGlyph);
         cube.mesh.material = cube._oppositeMats;
         op._pendingColor = newColor; // нужен после приземления, см. ниже
+      } else if (op.startBlank) {
+        // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule2, живая проверка: «перед вращением
+        // на серебристой грани опять появляется И»). По умолчанию сигнальная
+        // фаза красит грань ТЕКУЩЕЙ буквой кубика (matsSignal/matsGold лениво
+        // пересобираются через defineMatsSlot, используя cube.tr на момент
+        // первого обращения) — верно для обычного transform (agnayas), где
+        // старая буква ДОЛЖНА быть видна первую половину оборота. Но если
+        // кубик уже был явно погашен ДО этого transform (approach/merge с
+        // blankAtProgress — механика rule1/rule2, «буквы исчезают на
+        // полпути сближения»), merge на своём последнем кадре ВСЁ РАВНО
+        // пересобирает matsMain с буквой при завершении (сам момент
+        // слияния — самостоятельное, обязательное событие), и он же
+        // сбрасывает лениво собранные matsSignal/matsGold (regenMats) —
+        // следующее обращение к ним (здесь) пересобирает их ЗАНОВО, снова с
+        // буквой, потому что строятся они от cube.tr, не от того, был ли
+        // кубик только что погашен. Итог — уже спрятанная буква на мгновение
+        // «оживает» на сигнальной грани, прежде чем разворот вообще начался.
+        // op.startBlank — явный флаг «эта грань уже пуста, не перерисовывай
+        // старую букву» — сразу берёт ТОТ ЖЕ временный безбуквенный набор,
+        // что и штатная фаза ожидания (см. `_blankSignalMats` ниже), и сразу
+        // отмечает `_disappeared`, чтобы не пытаться погасить второй раз.
+        // Дефолт false — ни один существующий transform (agnayas, rule42,
+        // rule50, rule70/71) его не передаёт, их поведение не меняется.
+        if (op.signal === 'blank') {
+          cube.mesh.material = cube.matsBlank;
+        } else {
+          op._blankSignalMats = buildMetallicMaterials(op.signal === 'gold' ? 'gold' : 'silver', cube.seed, null);
+          cube.mesh.material = op._blankSignalMats;
+        }
+        op._disappeared = true;
       } else {
         cube.mesh.material = cube[signalMats];
       }
