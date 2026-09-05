@@ -135,9 +135,10 @@ export const data = {
     // («не увидела подписи про слияние»): 0.88 численно совпадал с пиком
     // радиуса вспышки-кольца слияния (spawnPulseRing) — пилюля пряталась
     // в собственном свечении merge, не перекрываясь геометрически с
-    // кубиком. 1.3 — зазор от пика вспышки И от дефолтной высоты
-    // следующей пилюли (vṛddhi, ~1.76), см. rule2 для подробного разбора.
-    { type: 'merge', from: START + 3, at: START + 5, toGlyph: 'au', start: 5300, dur: 900, label: 'ekādeśa', blankAtProgress: 0.5, labelY: 1.3, labelX: -1.2 },
+    // кубиком. labelX:-2.0 — та же линия (labelY), что и у следующего
+    // transform ниже («на одной линии», прямое уточнение пользователя),
+    // разведены по горизонтали — см. подробный расчёт в rule2.
+    { type: 'merge', from: START + 3, at: START + 5, toGlyph: 'au', start: 5300, dur: 900, label: 'ekādeśa', blankAtProgress: 0.5, labelY: 1.3, labelX: -2.0 },
 
     // Вриддхи — начинается СРАЗУ по завершении слияния (5300+900=6200),
     // без своей паузы-осознания (anticipateDur:0 — вспышка merge уже
@@ -153,7 +154,10 @@ export const data = {
     // заметен, чем в rule2 (toGlyph у merge и transform совпадают — 'au'
     // не меняется), но тот же класс бага — правка перенесена сюда для
     // единообразия. См. общий разбор в applyTransform (slot-engine-ops.js).
-    { type: 'transform', at: START + 5, atX: slotX(START + 4), toGlyph: 'au', start: 6200, anticipateDur: 0, startBlank: true, ...TRANSFORM_KIND.vrddhi, label: 'vṛddhi' },
+    // labelY:1.3/labelX:0.7 — та же линия, что и у пилюли merge выше
+    // («на одной линии», прямое уточнение пользователя), разведена по
+    // горизонтали симметрично ekādeśa — см. расчёт в rule2.
+    { type: 'transform', at: START + 5, atX: slotX(START + 4), toGlyph: 'au', start: 6200, anticipateDur: 0, startBlank: true, ...TRANSFORM_KIND.vrddhi, label: 'vṛddhi', labelY: 1.3, labelX: 0.7 },
 
     // au закрывает оставшийся зазор до v — РОВНО в момент, когда цвет уже
     // вернулся в истинный (10200+250=10450, signalHoldDur) — БЕЗ

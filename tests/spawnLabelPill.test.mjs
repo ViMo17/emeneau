@@ -71,3 +71,26 @@ test('spawnLabelPill: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule15, по �
   const xBelow = parseFloat(ctxBelow.created[0].style.left);
   assert.ok(xBelow > xAbove, `below должна проецироваться правее above на том же слоте (${xBelow} > ${xAbove})`);
 });
+
+test('spawnLabelPill: xOverride СКЛАДЫВАЕТСЯ с xWorldOverride, не заменяется им (rule1/rule2, найденный баг: «расположить надписи на одной линии» — две пилюли merge+transform на ОДНОМ кубике, обе с абсолютной xWorldOverride, нуждались в разведении по X через xOverride поверх неё, а не вместо)', () => {
+  const ctx = makeCtx();
+  spawnLabelPill('ekādeśa', 4, true, 5000, ctx, undefined, -2.0, 100); // xWorldOverride=100, xOverride=-2.0
+  const ctx2 = makeCtx();
+  spawnLabelPill('ekādeśa', 4, true, 5000, ctx2, undefined, 0, 100); // тот же xWorldOverride, xOverride=0 — контроль
+  const xShifted = parseFloat(ctx.created[0].style.left);
+  const xBase = parseFloat(ctx2.created[0].style.left);
+  assert.notEqual(xShifted, xBase, 'ненулевой xOverride обязан сдвинуть позицию ДАЖЕ при заданном xWorldOverride — раньше xWorldOverride полностью подавлял xOverride');
+  assert.ok(xShifted < xBase, 'отрицательный xOverride (-2.0) сдвигает пилюлю влево относительно базы xWorldOverride');
+});
+
+test('spawnLabelPill: без xOverride (undefined), above:true — xWorldOverride применяется БЕЗ добавки (регрессия исключена: x-дефолт для above остаётся 0, как и до введения сложения)', () => {
+  const ctx = makeCtx();
+  spawnLabelPill('vṛddhi', 4, true, 5000, ctx, undefined, undefined, 3.5);
+  const ctx2 = makeCtx();
+  spawnLabelPill('vṛddhi', 4, true, 5000, ctx2, undefined, 0, 3.5); // xOverride=0 явно — то же самое, что undefined при above:true
+  assert.equal(
+    parseFloat(ctx.created[0].style.left),
+    parseFloat(ctx2.created[0].style.left),
+    'xOverride:undefined и xOverride:0 дают одинаковый результат при above:true (дефолт x=0 не изменился существующим примерам)'
+  );
+});
