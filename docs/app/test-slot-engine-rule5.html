@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 5, pṛ+ā)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — четвёртый пример фазы автоматической постройки
+  по номерам правил. pṛ- «город» (корневое сущ. ж.р., односложная основа на
+  слоговый ṛ, тот же структурный тип, что strī-/nadī- в правиле 4) + ā
+  (окончание Instr. sg.) → purā «городом». Whitney §242 (сверено дословно
+  по Wikisource): ЧЕСТНАЯ ОГОВОРКА — Уитни описывает это НЕ как чистое
+  фонетическое правило, а как особенность ограниченного списка корней
+  (~12 штук), где ОДИН корень может давать то ar, то ir, то ur в разных
+  формах непредсказуемо («the treatment of such roots has to be described
+  in speaking of each formation»). Формулировка Эменó («после губного →
+  ur, иначе → ir; перед гласным кратко, иначе долго») — рабочее упрощение
+  для «хорошо себя ведущих» корней на губной (pṛ, mṛ, vṛ) — оба ПРИМЕРА
+  самого Эменó (kirati, kīryate) при проверке подтверждают его правило
+  дословно (см. подробный разбор в rule5-pura-slots.js), но список Уитни
+  шире и местами нерегулярнее (например, tṛ — без губного — всё равно
+  иногда даёт ur). Panini 6.4.77 (см. правило 4) — та же ПО ДУХУ операция,
+  но сутра дословно называет только y/v, не r; параллельная сутра для
+  ṛ→ir/ur не найдена.
+  Механика — ТА ЖЕ, что e→a+y в agnayas и ī→i+y в правиле 4 (split, без
+  предшествующего грамматического шага): approach (несовместимость,
+  отскок) → split (ṛ уходит в отстойник, u — короткое, т.к. далее гласный
+  ā, и u-ряд, т.к. p губной — возвращается на своё место, r прилетает в
+  зазор). ā (триггер) физически не сдвигается с места, кроме отскока.
+  Подпись пилюли — временная («огласовка ṛ», кириллицей) — санскритский
+  термин именно для ṛ→ir/ur не найден (в отличие от iyaṅ/uvaṅ у правила
+  4), открытый пункт реестра.
+  Данные — examples/rule5-pura-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule5-pura-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
