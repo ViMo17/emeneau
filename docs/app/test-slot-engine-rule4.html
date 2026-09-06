@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 4, strī+ā)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:640px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — третий пример фазы автоматической постройки
+  по номерам правил (после rule1, rule2). strī- «женщина» (основа ж.р. на
+  долгий ī, Whitney Declension III, «nadī»-тип) + ā (окончание Instr. sg.
+  для ī/ū-основ) → striyā «женщиной». Whitney §129/§129a (сверено дословно
+  по Wikisource): §129 — общее правило (i/u/ṛ перед иным гласным →
+  ПРОСТО полугласный, сам гласный теряется, это правило 6); §129a —
+  ИСКЛЮЧЕНИЕ для ОДНОСЛОЖНЫХ основ (strī-, bhū-): вместо потери гласного
+  целиком — ī РАСПАДАЕТСЯ на i (короче, но остаётся) и y (новый,
+  добавочный). Panini 6.4.77 (aci śnudhātubhruvāṃ yvor iyaṅuvaṅau) —
+  та же замена (iyaṅ/uvaṅ) для корня/bhrū; точная сутра для strī
+  конкретно не подтверждена, открытый пункт.
+  Механика — split, ТА ЖЕ геометрия, что в agnayas (одна буква становится
+  двумя, подъём вверх) — здесь БЕЗ предшествующего грамматического шага
+  (ī уже стоит в основе, событие целиком — прямое следствие столкновения
+  с ā). approach (несовместимость двух гласных, отскок) → split (ī уходит
+  в отстойник, i возвращается на своё место, y прилетает в зазор,
+  зарезервированный пустым с самого начала — зеркально Y в agnayas). ā
+  (триггер) физически не сдвигается с места, кроме самого отскока.
+  Подпись пилюли — 'iyaṅ' (Panini, точный термин для i/ī→iy, u/ū→uv),
+  НЕ 'ayādi' (тот термин — за agnayas, другая пара звуков).
+  Данные — examples/rule4-striya-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule4-striya-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
