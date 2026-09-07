@@ -100,7 +100,7 @@
   <div class="eyebrow">Систематизация санскритской грамматики</div>
   <h1>M.B. Emeneau <span class="dev">— सन्धि</span><br>сандхи Эмено как визуальная грамматика</h1>
   <p class="lede">Учебное приложение и набор изолированных 3D-демонстраций, показывающих операции сандхи из «Sanskrit Sandhi and Exercises» М. Б. Эмено, Б.А. ван Нотен (1968) — сборнику практических правил и упражнений по освоению фонетических принципов санскрита. Меловые кубики, WebGL/Three.js, без сборки — каждый файл открывается прямо в браузере.</p>
-  <p class="lede"><b>Текущее состояние:</b> 64 из 71 правила кликабельны в приложении (подсветка источник/триггер/результат); 13 правил — полноценная 3D-анимация на слот-движке, все интегрированы — раздел 02 ниже. Сверка формулировок с Уитни и Панини идёт по каждому новому правилу — сутры указаны в карточках и в <a href="effects/effects-map.html" style="color:var(--ink-dim);">карте эффектов</a>.</p>
+  <p class="lede"><b>Текущее состояние:</b> 64 из 71 правила кликабельны в приложении (подсветка источник/триггер/результат); 14 правил — полноценная 3D-анимация на слот-движке (13 интегрировано, 1 на тестовом полигоне) — раздел 02 ниже. Сверка формулировок с Уитни и Панини идёт по каждому новому правилу — сутры указаны в карточках и в <a href="effects/effects-map.html" style="color:var(--ink-dim);">карте эффектов</a>.</p>
 
   <section>
     <div class="sec-head"><span class="sec-num">01</span><h2>Приложение</h2></div>
@@ -123,7 +123,7 @@
       <span><span class="dot" style="background:var(--c-weak)"></span>слабая ступень</span>
       <span><span class="dot" style="background:var(--c-new)"></span>новый сегмент</span>
       <span><span class="dot" style="background:var(--c-ending)"></span>граница/окончание</span>
-      <span style="color:var(--ink-faint);">— подробнее в разделе 03 ниже</span>
+      <span style="color:var(--ink-faint);">— подробнее в разделе 04 ниже</span>
     </div>
     <div class="grid">
       <a class="card" href="app/test-slot-engine.html">
@@ -208,7 +208,19 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">03</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Слот-движок · в работе</h2></div>
+    <div class="grid">
+      <a class="card wide" href="app/test-slot-engine-rule6.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-ending)"></span></div>
+        <div class="t">pitros <span class="dev">— правило 6</span></div>
+        <div class="d">pitṛ- «отец» + os (оконч. Gen./Loc. du.) → pitros «(двух) отцов». Whitney §129 — ОБЩЕЕ правило (в отличие от исключения W129a у правил 4/5): ṛ полностью становится r, без остатка. Первый transform (не split) в этой фазе — оба соседа цели заняты разом, боковое раскачивание отключено (clearance:0), выдвижение по Z спасает от пересечения с соседями.</div>
+        <span class="status polish">тестовый полигон · не интегрировано</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
     <p class="lede" style="font-size:16px; margin-bottom:22px;">У Эмено правила даны единообразно, но за ними стоят разные операции Панини. Кодируем взаимодействие по двум независимым осям: цвет — тип затрагиваемого сегмента, движение — тип операции. Полный, построчно сверенный с Уитни/Панини реестр всех 71 правила — <code>docs/reference/interaction-registry.md</code> в репозитории; здесь — верхнеуровневая сводка по типам операций, не по номерам правил.</p>
 
     <div class="axes">
@@ -359,7 +371,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">04</span><h2>Эффекты</h2></div>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Эффекты</h2></div>
     <div class="grid">
       <a class="card" href="effects/rule-guna-agnayas.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
@@ -407,7 +419,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">05</span><h2>Материалы</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Материалы</h2></div>
     <div class="grid">
       <a class="card wide" href="reference/chalk-material-study.html">
         <div class="t">Меловой куб <span class="dev">— материаловедческий этюд</span></div>
@@ -417,7 +429,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">06</span><h2>Инструменты разработки</h2></div>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Инструменты разработки</h2></div>
     <p class="lede" style="margin-bottom:16px;">Не витрина — рабочие полигоны и диагностика для дальнейшей разработки слот-движка. Ссылки раньше жили отдельной панелью внутри приложения, теперь собраны здесь.</p>
     <div class="grid">
       <a class="card" href="app/test-slot-engine-agnayas-generated.html" target="_blank">

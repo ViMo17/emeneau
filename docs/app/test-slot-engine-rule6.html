@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 6, pitṛ+os)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — пятый пример фазы автоматической постройки по
+  номерам правил. pitṛ- «отец» (родственный термин, ДВУСЛОЖНАЯ основа на
+  ṛ — в отличие от односложной pṛ- в правиле 5) + os (оконч. Gen./Loc. du.)
+  → pitros «(двух) отцов». Whitney §129 (сверено дословно по Wikisource):
+  ОБЩЕЕ правило — i/u/ṛ перед иным гласным ПОЛНОСТЬЮ становятся
+  полугласным (y/v/r), без остатка гласного (в отличие от W129a,
+  исключения для ОДНОСЛОЖНЫХ основ/корней в правилах 4/5, где гласный
+  распадается на короче+согласный, а не пропадает целиком). Panini 6.1.77
+  iko yaṇ aci — устоявшийся термин этой замены, yaṇ.
+  Механика — ПОЛНОЦЕННЫЙ transform (1-к-1, не split): ṛ становится r НА
+  МЕСТЕ, без нового кубика. signal:'blank' — не серебро (серебро строго за
+  гунацией, качественно другая операция). Впервые в этой сессии оба
+  соседа цели заняты одновременно (t слева, o справа, раскладка без
+  единого зазора) — боковое раскачивание (clearance) отключено вовсе
+  (clearance:0, пустого места нет ни в одну сторону), выдвижение по Z
+  (clearanceZ:-0.5, та же техника и число, что в правиле 2) спасает от
+  прохождения сквозь текстуру соседей на диагональных углах вращения.
+  Подпись пилюли — 'yaṇ' (не путать с iyaṅ/uvaṅ у правил 4/5 — там
+  исключение с остатком гласного, здесь общее правило без остатка).
+  Данные — examples/rule6-pitros-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule6-pitros-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
