@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 31, suhārd→suhārt)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:680px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — шестой пример фазы автоматической постройки
+  по номерам правил, и одновременно ответ на правило 8 (у которого нет
+  собственного звукового события — см. ниже). suhārd- «друг» (su- +
+  hārda-, бахуврихи «имеющий доброе сердце») + -s (оконч. Nom. sg.,
+  согласнoосновное склонение) → suhārt.
+  ПОЛНАЯ ЦЕПОЧКА ИЗ ТРЁХ ПРАВИЛ (Whitney §150/§150b/§141/§159, сверено
+  дословно): (1) правило 9 — конечное скопление согласных сокращается до
+  одной буквы, отбрасывая с конца («rds»→«r»); (2) правило 8, ИСКЛЮЧЕНИЕ
+  из (1) — «a non-nasal mute, if radical and not suffixal, is retained
+  after r» — d здесь корневой (часть hārda-), стоит после r, НЕ
+  отбрасывается (Уитни приводит ИМЕННО этот пример: «suhā́rt from
+  suhārd», §150b) — отбрасывается только суффиксальное s, итог «suhārd»;
+  (3) правило 31 (Pāṇini 8.4.54-56, термин cartva, चर्त्व) — звонкий d не
+  может стоять на конце слова перед паузой, оглушается в t. АНИМИРУЕТСЯ
+  только шаг (3) — шаги (1)/(2) уже «случились» до начала сцены (слово
+  «suhārd» — готовое, тот же приём, что devās в правиле 55), но
+  объясняются в тексте, чтобы правило 8 было понятно через ЭТОТ же
+  пример, а не отдельной анимацией (у него нет собственного звукового
+  перехода для показа).
+  Механика — TRANSFORM_KIND.vargaPair (180°, противолежащая грань), та же
+  техника, что у jaśtva (vāk asti/taddhiraṇyam), просто направление
+  обратное (d→t, не t→d). БЕЗ influence — триггер позиционный (конец
+  слова перед паузой), соседа-причины физически нет, показать нечем;
+  пауза-осознание самого transform (пульс+кольца) — единственный сигнал.
+  clearance — дефолт (+0.35, вправо, в пустоту за краем слова), без
+  переопределения.
+  Данные — examples/rule31-suhart-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule31-suhart-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
