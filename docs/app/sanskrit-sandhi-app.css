@@ -1288,3 +1288,66 @@
     border-top-color: #1a1a1a;
   }
   .tooltip.show { opacity: 1; }
+
+  /* ══ Глоссарий: пилюли-термины под текстом шага + попап определения ══
+     Прямой запрос пользователя: каждый санскритский термин, показанный
+     3D-пилюлей (op.label), должен объясняться прямо здесь, со ссылкой на
+     растущий глоссарий (GLOSSARY, data.js) — не только мелькнуть в сцене. */
+  .glossary-term-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .glossary-term-btn {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #5A4526;
+    background: rgba(122,90,46,.12);
+    border: 1px solid rgba(122,90,46,.35);
+    border-radius: 999px;
+    padding: 3px 12px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .glossary-term-btn:hover, .glossary-term-btn:focus-visible {
+    background: #7A5A2E;
+    color: #F5EEDF;
+  }
+  #glossary-popover {
+    position: fixed;
+    max-width: 320px;
+    background: #2A241C;
+    color: #F0E9D8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.35);
+    z-index: 999;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+  #glossary-popover[hidden] { display: none; }
+  .glossary-popover-term {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 17px;
+    color: #E8C860;
+    margin-bottom: 6px;
+  }
+  .glossary-popover-def {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #F0E9D8;
+  }
+  .glossary-popover-source {
+    margin-top: 8px;
+    font-size: 11px;
+    letter-spacing: .02em;
+    color: rgba(240,233,216,.6);
+  }
+  .glossary-popover-open {
+    margin-top: 8px;
+    font-size: 11px;
+    font-style: italic;
+    color: rgba(232,200,96,.85);
+  }

@@ -21,6 +21,7 @@ installDomStub();
 
 await import('../docs/app/alpha-panel.js');
 const { renderRoleDemo, renderRoleDemoSynced, clearRoleDemo } = await import('../docs/app/role-demo.js');
+const { GLOSSARY } = await import('../docs/app/data.js');
 
 const wrap = document.getElementById('alpha-wrap');
 const roleSteps = document.getElementById('role-steps');
@@ -116,4 +117,94 @@ test('gunaCells: клетки таблицы получают gv-active, а Muta
   assert.ok(document.getElementById('gc-vriddhi-i').classList.contains('gv-col-active'));
   // соседний столбец «u» не должен зацепить
   assert.ok(!document.getElementById('gc-weak-u').classList.contains('gv-col-active'));
+});
+
+/* ═══════════════════ Глоссарий — пилюли-термины + попап ═══════════════════ */
+
+test('renderRoleDemo: step.glossaryTerm (строка) — ровно одна пилюля-термин под текстом, с правильной подписью', () => {
+  const term = Object.keys(GLOSSARY)[0];
+  renderRoleDemo({ steps: [{ text: 'текст шага', glossaryTerm: term }] });
+  assert.equal(roleStepsText.childNodes[0].textContent, 'текст шага', 'сам текст шага не тронут');
+  const chips = roleStepsText.querySelectorAll('.glossary-term-btn');
+  assert.equal(chips.length, 1);
+  assert.equal(chips[0].textContent, term);
+});
+
+test('renderRoleDemo: step.glossaryTerm (массив) — по пилюле на каждый термин, в заданном порядке', () => {
+  renderRoleDemo({ steps: [{ text: 'два события в одном шаге', glossaryTerm: ['ekādeśa', 'guṇa'] }] });
+  const chips = roleStepsText.querySelectorAll('.glossary-term-btn');
+  assert.equal(chips.length, 2);
+  assert.equal(chips[0].textContent, 'ekādeśa');
+  assert.equal(chips[1].textContent, 'guṇa');
+});
+
+test('renderRoleDemo: шаг БЕЗ glossaryTerm — ни одной пилюли, textContent строго равен step.text (регрессия исключена)', () => {
+  renderRoleDemo({ steps: [{ text: 'обычный шаг без термина' }] });
+  assert.equal(roleStepsText.querySelectorAll('.glossary-term-btn').length, 0);
+  assert.equal(roleStepsText.textContent, 'обычный шаг без термина');
+});
+
+test('renderRoleDemo: glossaryTerm без записи в GLOSSARY — не рендерит пилюлю и не бросает (защита от опечатки в данных)', () => {
+  assert.doesNotThrow(() => {
+    renderRoleDemo({ steps: [{ text: 'опечатка в термине', glossaryTerm: 'несуществующий-термин-xyz' }] });
+  });
+  assert.equal(roleStepsText.querySelectorAll('.glossary-term-btn').length, 0);
+});
+
+test('клик по пилюле-термину открывает попап с определением и источником из GLOSSARY; повторный клик вне попапа закрывает', () => {
+  const term = Object.keys(GLOSSARY).find(t => GLOSSARY[t].source);
+  renderRoleDemo({ steps: [{ text: 'шаг с термином', glossaryTerm: term }] });
+  const popover = document.getElementById('glossary-popover');
+  assert.equal(popover.hidden, true, 'закрыт по умолчанию');
+
+  const chip = roleStepsText.querySelector('.glossary-term-btn');
+  chip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal(popover.hidden, false, 'открылся по клику');
+  assert.ok(popover.textContent.includes(term), 'название термина показано');
+  assert.ok(popover.textContent.includes(GLOSSARY[term].definition), 'определение показано');
+  assert.ok(popover.textContent.includes(GLOSSARY[term].source), 'источник показан');
+
+  // клик по самому popover (например, по тексту определения) НЕ закрывает —
+  // document-level слушатель явно исключает клики внутри #glossary-popover
+  popover.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal(popover.hidden, false, 'клик внутри попапа не закрывает его');
+
+  // клик СНАРУЖИ (любой другой элемент документа) закрывает
+  document.body.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.equal(popover.hidden, true, 'клик вне попапа и вне пилюли закрывает его');
+});
+
+test('openTerm:true в GLOSSARY отображается в попапе как честная оговорка «термин ещё не найден»', () => {
+  const openTerm = Object.keys(GLOSSARY).find(t => GLOSSARY[t].openTerm);
+  assert.ok(openTerm, 'в GLOSSARY должен быть хотя бы один временный термин (см. CLAUDE.md, «Словарь подписей»)');
+  renderRoleDemo({ steps: [{ text: 'временный термин', glossaryTerm: openTerm }] });
+  const chip = roleStepsText.querySelector('.glossary-term-btn');
+  chip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  const popover = document.getElementById('glossary-popover');
+  assert.ok(popover.querySelector('.glossary-popover-open'), 'честная пометка «термин ещё не найден» показана');
+});
+
+test('clearRoleDemo() закрывает открытый попап — не переживает переключение примера', () => {
+  const term = Object.keys(GLOSSARY)[0];
+  renderRoleDemo({ steps: [{ text: 'шаг', glossaryTerm: term }] });
+  roleStepsText.querySelector('.glossary-term-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  const popover = document.getElementById('glossary-popover');
+  assert.equal(popover.hidden, false);
+
+  clearRoleDemo();
+  assert.equal(popover.hidden, true, 'clearRoleDemo прячет попап предыдущего примера');
+});
+
+test('переключение шага (renderRoleStep через кнопку) закрывает попап предыдущего шага', () => {
+  const [termA, termB] = Object.keys(GLOSSARY);
+  renderRoleDemo({ steps: [
+    { tag: 'a', text: 'шаг A', glossaryTerm: termA },
+    { tag: 'b', text: 'шаг B', glossaryTerm: termB },
+  ] });
+  roleStepsText.querySelector('.glossary-term-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  const popover = document.getElementById('glossary-popover');
+  assert.equal(popover.hidden, false);
+
+  roleStepsRibbon.querySelectorAll('.role-step-btn')[1].click();
+  assert.equal(popover.hidden, true, 'переход на следующий шаг закрывает попап предыдущего');
 });
