@@ -247,6 +247,14 @@ export const GLOSSARY = {
   },
 };
 
+/* Ключ GLOSSARY может содержать пробел («огласовка ṛ») — небезопасно
+   напрямую как HTML id/URL-фрагмент без пробелов. Один общий слаг для
+   обеих сторон ссылки (role-demo.js строит href, glossary.html строит id)
+   — не дублировать формулу преобразования в двух местах. */
+export function glossarySlug(term) {
+  return term.trim().replace(/\s+/g, '-');
+}
+
 /* ═══════════════════ ПРИМЕРЫ К ПРАВИЛАМ (доп. к встроенным в текст) ═══════════════════ */
 export const EXAMPLES = {};
 /* Правила 2, 6, 32, 33, 39 подключены к системе ролей на алфавите — 5 демо-паттернов
@@ -298,6 +306,7 @@ EXAMPLES[5] = [{
 }];
 EXAMPLES[6] = [{
   desc: 'pitṛ- «отец» + os → pitros «(двух) отцов»',
+  module: './examples/rule6-pitros-slots.js',
   roleDemo: { steps: [
     { tag: '6', type: 'grade', source: 'ṛ', trigger: 'o', result: 'ra',
       gunaCells: ['gc-weak-r', 'gc-guna-rev-r'], glossaryTerm: 'yaṇ',

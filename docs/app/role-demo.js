@@ -4,7 +4,7 @@
 // уже есть в статической разметке к моменту выполнения любого модуля, порядок
 // импорта не имеет значения. Наружу нужны только три функции: остальное —
 // внутренние детали рендера.
-import { GLOSSARY } from './data.js';
+import { GLOSSARY, glossarySlug } from './data.js';
 
 /* ═══════════════════ РОЛИ НА АЛФАВИТЕ: рендер (источник/триггер/результат) ═══════════════════ */
 const wrap = document.getElementById('alpha-wrap');
@@ -48,75 +48,27 @@ const roleStepsRibbon = document.getElementById('role-steps-ribbon');
 const roleStepsText   = document.getElementById('role-steps-text');
 let currentSlotStepListener = null; // слушатель события slotstep текущего 3D-примера (см. clearRoleDemo)
 
-/* ═══════════════════ ГЛОССАРИЙ: пилюли-термины под текстом шага ═══════════════════
+/* ═══════════════════ ГЛОССАРИЙ: ссылки-термины под текстом шага ═══════════════════
    Прямой запрос пользователя: плавающая пилюля-подпись 3D-анимации (op.label)
    называет операцию санскритским термином, но видна только несколько секунд —
    тут же, в постоянном текстовом блоке, должна быть кликабельная ссылка на
    определение (см. GLOSSARY, data.js), не только сам факт термина в прозе.
-   Один переиспользуемый попап на всё приложение (не создаётся заново на
-   каждый клик) — открывается рядом с нажатой пилюлей, закрывается по клику
-   вне себя или по Escape. */
-const glossaryPopover = document.createElement('div');
-glossaryPopover.id = 'glossary-popover';
-glossaryPopover.hidden = true;
-document.body.appendChild(glossaryPopover);
-
-function hideGlossaryPopover() { glossaryPopover.hidden = true; }
-
-function showGlossaryPopover(term, anchorEl) {
-  const entry = GLOSSARY[term];
-  if (!entry) { console.warn('Роль: термин глоссария не найден —', term); return; }
-  glossaryPopover.innerHTML = '';
-  const title = document.createElement('div');
-  title.className = 'glossary-popover-term';
-  title.textContent = term;
-  const def = document.createElement('div');
-  def.className = 'glossary-popover-def';
-  def.textContent = entry.definition;
-  glossaryPopover.appendChild(title);
-  glossaryPopover.appendChild(def);
-  if (entry.source) {
-    const src = document.createElement('div');
-    src.className = 'glossary-popover-source';
-    src.textContent = entry.source;
-    glossaryPopover.appendChild(src);
-  }
-  if (entry.openTerm) {
-    const note = document.createElement('div');
-    note.className = 'glossary-popover-open';
-    note.textContent = 'Устоявшийся санскритский термин для этого случая пока не найден — рабочее обозначение.';
-    glossaryPopover.appendChild(note);
-  }
-  glossaryPopover.hidden = false;
-  // position:fixed (см. .tooltip в sanskrit-sandhi-app.css, тот же приём) —
-  // координаты прямо из getBoundingClientRect(), окно, не wrap, — попап
-  // прикреплён к document.body, не вложен внутрь alpha-wrap физически.
-  // getBoundingClientRect() сразу после hidden=false уже даёт актуальный
-  // layout (синхронный расчёт по требованию) — отдельный кадр ожидания не
-  // нужен.
-  const a = anchorEl.getBoundingClientRect();
-  glossaryPopover.style.left = a.left + 'px';
-  glossaryPopover.style.top = (a.bottom + 6) + 'px';
-  const pw = glossaryPopover.getBoundingClientRect().width;
-  if (a.left + pw > window.innerWidth) {
-    glossaryPopover.style.left = Math.max(0, window.innerWidth - pw - 8) + 'px';
-  }
+   ПЕРВАЯ версия (попап внутри тренажёра) заменена ПОСЛЕ живой проверки —
+   прямая правка: обычная ссылка на отдельную страницу глоссария
+   (glossary.html), не всплывающее окно поверх интерфейса — та же ссылка
+   уместна и как ПОСТОЯННЫЙ артефакт (можно скопировать/открыть в новой
+   вкладке), а не только сиюминутное действие. Открывается в НОВОЙ вкладке
+   (target="_blank") — зритель не теряет место в тренажёре. */
+function glossaryHref(term) {
+  return 'glossary.html#term-' + glossarySlug(term);
 }
 
-document.addEventListener('click', e => {
-  if (glossaryPopover.hidden) return;
-  if (e.target.closest('#glossary-popover') || e.target.closest('.glossary-term-btn')) return;
-  hideGlossaryPopover();
-});
-document.addEventListener('keydown', e => { if (e.key === 'Escape') hideGlossaryPopover(); });
-
-/* Рендерит ряд пилюль-терминов ПОД текстом шага — step.glossaryTerm может
+/* Рендерит ряд ссылок-терминов ПОД текстом шага — step.glossaryTerm может
    быть строкой (один термин) или массивом (несколько событий одного шага,
    см. rule1/rule2/rule42/rule50/rule70 — merge+transform или два transform
    в одном 3D-шаге, каждый со своей подписью). Термин, для которого GLOSSARY
    не содержит запись, просто не рендерится (защита от опечатки в данных —
-   тихо, не ломает остальной текст; консольный warn всё равно есть в
-   showGlossaryPopover, если до клика вообще дойдёт немыслимый случай). */
+   тихо, не ломает остальной текст, консольный warn остаётся). */
 function renderGlossaryTerms(step) {
   const terms = step.glossaryTerm == null ? [] : [].concat(step.glossaryTerm);
   if (!terms.length) return;
@@ -124,12 +76,13 @@ function renderGlossaryTerms(step) {
   row.className = 'glossary-term-row';
   terms.forEach(term => {
     if (!GLOSSARY[term]) { console.warn('Роль: glossaryTerm без записи в GLOSSARY —', term); return; }
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'glossary-term-btn';
-    btn.textContent = term;
-    btn.addEventListener('click', () => showGlossaryPopover(term, btn));
-    row.appendChild(btn);
+    const a = document.createElement('a');
+    a.className = 'glossary-term-link';
+    a.href = glossaryHref(term);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'глоссарий: ' + term;
+    row.appendChild(a);
   });
   roleStepsText.appendChild(row);
 }
@@ -214,7 +167,6 @@ function clearRoleDemo() {
   roleStepsWrap.style.display = 'none';
   roleStepsRibbon.innerHTML = '';
   roleStepsText.textContent = '';
-  hideGlossaryPopover(); // не должен пережить переключение на другой пример
   grammarExplain.style.display = 'none'; // блок гуны/вриддхи виден только при активном примере
   document.querySelectorAll('.guna-table td.gv-active').forEach(el => el.classList.remove('gv-active'));
   // Снимаем слушатель slotstep предыдущего примера — иначе при каждой смене
@@ -312,7 +264,6 @@ function renderRoleStep(step) {
   }
 
   roleStepsText.textContent = step.text || '';
-  hideGlossaryPopover(); // предыдущий шаг мог оставить его открытым
   renderGlossaryTerms(step);
 }
 

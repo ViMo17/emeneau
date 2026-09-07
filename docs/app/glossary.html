@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Глоссарий терминов сандхи</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: #23201A;
+    color: #F0E9D8;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  a.back {
+    display: inline-block;
+    margin-bottom: 24px;
+    color: rgba(240,233,216,.7);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  a.back:hover { color: #E8C860; }
+  h1 {
+    font-family: 'Georgia', serif;
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0 0 8px;
+    color: #F5EEDF;
+  }
+  p.lede {
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(240,233,216,.8);
+    margin: 0 0 36px;
+  }
+  .term {
+    border-top: 1px solid rgba(240,233,216,.14);
+    padding: 22px 0;
+    scroll-margin-top: 20px;
+  }
+  .term:target {
+    background: rgba(232,200,96,.08);
+    margin: 0 -16px;
+    padding: 22px 16px;
+    border-radius: 10px;
+  }
+  .term-name {
+    font-family: 'Georgia', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: #E8C860;
+    margin: 0 0 8px;
+  }
+  .term-def {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #F0E9D8;
+    margin: 0 0 8px;
+  }
+  .term-source {
+    font-size: 13px;
+    letter-spacing: .01em;
+    color: rgba(240,233,216,.6);
+  }
+  .term-open {
+    margin-top: 8px;
+    font-size: 13px;
+    font-style: italic;
+    color: rgba(232,200,96,.85);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="sanskrit-sandhi-app.html">← вернуться в тренажёр</a>
+  <h1>Глоссарий терминов сандхи</h1>
+  <p class="lede">Санскритские термины (ИАСТ), которыми в приложении названы конкретные операции звукового перехода (сандхи) — те же слова, что мелькают плавающими подписями во время 3D-анимации. Список растёт вместе с новыми примерами приложения.</p>
+  <div id="terms"></div>
+</div>
+<script type="module">
+import { GLOSSARY, glossarySlug } from './data.js';
+
+const wrap = document.getElementById('terms');
+for (const [term, entry] of Object.entries(GLOSSARY)) {
+  const div = document.createElement('div');
+  div.className = 'term';
+  div.id = 'term-' + glossarySlug(term);
+
+  const name = document.createElement('div');
+  name.className = 'term-name';
+  name.textContent = term;
+  div.appendChild(name);
+
+  const def = document.createElement('div');
+  def.className = 'term-def';
+  def.textContent = entry.definition;
+  div.appendChild(def);
+
+  if (entry.source) {
+    const src = document.createElement('div');
+    src.className = 'term-source';
+    src.textContent = entry.source;
+    div.appendChild(src);
+  }
+
+  if (entry.openTerm) {
+    const open = document.createElement('div');
+    open.className = 'term-open';
+    open.textContent = 'Устоявшийся санскритский термин для этого случая пока не найден — рабочее обозначение.';
+    div.appendChild(open);
+  }
+
+  wrap.appendChild(div);
+}
+
+// Открытие по прямой ссылке с #term-... — прокрутить к нужной записи и
+// подсветить её (:target уже красит фон через CSS, здесь только скролл,
+// браузер сам не долистывает к фрагменту, если элемент создан ПОСЛЕ
+// первой отрисовки страницы, как здесь через JS).
+if (location.hash) {
+  const el = document.getElementById(location.hash.slice(1));
+  if (el) el.scrollIntoView();
+}
+</script>
+</body>
+</html>
