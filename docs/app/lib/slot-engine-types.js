@@ -234,6 +234,26 @@
  * @property {boolean} [_labelSpawned]
  */
 
+/** @typedef {Object} ResistOp
+ * @property {'resist'} type
+ * @property {number} at
+ * @property {number} start
+ * @property {number|{word:number}|Array<number|{word:number}>} [groupSlots] - защищающая группа, рамка GROUP_COLOR на всё время попытки (та же формула ссылки, что InfluenceOp.from)
+ * @property {'gold'|'silver'} [frameSignal] - см. InfluenceOp.frameSignal (та же updateGroupFrame) - не задействовано ни в одном примере, поле только для структурного соответствия общей функции
+ * @property {number} [dipOffset] - смещение по Y на пике попытки, отрицательное = вниз (дефолт -0.6)
+ * @property {number} [dipDur]
+ * @property {number} [holdDur] - пауза на пике попытки, до отскока
+ * @property {number} [retreatDur]
+ * @property {string} [label]
+ * @property {number} [labelY]
+ * @property {number} [labelX]
+ * @property {boolean} [_done]
+ * @property {number} [_impactAt]
+ * @property {boolean} [_labelSpawned]
+ * @property {number} [_frameHoldEnd]
+ * @property {HTMLElement} [_frameEl]
+ */
+
 /** @typedef {Object} SettleOp
  * @property {'settle'} type
  * @property {number[]} slots
@@ -252,7 +272,7 @@
  * @property {number} [ramp]
  */
 
-/** @typedef {InfluenceOp|ApproachOp|TransformOp|SplitOp|ArriveOp|MergeOp|BudOp|ElideOp|SettleOp|DimOp} SlotOp */
+/** @typedef {InfluenceOp|ApproachOp|TransformOp|SplitOp|ArriveOp|MergeOp|BudOp|ElideOp|ResistOp|SettleOp|DimOp} SlotOp */
 
 /** Данные примера — то, что приходит из docs/app/examples/ruleN-*.js и
  * проверяется validateExampleData ДО первого кадра. Поля ниже, КРОМЕ

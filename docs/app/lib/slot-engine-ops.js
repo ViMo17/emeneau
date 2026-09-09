@@ -19,6 +19,7 @@ import { stepIndexAt, stepTargetOpacity } from './slot-engine-steps.js';
  * @typedef {import('./slot-engine-types.js').PulseFace} PulseFace
  * @typedef {import('./slot-engine-types.js').TransformOp} TransformOp
  * @typedef {import('./slot-engine-types.js').ElideOp} ElideOp
+ * @typedef {import('./slot-engine-types.js').ResistOp} ResistOp
  * @typedef {import('./slot-engine-types.js').InfluenceOp} InfluenceOp
  * @typedef {import('./slot-engine-types.js').ApproachOp} ApproachOp
  * @typedef {import('./slot-engine-types.js').SplitOp} SplitOp
@@ -692,6 +693,94 @@ export function applyElide(op, elapsed, ctx) {
     }
 }
 
+/* RESIST — попытка elide блокируется правилом-исключением: кубик начинает
+   уходить вниз (та же визуальная грамматика начала реакции, что у самой
+   `elide` — вспышка+скачок масштаба РОВНО в момент старта, движение по
+   easeInOutCubic), но НЕ долетает до отстойника — на пике коротко
+   задерживается и пружинисто отскакивает НАЗАД, на своё место
+   (easeOutBack, тот же характер отскока, что уже несёт этот смысл у
+   `approach` — «наткнулось на невидимую преграду»), не исчезая и не
+   превращаясь. Показывает ИСКЛЮЧЕНИЕ (правило блокирует ДРУГОЕ правило от
+   применения к этому звуку), не собственное сандхи-событие — реальный
+   найденный случай: rule 8 (Whitney §150b) не производит звукового
+   перехода само по себе, оно НЕ ДАЁТ правилу 9 отбросить корневой
+   согласный после r; зритель должен увидеть саму попытку и её провал, а
+   не только текст об этом (прямая правка пользователя: «этого эффекта
+   нет — попробуй как будто буква начинает отделяться, но пружинит и
+   возвращается»).
+   `groupSlots` (необязательно, строка/{word}/массив — тот же формат, что
+   и `influence.from`) — рамка GROUP_COLOR под ВСЕЙ защищающей группой на
+   всё время попытки, переиспользует `updateGroupFrame` БЕЗ изменений
+   (тот же приём, что уже несёт этот смысл у `influence` с несколькими
+   источниками — «вот что объединено, вот что действует как одно целое»).
+   Здесь смысл зеркальный: не «источник влияния», а «то, что защищает» —
+   тот же визуальный язык, честно другая причина.
+   { type:'resist', at, start, groupSlots, dipOffset=-0.6, dipDur=700,
+     holdDur=300, retreatDur=700, label } */
+/** @param {ResistOp} op @param {number} elapsed @param {Ctx} ctx */
+export function applyResist(op, elapsed, ctx) {
+  const { cubes, wordGroupsList } = ctx;
+  const cube = cubes[op.at];
+  if (!cube || elapsed < op.start || op._done) return;
+  const dipOffset = op.dipOffset ?? -0.6; // вниз, заметно меньше riseDur-пути elide — это ПОПЫТКА, не полноценный уход
+  const dipDur = op.dipDur ?? 700;
+  const holdDur = op.holdDur ?? 300;
+  const retreatDur = op.retreatDur ?? 700;
+  const dipEnd = op.start + dipDur;
+  const holdEnd = dipEnd + holdDur;
+  const retreatEnd = holdEnd + retreatDur;
+
+  // Рамка-опора под защищающей группой — на всё время попытки (растёт
+  // прямо из updateGroupFrame, та же функция, что уже используют
+  // несколько источников `influence`; op._frameHoldEnd — тот же контракт
+  // поля, что и там).
+  if (op.groupSlots) {
+    op._frameHoldEnd = retreatEnd;
+    const groupCubes = resolveSlotRef(op.groupSlots, wordGroupsList).map(s => cubes[s]).filter(Boolean);
+    updateGroupFrame(op, groupCubes, elapsed, ctx);
+  }
+
+  // Вспышка+скачок масштаба РОВНО в момент начала попытки — тот же язык,
+  // что у elide (см. выше) и merge: момент начала реакции нуждается в
+  // отдельном сигнале, не только конец.
+  if (!op._impactAt) {
+    op._impactAt = elapsed;
+    spawnPulseRing(frontAnchor(cube.mesh), 700, GROUP_RGB, ctx);
+  }
+
+  if (op.label && !op._labelSpawned) {
+    op._labelSpawned = true;
+    spawnLabelPill(op.label, op.at, false, dipDur + holdDur + retreatDur, ctx, op.labelY, op.labelX);
+  }
+
+  if (elapsed > retreatEnd) {
+    cube.mesh.position.y = 0;
+    cube.mesh.scale.setScalar(1);
+    op._done = true;
+    return;
+  }
+
+  if (elapsed <= dipEnd) {
+    const t = clamp01((elapsed - op.start) / dipDur);
+    cube.mesh.position.y = dipOffset * easeInOutCubic(t);
+  } else if (elapsed <= holdEnd) {
+    cube.mesh.position.y = dipOffset; // краткая пауза на пике попытки — «вот-вот получится»
+  } else {
+    const t = clamp01((elapsed - holdEnd) / retreatDur);
+    const te = easeOutBack(t); // пружина — тот же характер, что и у отскока approach
+    cube.mesh.position.y = dipOffset * (1 - te);
+  }
+
+  // Скачок масштаба в момент удара, спадающий за 350мс — тот же приём,
+  // что и у elide (см. выше), тем же классом бага НЕ затронут: здесь
+  // всего одна ветка позиции (нет отдельного «fade», который мог бы
+  // конфликтовать), масштаб можно спокойно считать в общем месте.
+  if (op._impactAt != null && !op._done) {
+    const pt = clamp01((elapsed - op._impactAt) / 350);
+    cube.mesh.scale.setScalar(lerp(1.2, 1, easeOutCubic(pt)));
+  }
+}
+
 /* ПУЛЬС В ТЕКСТУРЕ ГРАНИ — та же эталонная техника, что в rule71-vak-asti.js
    (перенесена из docs/effects/rule-assimilation-varga-t-d.html). Отличие
    от spawnPulseRing: тот — отдельный
@@ -825,7 +914,7 @@ export function spawnWave(fromVec3, toVec3, dur, rgbStr, ctx) {
    групп (>1 кубика, подчёркивать одну букву незачем, если это не
    специально запрошенный сигнал) — уже построенные примеры (agnayas и
    др.) ничего не передают в frameSignal, значит рисуются как раньше. */
-/** @param {InfluenceOp} op @param {import('./slot-engine-types.js').Cube[]} sources @param {number} elapsed @param {Ctx} ctx */
+/** @param {InfluenceOp|ResistOp} op @param {import('./slot-engine-types.js').Cube[]} sources @param {number} elapsed @param {Ctx} ctx */
 export function updateGroupFrame(op, sources, elapsed, ctx) {
   const { labelsEl } = ctx;
   const holdEnd = op._frameHoldEnd;
