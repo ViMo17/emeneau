@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 10, gacchati)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — правило 10, ПЕРВЫЙ реальный тест гэпа DOUBLE
+  с деаспирацией. gam- «идти» → наст. основа gach- (грамм. факт, не
+  сандхи) + ati (тематич. -a- + оконч. 3 sg. -ti) → gacchati «идёт».
+  Whitney §227 (сверено дословно): ch между двух гласных геминирует —
+  cch (Эменó: то же самое, «между двух гласных»). Whitney §154 (сверено
+  дословно): при удвоении придыхательного смычного результат сразу
+  «неприд.+прид.» («doubled by prefixing its own corresponding
+  non-aspirate») — ОДНО событие, не геминация-потом-деаспирация.
+  Точный номер сутры Панини для ЭТОГО случая (ch после гласного) не
+  найден — открытый пункт, как и у правила 5.
+  Механика — ТА ЖЕ операция `bud`, что и в rule61 (hasannagacchat), но
+  клон получает toGlyph='c' (ОТЛИЧНЫЙ от источника 'ch') — движок уже
+  безусловно это поддерживал, просто не был использован; деаспирация
+  «встроена» в то, каким рождается клон, ни одной новой строчки в
+  движке не потребовалось. Направление — зеркально rule61: клон едет
+  ВЛЕВО (первая копия предшествует второй в результате «cch»).
+  Причина — оба фланкирующих гласных (корневой a, тематический a)
+  пульсируют к ch одновременно (`influence`, два источника, рамка
+  группы автоматическая).
+  Раскладка центрирована по итоговому 7-фонемному результату «gacchati»
+  (centeredStart(7)=1).
+  Данные — examples/rule10-gacchati-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule10-gacchati-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
