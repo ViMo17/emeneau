@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Глоссарий терминов сандхи</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Sanskrit&display=swap">
 <style>
   * { box-sizing: border-box; }
   html, body {
@@ -55,6 +56,15 @@
     font-size: 22px;
     color: #E8C860;
     margin: 0 0 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .term-devanagari {
+    font-family: 'Tiro Devanagari Sanskrit', 'Source Serif 4', serif;
+    font-style: normal;
+    font-size: 20px;
+    color: rgba(240,233,216,.75);
   }
   .term-def {
     font-size: 16px;
@@ -79,7 +89,7 @@
 <div class="wrap">
   <a class="back" href="sanskrit-sandhi-app.html">← вернуться в тренажёр</a>
   <h1>Глоссарий терминов сандхи</h1>
-  <p class="lede">Санскритские термины (ИАСТ), которыми в приложении названы конкретные операции звукового перехода (сандхи) — те же слова, что мелькают плавающими подписями во время 3D-анимации. Список растёт вместе с новыми примерами приложения.</p>
+  <p class="lede">Санскритские термины (ИАСТ и деванагари) языка самого Панини — не только названия конкретных операций сандхи (те же слова, что мелькают плавающими подписями во время 3D-анимации), но и метаязыковые понятия его грамматики (pada, adhikāra, varga, nimitta и т.п.), нужные, чтобы читать его сутры буквально, а не только на слух. Список растёт вместе с новыми примерами приложения.</p>
   <div id="terms"></div>
 </div>
 <script type="module">
@@ -93,7 +103,15 @@ for (const [term, entry] of Object.entries(GLOSSARY)) {
 
   const name = document.createElement('div');
   name.className = 'term-name';
-  name.textContent = term;
+  const iast = document.createElement('span');
+  iast.textContent = term;
+  name.appendChild(iast);
+  if (entry.devanagari) {
+    const dev = document.createElement('span');
+    dev.className = 'term-devanagari';
+    dev.textContent = entry.devanagari;
+    name.appendChild(dev);
+  }
   div.appendChild(name);
 
   const def = document.createElement('div');

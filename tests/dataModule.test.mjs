@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import {
   SECTIONS, EXAMPLES, EXERCISES,
   RULE_GROUP, RULE_SUBGROUP, GROUP_INFO, SUBGROUP_INFO,
-  ALPHA_ROWS,
+  ALPHA_ROWS, GLOSSARY, glossarySlug,
 } from '../docs/app/data.js';
 
 test('SECTIONS — непустой массив разделов с id/label/cards', () => {
@@ -72,5 +72,47 @@ test('ALPHA_ROWS — непустой массив рядов алфавита, 
       assert.equal(typeof cell.dv, 'string');
       assert.equal(typeof cell.tr, 'string');
     }
+  }
+});
+
+// Прямой запрос пользователя: глоссарий должен «уяснить язык Панини» — не
+// только термины-названия конкретных операций сандхи, но и метаязыковые
+// понятия его грамматики (pada, adhikāra, varga, nimitta и т.п.), каждый с
+// деванагари. openTerm:true — законное исключение (временный кириллический
+// плейсхолдер для явления, у которого устоявшийся санскритский термин ещё
+// не найден, см. CLAUDE.md «Термины, остающиеся НЕ решены») — деванагари у
+// русского слова не имеет смысла.
+test('GLOSSARY — каждая запись без openTerm имеет devanagari (не только ИАСТ)', () => {
+  for (const [term, entry] of Object.entries(GLOSSARY)) {
+    if (entry.openTerm) continue;
+    assert.equal(typeof entry.devanagari, 'string', `${term} — нет devanagari`);
+    assert.ok(entry.devanagari.length > 0, `${term} — devanagari пустая строка`);
+  }
+});
+
+test('GLOSSARY — glossarySlug даёт непустой, без пробелов слаг для каждого ключа', () => {
+  for (const term of Object.keys(GLOSSARY)) {
+    const slug = glossarySlug(term);
+    assert.ok(slug.length > 0, `${term} — пустой слаг`);
+    assert.ok(!/\s/.test(slug), `${term} — слаг содержит пробел: "${slug}"`);
+  }
+});
+
+// Реальный найденный класс бага (śādhi/EXAMPLES[15], suhārt/EXAMPLES[8]) —
+// опечатка в glossaryTerm молча не рендерит ссылку (тихий console.warn в
+// role-demo.js, не бросает) — легко не заметить визуально. Проверяем
+// структурно, что КАЖДАЯ ссылка на термин в любом roleDemo.steps по всем
+// 71 правилам резолвится в реально существующую запись GLOSSARY.
+test('EXAMPLES — каждый glossaryTerm (строка или массив) ссылается на существующую запись GLOSSARY', () => {
+  for (const [ruleNum, arr] of Object.entries(EXAMPLES)) {
+    arr.forEach((ex, exi) => {
+      (ex.roleDemo?.steps ?? []).forEach((step, si) => {
+        if (step.glossaryTerm == null) return;
+        const terms = [].concat(step.glossaryTerm);
+        terms.forEach(term => {
+          assert.ok(GLOSSARY[term], `EXAMPLES[${ruleNum}][${exi}].roleDemo.steps[${si}].glossaryTerm — "${term}" нет в GLOSSARY`);
+        });
+      });
+    });
   }
 });
