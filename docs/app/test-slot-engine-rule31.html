@@ -61,11 +61,13 @@
   EXAMPLES[8]/[9]/[31], три точки входа в один и тот же модуль); здесь, на
   тестовом полигоне, вызвано без параметра — все три чипа крупные, как
   раньше.
-  Данные — examples/rule31-suhart-slots.js.
+  Данные — examples/suhart-slots.js (общая библиотека; рабочие точки
+  входа приложения — examples/rule8-suhart-slots.js/rule9.../rule31...,
+  каждая со своим targetRuleNum).
   Открывать через живой сайт (https://).</div>
 <div id="stage-wrap"><div id="anim-container"></div></div>
 <script type="module">
-import { mount } from './examples/rule31-suhart-slots.js';
+import { mount } from './examples/suhart-slots.js';
 import { attachPauseDebug } from './test-pause-debug.js';
 attachPauseDebug(mount(document.getElementById('anim-container')));
 </script>
