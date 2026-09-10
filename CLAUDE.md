@@ -254,10 +254,20 @@ consolidated-файлом выше). Тот файл — лингвистиче�
     `computeWordGroups`/`resolveSlotRef`).
   - `slot-engine-steps.js` — шаги (грамматика/правило N), runtime-таймлайн.
   - `slot-engine-validate.js` — `validateExampleData` (Стадия 4).
-  - `slot-engine-ops.js` — обработчики операций (все `apply*`) и их прямые
-    помощники (project/frontAnchor/spawnPulseRing/spawnWave/
-    updateGroupFrame/setFacePulse/flyArcPosition) — самый крупный модуль,
-    ~1000 строк. Новую `apply*`-функцию добавлять сюда.
+  - `slot-engine-ops-*.js` — обработчики операций (`apply*`), разбиты на
+    6 файлов по смыслу (был один файл ~1760 строк, слишком крупный для
+    одного файла даже после Стадии 5): `-shared.js` (общие DOM/визуальные
+    помощники — project/frontAnchor/spawnPulseRing/spawnSparkleBurst/
+    spawnLabelPill/buildPulseFace/redrawPulseFace/setFacePulse/
+    disposePulseFace/spawnWave/updateGroupFrame/flyArcPosition,
+    используются несколькими apply* разом), `-transform.js`
+    (applyTransform — держит ОБЩИЙ `@typedef`-алиас-блок, Ctx/TransformOp/
+    и т.п., см. ниже про коллизии), `-elide.js` (applyElide+applyResist),
+    `-influence.js` (applyInfluence+applyApproach), `-move.js`
+    (applySplit+applyArrive+applyMerge+applyBud), `-finish.js`
+    (applySettle+applyDim+applyStepDim). Новую `apply*`-функцию добавлять
+    в тот файл, где она смыслово ближе (или в `-shared.js`, если это
+    общий помощник для нескольких групп).
   - `slot-engine-mount.js` — `mountSlotExample`, кадровый цикл, лента
     шагов, инъекция стилей.
   - `slot-engine-generate.js` — **ГЕНЕРАТОР данных примера** (заходы
@@ -983,7 +993,7 @@ lint/check-conventions/typecheck чисто.
   просто красивая анимация). Уже реализовано для `vargaPair` (180°) —
   1800мс, НЕ `0.5×MS_PER_360` (700мс) — портировано из эталона
   `docs/effects/rule-assimilation-varga-t-d.html`, см.
-  `landsOnOppositeFace` в `applyTransform` (`slot-engine-ops.js`).
+  `landsOnOppositeFace` в `applyTransform` (`slot-engine-ops-transform.js`).
   **РЕШЕНО (заход 98). `MS_PER_360` = 2000 (было 1400)** — прямое
   замечание пользователя после живой проверки agnayas: гунация читалась
   слишком быстро, «нельзя быстро понять, что происходит». Одна общая
