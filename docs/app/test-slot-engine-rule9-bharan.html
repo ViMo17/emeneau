@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 9, bharant+s)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — родной (не заимствованный из suhārt) пример
+  правила 9. bharant- «несущий» (наст. действ. причастие, атематический
+  суффикс -ant/-at, корень bhṛ- «нести») + -s (оконч. Nom. sg., корневое
+  склонение) → bharan «несущий».
+  Whitney §150 (сверено дословно по Wikisource), Pāṇini 8.2.23
+  saṃyogāntasya lopaḥ («конечный элемент словофинального скопления
+  согласных исчезает») — правило ИТЕРАТИВНОЕ: на конце bharant+s
+  скопление из ТРЁХ согласных (n-t-s). (1) первая итерация — отпадает
+  последний, суффиксальное -s: bharants → bharant. (2) на конце всё ещё
+  скопление (-nt) — правило применяется ПОВТОРНО: отпадает t → bharan.
+  (3) итог — уцелевший согласный (n) всегда ПЕРВЫЙ из исходного
+  скопления, не произвольный.
+  В отличие от suhārt (где вторая итерация БЛОКИРУЕТСЯ правилом 8 —
+  корневой d после r), здесь ОБЕ итерации проходят без исключений — это
+  самый чистый пример именно правила 9 как такового. Оба elide — полный
+  драматичный эффект (не quiet), лейбл 'lopa' без звёздочки — никакой
+  причинно-следственной связи с avasāna не заявляется, в отличие от
+  причины-данды у suhārt.
+  Раскладка центрирована по итоговому 5-фонемному результату «bharan»
+  (centeredStart(5)=2).
+  Данные — examples/rule9-bharan-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule9-bharan-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
