@@ -48,6 +48,7 @@ function unmountCurrentAnim() {
   animWrap.style.display  = 'none';
   animEmpty.style.display = 'block';
   clearRoleDemo();
+  clearRelatedHighlight(); // покрывает переключение карточки правила и снятие пина
 }
 
 // currentAnim выставляется только ПОСЛЕ того, как долетел await import() —
@@ -133,8 +134,15 @@ function showCenter(cd) {
       chip.addEventListener('click', () => {
         lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
+        // ex.relatedRules — явное поле (тот же принцип, что и glossaryTerm/
+        // op.label везде в проекте — не выводится угадыванием из module):
+        // номера ДРУГИХ правил, которые эта же анимация тоже задействует
+        // (см. suhārt — правило 9 открыто как целевое, но модуль показывает
+        // и правило 8, и правило 31). Подсветка — на левой панели карточек.
+        clearRelatedHighlight();
         if (ex.module) mountAnimExample(ex.module);
         else unmountCurrentAnim();
+        if (ex.relatedRules) applyRelatedHighlight(ex.relatedRules);
         // Пример с 3D-модулем — синхронизированная версия (без кнопочной
         // ленты, переключается событием slotstep от самой анимации); без
         // модуля — обычное поведение, для остальных правил без 3D.
@@ -241,6 +249,25 @@ function applyGroupHighlight(cd) {
 function clearGroupHighlight() {
   for (let i = 20; i <= 26; i++)
     if (CARD_ELS[i]) CARD_ELS[i].classList.remove('primary-active','card-21-primary');
+}
+
+// Обобщение того же реестра CARD_ELS для ДРУГОГО случая: не жёстко
+// зашитая лингвистическая группа (как выше), а ДАННЫМИ заданный список —
+// какие ещё правила задействует ИМЕННО этот пример (см. ex.relatedRules,
+// suhārt — правило 9 целевое, но модуль показывает и 8, и 31). Явное
+// поле, не выводится угадыванием из module (тот же принцип, что и
+// glossaryTerm/op.label везде в проекте). Вызывается из клика по чипу
+// примера (showCenter) — не из выбора карточки самой по себе, т.к. до
+// клика по чипу неизвестно, какой ИМЕННО пример правила будет показан.
+let relatedActiveNums = [];
+function applyRelatedHighlight(nums) {
+  clearRelatedHighlight();
+  relatedActiveNums = nums.filter(n => CARD_ELS[n]);
+  relatedActiveNums.forEach(n => CARD_ELS[n].classList.add('related-active'));
+}
+function clearRelatedHighlight() {
+  relatedActiveNums.forEach(n => { if (CARD_ELS[n]) CARD_ELS[n].classList.remove('related-active'); });
+  relatedActiveNums = [];
 }
 
 const body = document.getElementById('sandhi-body');

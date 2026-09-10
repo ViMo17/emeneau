@@ -111,6 +111,37 @@ test('правила 8/9/31 (suhārt) — родные примеры Эменó
   assert.ok(chips[2].classList.contains('annotated') && chips[2].textContent.includes('suhārt'));
 });
 
+test('ex.relatedRules — данные корректны для suhārt (8/9/31): валидные номера правил, без самоссылки, симметрично', () => {
+  const rel = { 8: EXAMPLES[8][0].relatedRules, 9: EXAMPLES[9][1].relatedRules, 31: EXAMPLES[31][2].relatedRules };
+  for (const n of [8, 9, 31]) {
+    assert.ok(Array.isArray(rel[n]), `relatedRules у правила ${n} должен быть массивом`);
+    assert.ok(!rel[n].includes(n), `правило ${n} не должно ссылаться на само себя`);
+    rel[n].forEach(m => assert.ok(Number.isInteger(m) && EXAMPLES[m] !== undefined, `relatedRules[${n}] содержит ${m} — должен быть номером реально существующего правила`));
+  }
+  // Симметрично: если 9 указывает на 8 и 31, то и у 8, и у 31 должен быть обратный указатель на 9 (и т.д.) —
+  // тот же физический модуль показывает все три правила разом, связь должна быть видна с любой стороны.
+  const byNum = (a, b) => a - b;
+  assert.deepEqual([...rel[8]].sort(byNum), [9, 31]);
+  assert.deepEqual([...rel[9]].sort(byNum), [8, 31]);
+  assert.deepEqual([...rel[31]].sort(byNum), [8, 9]);
+});
+
+// Осознанно НЕ тестируется клик по suhārt-чипам (EXAMPLES[8]/[9]/[31] с
+// ex.relatedRules) — они несут module, mountAnimExample() делает реальный
+// await import() слот-движка (см. комментарий в начале файла про 3D).
+// Здесь проверяется только то, что БЕЗОПАСНО проверить без 3D: интеграция
+// нового кода (clearRelatedHighlight()/if (ex.relatedRules)) в клик по
+// чипу БЕЗ module и БЕЗ relatedRules ничего не ломает — визуальное
+// появление/снятие .related-active на КОНКРЕТНО suhārt-примерах остаётся
+// на подтверждение пользователя (Часть 1 п.6 CLAUDE.md).
+test('клик по чипу примера БЕЗ relatedRules (правило 39) не падает — clearRelatedHighlight() безопасен на пустом состоянии', () => {
+  selectRule(39);
+  const chip = letterPicker.querySelector('.eg-chip');
+  assert.equal(EXAMPLES[39][0].relatedRules, undefined);
+  click(chip); // не должно бросить исключение
+  assert.ok(chip.classList.contains('active'));
+});
+
 test('клик по чипу примера правила 39 включает 2D roleDemo (без module — clearRoleDemo/renderRoleDemo напрямую)', () => {
   selectRule(39);
   const chip = letterPicker.querySelector('.eg-chip');

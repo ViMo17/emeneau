@@ -774,6 +774,14 @@
   .card.hovered .card-num,
   .card.pinned  .card-num { font-size: 22px; }
 
+  /* Правило-«соучастник» текущего примера, не целевое (см. ex.relatedRules,
+     rule-panel.js) — тот же лак-краситель, что и у .eg-chip.annotated/
+     --c-annotation, единый сигнал «связано с ДОПОЛНИТЕЛЬНЫМ примером» по
+     всему приложению. Кольцо, не смена фона — .pinned/.hovered уже
+     распоряжаются transform, фон карточки всегда её собственный цвет
+     варги (c1..c5), трогать его для этого сигнала не нужно. */
+  .card.related-active { box-shadow: 0 0 0 3px rgba(122,59,78,.65), 0 0 10px 2px rgba(122,59,78,.4); }
+
   /* Цвета сандхи — контрастные цифры */
   .c1 {
     background: #AFBFD4;

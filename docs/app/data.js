@@ -352,6 +352,7 @@ EXAMPLES[7] = [{
 // разные точки входа — не три разных примера).
 EXAMPLES[8] = [{
   desc: 'suhārd «друг» + s → suhārd → suhārt',
+  relatedRules: [9, 31], // тот же модуль анимирует и правило 9 (lopa), и правило 31 (cartva)
   module: './examples/rule8-suhart-slots.js',
   roleDemo: { steps: [
     { tag: '9', type: 'elide', source: 'sa', glossaryTerm: 'lopa',
@@ -385,6 +386,7 @@ EXAMPLES[9] = [
     // не даёт отсечь следом) — annotated:true, см. rule-panel.js/CSS.
     annotated: true,
     desc: 'suhārd «друг» + s → suhārd → suhārt',
+    relatedRules: [8, 31], // тот же модуль анимирует и правило 8 (resist), и правило 31 (cartva)
     module: './examples/rule9-suhart-slots.js',
     roleDemo: { steps: [
       { tag: '9', type: 'elide', source: 'sa', glossaryTerm: 'lopa',
@@ -526,6 +528,7 @@ EXAMPLES[31] = [
     // не дублирование по ошибке, а требование синхронизации по позиции.
     annotated: true,
     desc: 'suhārd «друг» + s → suhārd → suhārt',
+    relatedRules: [8, 9], // тот же модуль анимирует и правило 8 (resist), и правило 9 (lopa)
     module: './examples/rule31-suhart-slots.js',
     roleDemo: { steps: [
       { tag: '9', type: 'elide', source: 'sa', glossaryTerm: 'lopa',
