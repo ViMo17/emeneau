@@ -17,6 +17,11 @@
     --c-stem: #5C7A52; --c-guna: #8A8D92; --c-vrddhi: #9A6B2E;
     --c-weak: #B5AC98; --c-new: #2E7B74; --c-ending: #BE8A3E; --c-trigger: #B85A3E;
     --accent: #2B3A6B;
+    /* Лак-краситель (лаковая киноварь) — цвет исправлений/глосс на полях
+       рукописи, не основного текста; здесь — тот же смысл: карточка с
+       собственным дополнением к формулировке источника, не только
+       материал Эменó (см. .card.annotated ниже). */
+    --c-annotation: #7A3B4E;
     --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
     --display: 'Fraunces', 'Source Serif 4', Georgia, serif;
     --dev: 'Tiro Devanagari Sanskrit', 'Source Serif 4', serif;
@@ -54,6 +59,14 @@
   .status.done { background: rgba(46,123,116,.10); color: var(--c-new); border: 1px solid rgba(46,123,116,.25); }
   .status.plan { background: rgba(107,101,90,.10); color: var(--ink-dim); border: 1px solid var(--line); }
   .status.polish { background: rgba(154,107,46,.12); color: var(--c-vrddhi); border: 1px solid rgba(154,107,46,.28); }
+  /* Карточка с авторским дополнением к формулировке источника (не только
+     материал Эменó) — лёгкий цветной оттенок фона + рамки, лак-краситель
+     (--c-annotation), тот же смысл, что и у рукописной глоссы на полях.
+     Не звёздочка/значок — прямой запрос пользователя («пусть не звезда,
+     а другой фон»), сама подсветка карточки — единственный сигнал. */
+  .card.annotated { background: linear-gradient(180deg, rgba(122,59,78,.08), rgba(122,59,78,.03)) , var(--stage-2); border-color: rgba(122,59,78,.32); }
+  .card.annotated:hover { border-color: rgba(122,59,78,.5); }
+  .status.annotated { background: rgba(122,59,78,.12); color: var(--c-annotation); border: 1px solid rgba(122,59,78,.30); }
 
   .card.wide { grid-column: 1 / -1; }
 
@@ -210,13 +223,14 @@
         <div class="d">pitṛ- «отец» + os (оконч. Gen./Loc. du.) → pitros «(двух) отцов». Whitney §129 — ОБЩЕЕ правило (в отличие от исключения W129a у правил 4/5): ṛ полностью становится r, без остатка. Вращение здесь не годится (зарезервировано за гуной/вриддхи/ослаблением/сменой парных согласных — сегмент остаётся собой) — split с ОДНИМ результатом, возвращающимся в тот же слот.</div>
         <span class="status done">интегрировано · EXAMPLES[6]</span>
       </a>
-      <a class="card wide" href="app/test-slot-engine-rule31.html">
+      <a class="card wide annotated" href="app/test-slot-engine-rule31.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem); opacity:.42"></span><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-ending)"></span></div>
         <div class="t">suhārt <span class="dev">— правила 9, 8, 31</span></div>
         <div class="d">suhārd- «друг» + s (оконч. Nom. sg.) → suhārt. Уитни формулирует правило 9 (§150) итеративно — «the last is dropped, and again the last»: (9) первая итерация — суффиксальное s реально отсекается (elide), причина — данда (avasāna, «пауза») пульсирует к s перед самим отсечением (lopa*, звёздочка — честная оговорка: эта связь наша, не дословная у Эменó); (8) вторая, БЛОКИРОВАННАЯ итерация — r, названный в самой сутре условием («after r»), сначала получает собственный импульс к d, только потом корневой d тем же движением пытается уйти следом, но не долетает и пружинисто отскакивает обратно (resist), пока весь корень hārda- подчёркнут общей рамкой как неделимое целое — Whitney §150b, дословный пример «suhā́rt from suhārd»; (31/cartva, Pāṇini 8.4.54–56, без звёздочки — причина названа в самой сутре) уцелевший d оглушается в t перед паузой. Маркер паузы — данда «।» (avasāna), впервые даёт позиционному триггеру физического соседа для influence. Один физический модуль, ТРИ точки входа — EXAMPLES[8]/[9]/[31], каждая крупным чипом выделяет своё правило.</div>
-        <span class="status done">интегрировано · EXAMPLES[8]/[9]/[31]</span>
+        <span class="status done annotated">интегрировано · EXAMPLES[8]/[9]/[31]</span>
       </a>
     </div>
+    <p style="font-family:var(--sans); font-size:12px; color:var(--c-annotation); margin-top:10px;">Карточка с цветным фоном (лак-краситель) — содержит наше собственное дополнение к формулировке источника (причинные пульсы avasāna/r, честно оговорено звёздочкой на самой 3D-пилюле), не только материал Эменó напрямую.</p>
   </section>
 
   <section>

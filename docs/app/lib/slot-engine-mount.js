@@ -454,7 +454,18 @@ function injectStylesOnce() {
     .slot-step-chip.is-grammar { background:#CDA84E; color:#2A2D35; }
     .slot-step-chip.is-rule { font-variant-numeric: tabular-nums;
       background:var(--rule-chip-color, #5B7EAE); color:#0F2547; }
-    .slot-step-chip.active { border-color:transparent; }
+    /* РЕАЛЬНАЯ НАЙДЕННАЯ НЕДОСТАТОЧНОСТЬ (прямая обратная связь: «недостаточно
+       активно подсвечена активная пилюля с шагом») — раньше .active снимал
+       только едва заметную 1px-рамку, никакого свечения не было вообще,
+       вопреки собственному комментарию выше («.active добавляет только
+       СВЕЧЕНИЕ»). Теперь — настоящее свечение (box-shadow, цвет чипа же —
+       var(--rule-chip-color) для is-rule, свой для is-grammar ниже) + лёгкий
+       подъём/увеличение, тот же язык, что уже даёт .slot-step-chip:hover,
+       но постоянно, не только под курсором. */
+    .slot-step-chip.active { border-color:transparent; transform: translateY(-1px) scale(1.06);
+      box-shadow: 0 0 0 2px rgba(255,255,255,.28), 0 0 18px 4px var(--rule-chip-color, #5B7EAE); }
+    .slot-step-chip.is-grammar.active {
+      box-shadow: 0 0 0 2px rgba(255,255,255,.28), 0 0 18px 4px #CDA84E; }
     /* PRIMARY — тот единственный шаг, ради которого сделан весь ролик
        («шаг 2» из её формулировки: правило N, а не вспомогательная ссылка).
        Вдвое выше и в 1.5 раза шире обычного чипа — font-size и padding
