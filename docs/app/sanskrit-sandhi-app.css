@@ -661,6 +661,10 @@
   .eg-chip.c3 { background: #5B7EAE; border: 1.5px solid #497BC1; color: rgba(48,22,72,0.92); }
   .eg-chip.c4 { background: #C7BAA8; border: 1.5px solid #C18F49; color: rgba(90,20,45,0.92); }
   .eg-chip.c5 { background: #AE987A; border: 1.5px solid #C18F49; color: rgba(80,38,5,0.92); }
+  /* Лак-краситель — ДОПОЛНИТЕЛЬНЫЙ пример (не собственный пример Эменó
+     для ЭТОГО конкретного правила, см. rule-panel.js/ex.annotated) —
+     после c1-c5 в исходнике, чтобы побеждать при равной специфичности. */
+  .eg-chip.annotated { background: #7A3B4E; border: 1.5px solid #5A2838; color: rgba(240,224,228,0.95); }
 
   .panel-title {
     font-size: 20px;

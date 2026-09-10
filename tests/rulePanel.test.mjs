@@ -88,6 +88,29 @@ test('выбор правила 39 (пример без 3D-модуля): тек
   assert.deepEqual(exChips, EXERCISES[39].map(n => 'Упр. ' + n));
 });
 
+test('правила 8/9/31 (suhārt) — родные примеры Эменó идут первыми, suhārt последним с annotated (реальный найденный баг: desc правила 8 не совпадал дословно с цитатой, чип дублировался — та же ошибка класса, что уже была у śādhi/EXAMPLES[15])', () => {
+  selectRule(8);
+  let chips = [...letterPicker.querySelectorAll('.eg-chip')];
+  assert.equal(chips.length, 1, 'suhārt — родной, единственный пример Эменó для правила 8, дубля от parsed.examples быть не должно');
+  assert.equal(chips[0].textContent, EXAMPLES[8][0].desc);
+  assert.ok(!chips[0].classList.contains('annotated'), 'правило 8 — suhārt здесь СВОЙ пример, без выделения');
+
+  selectRule(9);
+  chips = [...letterPicker.querySelectorAll('.eg-chip')];
+  assert.equal(chips.length, 2);
+  assert.ok(!chips[0].classList.contains('annotated'), 'первый чип — родной пример Эменó (bharant-/bharan)');
+  assert.ok(chips[0].textContent.includes('bharant'));
+  assert.ok(chips[1].classList.contains('annotated'), 'suhārt — ДОПОЛНИТЕЛЬНЫЙ для правила 9, идёт последним, выделен');
+  assert.ok(chips[1].textContent.includes('suhārt'));
+
+  selectRule(31);
+  chips = [...letterPicker.querySelectorAll('.eg-chip')];
+  assert.equal(chips.length, 3);
+  assert.ok(!chips[0].classList.contains('annotated') && !chips[1].classList.contains('annotated'));
+  assert.ok(chips[0].textContent.includes('vid-') && chips[1].textContent.includes('budh-'));
+  assert.ok(chips[2].classList.contains('annotated') && chips[2].textContent.includes('suhārt'));
+});
+
 test('клик по чипу примера правила 39 включает 2D roleDemo (без module — clearRoleDemo/renderRoleDemo напрямую)', () => {
   selectRule(39);
   const chip = letterPicker.querySelector('.eg-chip');

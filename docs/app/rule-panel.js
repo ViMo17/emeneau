@@ -123,7 +123,12 @@ function showCenter(cd) {
   } else {
     exData.forEach(ex => {
       const chip = document.createElement('span');
-      chip.className = 'eg-chip ' + cd.g;
+      // ex.annotated — явный флаг (не выводится угадыванием): пример
+      // ДОПОЛНИТЕЛЬНЫЙ, не собственный пример Эменó для ЭТОГО конкретного
+      // правила (см. suhārt в EXAMPLES[9]/EXAMPLES[31] — Эменó цитирует
+      // это слово под правилом 8, не под 9/31) — прямой запрос
+      // пользователя: «доп. цветом — СУХАРТ там, где его нет в примерах».
+      chip.className = 'eg-chip ' + cd.g + (ex.annotated ? ' annotated' : '');
       chip.textContent = ex.desc;
       chip.addEventListener('click', () => {
         lpPicker.querySelectorAll('.eg-chip').forEach(c => c.classList.remove('active'));
