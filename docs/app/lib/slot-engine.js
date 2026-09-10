@@ -41,7 +41,11 @@
 //   slot-engine-words.js    — группы слов («вся единица, не одна буква»).
 //   slot-engine-steps.js    — шаги (грамматика/правило N), runtime-таймлайн.
 //   slot-engine-validate.js — валидация data перед первым кадром.
-//   slot-engine-ops.js      — обработчики операций (apply*) и их помощники.
+//   slot-engine-ops-*.js    — обработчики операций (apply*), разбиты по
+//                             смыслу (Стадия 5б): shared (общие DOM/визуальные
+//                             помощники — кольца/искры/пилюли/волны/рамка),
+//                             transform, elide (+resist), influence (+approach),
+//                             move (split/arrive/merge/bud), finish (settle/dim).
 //   slot-engine-mount.js    — mountSlotExample: сцена, кадровый цикл, стили.
 //   slot-engine-generate.js — ЭКСПЕРИМЕНТАЛЬНЫЙ генератор ops для одной
 //                             категории реестра (influence+transform, один
@@ -54,6 +58,11 @@ export * from './slot-engine-cube.js';
 export * from './slot-engine-words.js';
 export * from './slot-engine-steps.js';
 export * from './slot-engine-validate.js';
-export * from './slot-engine-ops.js';
+export * from './slot-engine-ops-shared.js';
+export * from './slot-engine-ops-transform.js';
+export * from './slot-engine-ops-elide.js';
+export * from './slot-engine-ops-influence.js';
+export * from './slot-engine-ops-move.js';
+export * from './slot-engine-ops-finish.js';
 export * from './slot-engine-mount.js';
 export * from './slot-engine-generate.js';

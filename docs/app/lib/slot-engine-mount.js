@@ -9,10 +9,12 @@ import { makeCube, updateShadow, isSharedResource } from './slot-engine-cube.js'
 import { computeWordGroups, resolveSlotRef } from './slot-engine-words.js';
 import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
 import { validateExampleData } from './slot-engine-validate.js';
-import {
-  applyInfluence, applyApproach, applyTransform, applySplit, applyArrive,
-  applyMerge, applyBud, applyElide, applyResist, applySettle, applyDim, applyStepDim, disposePulseFace,
-} from './slot-engine-ops.js';
+import { applyTransform } from './slot-engine-ops-transform.js';
+import { applyElide, applyResist } from './slot-engine-ops-elide.js';
+import { applyInfluence, applyApproach } from './slot-engine-ops-influence.js';
+import { applySplit, applyArrive, applyMerge, applyBud } from './slot-engine-ops-move.js';
+import { applySettle, applyDim, applyStepDim } from './slot-engine-ops-finish.js';
+import { disposePulseFace } from './slot-engine-ops-shared.js';
 
 /**
  * @param {HTMLElement} container

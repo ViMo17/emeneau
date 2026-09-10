@@ -1,6 +1,8 @@
-// Тест-предохранитель на разбиение slot-engine.js по модулям (заход 62,
-// Стадия 5 профессионализации). Реализация ушла в slot-engine-*.js
-// (core/cube/words/steps/validate/ops/mount), slot-engine.js стал тонким
+// Тест-предохранитель на разбиение slot-engine.js по модулям (Стадия 5
+// профессионализации, позже — доп. разбиение самого slot-engine-ops.js на
+// shared/transform/elide/influence/move/finish, слишком крупный для одного
+// файла). Реализация ушла в slot-engine-*.js (core/cube/words/steps/
+// validate/ops-*/mount), slot-engine.js стал тонким
 // barrel-файлом (`export * from './slot-engine-X.js'` на каждый модуль) —
 // публичный API (что реально импортируют examples/*.js, тестовые HTML,
 // приложение, остальные tests/*.mjs) не должен был измениться ни на одно
@@ -55,7 +57,12 @@ test('каждый submodule импортируется НАПРЯМУЮ (не �
     '../docs/app/lib/slot-engine-words.js',
     '../docs/app/lib/slot-engine-steps.js',
     '../docs/app/lib/slot-engine-validate.js',
-    '../docs/app/lib/slot-engine-ops.js',
+    '../docs/app/lib/slot-engine-ops-shared.js',
+    '../docs/app/lib/slot-engine-ops-transform.js',
+    '../docs/app/lib/slot-engine-ops-elide.js',
+    '../docs/app/lib/slot-engine-ops-influence.js',
+    '../docs/app/lib/slot-engine-ops-move.js',
+    '../docs/app/lib/slot-engine-ops-finish.js',
     '../docs/app/lib/slot-engine-mount.js',
   ];
   for (const m of modules) {
