@@ -77,3 +77,8 @@ npm run audit               # известные уязвимости в зав�
 Settings → Pages → Source: `Deploy from a branch` → Branch: `main`, папка
 `/docs` → Save. Через минуту сайт появится по адресу
 `https://vimo17.github.io/emeneau/`.
+
+## Лицензия
+
+Все права защищены — см. [`LICENSE`](LICENSE). Код не является открытым
+исходным кодом.

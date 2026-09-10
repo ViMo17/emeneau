@@ -2,6 +2,12 @@
   "name": "emeneau",
   "version": "1.0.0",
   "description": "Интерактивный тренажёр сандхи санскрита (71 правило Emeneau & van Nooten) — слот-движок 3D-анимации.",
+  "homepage": "https://vimo17.github.io/emeneau/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ViMo17/emeneau.git"
+  },
+  "license": "UNLICENSED",
   "type": "module",
   "private": true,
   "scripts": {
