@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 11, agam-+va)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — шестой пример фазы автоматической постройки по
+  номерам правил. gam- «идти» (корень) → аористная основа agam- (аугмент
+  a- + корень) + va (личн. оконч. 1 л. дв.ч.) → aganva «шли (мы оба)».
+  Whitney §212a (сверено дословно, Wikisource): финальный m корня перед v
+  или m заменяется на n — «before m or v, [final radical m] is changed to
+  n». Pāṇini 8.2.65 mvoś ca (найдено через сниппеты Kāśikāvṛtti, не через
+  прямую сверку первоисточника — открытый пункт).
+  МЕХАНИКА — без approach (в отличие от śādhi/rule42): граница морфем
+  чисто условная, буквы падают уже рядом, как у agnayas/taddhiraṇyam —
+  influence (v→m) + transform (m→n) на месте. TRANSFORM_KIND.assimToNeighbor
+  (360°), не vargaPair (180°) — m/n не парные звуки одной варги, полная
+  смена варги целиком (тот же класс, что h→dh, но m остаётся носовым, не
+  выходит из всех варг вовсе). clearance:0/clearanceZ:-0.5 — оба соседа
+  заняты без зазора.
+  Данные — examples/rule11-aganva-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule11-aganva-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
