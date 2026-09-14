@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { buildChalkMaterials, buildMetallicMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
+import { buildChalkMaterials, buildOpposingFaceMaterials, buildMetallicMaterials, makeChalkGeo, makeShadowBlobTexture } from './chalk-module.js';
 import { CUBE_SIZE, READY_COLOR, colorFor } from './slot-engine-core.js';
 
 /** @typedef {import('./slot-engine-types.js').Cube} Cube */
@@ -138,7 +138,21 @@ export function makeCube(tr, seed) {
   // переиспользовал именно его для сигнальной фазы transform — из-за этого
   // ни старая, ни новая буква не были видны всё вращение (см.
   // slot-engine-ops-transform.js, signalMats).
-  defineMatsSlot(cube, 'matsBlankSignal', c => buildOneMatSet(c.color, c.seed + 6, c.tr));
+  //
+  // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (живая проверка, тот же заход): первая версия
+  // строила matsBlankSignal через buildOneMatSet → buildChalkMaterials,
+  // которая красит букву на ОБЕИХ торцевых гранях (idx4 И idx5) — годится
+  // для matsMain/matsReady/matsBlank (кубик в покое, задняя грань никогда
+  // не видна зрителю), но НЕ для активного вращения: во время своего
+  // собственного окна поворота (когда idx5 разворачивается К зрителю,
+  // см. Часть 3 «Буква на кубике-transform — ТОЛЬКО на фасаде»,
+  // тот же класс бага, что уже был исправлен для matsSignal/matsGold через
+  // buildMetallicMaterials) буква показывалась ВТОРОЙ раз, посередине
+  // оборота — «n видна дважды». Исправлено — `buildOpposingFaceMaterials`
+  // с `backGlyph:null` (идентична buildChalkMaterials по внешности —
+  // тот же paintFlatFace/roughness/metalness/transparent, просто красит
+  // ТОЛЬКО idx4), не изобретён новый рисующий код.
+  defineMatsSlot(cube, 'matsBlankSignal', c => buildOpposingFaceMaterials(c.color, c.seed + 6, c.tr, null));
   cube.matsMain = buildOneMatSet(color, seed, tr);
   cube.mesh = new THREE.Mesh(getCubeGeo(), cube.matsMain);
   cube.shadow = makeShadow();

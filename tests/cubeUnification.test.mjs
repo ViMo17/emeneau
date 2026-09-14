@@ -49,6 +49,35 @@ test('makeCube: matsBlankSignal — отдельный от matsBlank набор
   assert.equal(cube.matsBlankSignal, blankSignal, 'повторное чтение — та же ссылка');
 });
 
+test('makeCube: matsBlankSignal рисует букву ТОЛЬКО на idx4 (фасад), НЕ на idx5 (найденный баг — живая проверка: «n видна дважды», регрессия к поведению buildChalkMaterials)', () => {
+  // Инструментируем document.createElement('canvas') на время теста —
+  // считаем fillText по каждому холсту в порядке создания (0..5, тот же
+  // порядок, что faces.map в chalk-module.js). Сохраняем/восстанавливаем
+  // оригинал, чтобы не задеть остальные тесты этого файла.
+  const originalCreateElement = globalThis.document.createElement;
+  const created = [];
+  globalThis.document.createElement = function (tag) {
+    if (tag !== 'canvas') return originalCreateElement.call(this, tag);
+    const real = originalCreateElement.call(this, tag);
+    const rec = { idx: created.length, fillTextCalls: 0 };
+    created.push(rec);
+    const realCtx = real.getContext();
+    const originalFillText = realCtx.fillText.bind(realCtx);
+    realCtx.fillText = (...args) => { rec.fillTextCalls++; return originalFillText(...args); };
+    return real;
+  };
+  try {
+    const cube = makeCube('m', 42); // matsMain строится эагерно — уже создаёт 6 холстов, не относящихся к этой проверке
+    created.length = 0;
+    void cube.matsBlankSignal; // ленивая постройка — ровно 6 холстов, по одному на грань
+    assert.equal(created.length, 6, 'по одному холсту на каждую из 6 граней BoxGeometry');
+    assert.ok(created[4].fillTextCalls > 0, 'idx4 (фасад) несёт букву');
+    assert.equal(created[5].fillTextCalls, 0, 'idx5 (противолежащая) — БЕЗ буквы, иначе видна дважды во время своего окна поворота');
+  } finally {
+    globalThis.document.createElement = originalCreateElement;
+  }
+});
+
 test('makeCube: два разных кубика используют ОДНУ И ТУ ЖЕ геометрию (Задача А — общая форма)', () => {
   const cubeA = makeCube('k', 100);
   const cubeB = makeCube('a', 999); // другой глиф, другой seed
