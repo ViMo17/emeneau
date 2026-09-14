@@ -146,7 +146,25 @@ export function applyApproach(op, elapsed, ctx) {
   // op.movers/op.mover — как раньше (число/массив), либо ссылка на группу слов
   // ({word:2}) через ту же общую формулу, что и у influence.from (см. выше).
   const slots = resolveSlotRef(op.movers ?? op.mover, wordGroupsList);
-  const movers = slots.map(s => cubes[s]).filter(Boolean);
+  // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule12, живая проверка: «сначала внезапно
+  // сближаются, потом отодвигаются»): movers и baseXs (ниже) раньше
+  // фильтровались НЕЗАВИСИМО — movers.filter(Boolean) выбрасывает слот,
+  // чей cube пропал (типично — соседний `elide` того же кадра), но
+  // baseXs.map(...) считался от НЕФИЛЬТРОВАННОГО slots, той же длины,
+  // что и до пропажи. Итог — movers[i] и baseXs[i] расходились по
+  // индексу: движение, у которого ОДИН из movers исчез уже ПОСЛЕ
+  // приземления (retreat:false продолжает переустанавливать позицию
+  // каждый кадр), на следующем кадре сдвигало ОСТАВШИХСЯ movers на
+  // baseX ЧУЖОГО (сдвинутого) слота — видимый мгновенный скачок к
+  // цели, задолго до старта следующего approach, который его данные не
+  // ожидают (у него свой fromX, рассчитанный от НЕиспорченной позиции —
+  // отсюда и второй скачок, уже назад, в момент его собственного
+  // старта). Исправлено — фильтруем slot/cube/fromX ОДНОЙ маской, чтобы
+  // movers[i] и baseXs[i] всегда указывали на ОДНУ и ту же букву.
+  const pairs = slots
+    .map((s, i) => ({ slot: s, cube: cubes[s], baseX: op.fromX?.[i] ?? slotX(s) }))
+    .filter(p => p.cube);
+  const movers = pairs.map(p => p.cube);
   if (!movers.length) return;
   // Цель (target) может исчезнуть по ходу движения (сценарий «приближение
   // вызывает реакцию» — śādhi: DH приближается к S, а S по ходу
@@ -170,7 +188,7 @@ export function applyApproach(op, elapsed, ctx) {
   // слился с соседом на общем зазоре через merge — ключ в cubes{} не
   // меняется от merge/approach, см. rule1). Без fromX поведение не меняется
   // ни на йоту — ни один существующий пример его не передаёт.
-  const baseXs = slots.map((s, i) => op.fromX?.[i] ?? slotX(s));
+  const baseXs = pairs.map(p => p.baseX);
   const dir = Math.sign(slotX(op.target) - baseXs[0]); // в какую сторону цель
 
   // Если distance большая (закрыть исходный зазор И занять место

@@ -79,6 +79,30 @@ test('applyApproach: retreat:false (заход 15) — мувер остаётс
   assert.ok(Math.abs(cubes[1].mesh.position.x - (baseX + shift)) < 1e-9, 'после окончания — мувер держится у цели (shift), не 0');
 });
 
+test('applyApproach: РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (rule12, живая проверка: «сначала внезапно сближаются, потом отодвигаются») — если один из НЕСКОЛЬКИХ movers пропадает из ctx.cubes (типично, соседний elide), ОСТАЛЬНЫЕ movers не должны скакать на чужой baseX', () => {
+  const cubes = { 7: makeCube(7), 8: makeCube(8), 9: makeCube(9) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'approach', movers: [7, 8, 9], target: 5, start: 0, approachDur: 500, holdDur: 300, retreat: false, distance: 1.0, jitterAmp: 0 };
+  const dir = Math.sign(slotX(5) - slotX(7));
+  const shift = SLOT * 1.0 * dir;
+  const retreatEnd = 500 + 300; // retreatDur=0 при retreat:false
+
+  applyApproach(op, retreatEnd + 50, ctx);
+  const x8Before = cubes[8].mesh.position.x;
+  const x9Before = cubes[9].mesh.position.x;
+  assert.ok(Math.abs(x8Before - (slotX(8) + shift)) < 1e-9, 'до пропажи слота 7 — слот 8 держится у СВОЕЙ верной цели');
+  assert.ok(Math.abs(x9Before - (slotX(9) + shift)) < 1e-9, 'до пропажи слота 7 — слот 9 держится у СВОЕЙ верной цели');
+
+  // Слот 7 «исчезает» (та же ситуация, что создаёт applyElide, убирая
+  // букву из ctx.cubes) — approach продолжает вызываться каждый кадр
+  // (retreat:false), поскольку он всё ещё в data.ops.
+  delete cubes[7];
+  applyApproach(op, retreatEnd + 100, ctx);
+
+  assert.ok(Math.abs(cubes[8].mesh.position.x - x8Before) < 1e-9, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: слот 8 не должен скакать на чужой baseX(slot7) после пропажи слота 7');
+  assert.ok(Math.abs(cubes[9].mesh.position.x - x9Before) < 1e-9, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: слот 9 не должен скакать на чужой baseX(slot8) после пропажи слота 7');
+});
+
 test('applyApproach: обычный retreat (по умолчанию) — по истечении полного цикла мувер возвращается домой', () => {
   const cubes = { 1: makeCube(1), 3: makeCube(3) };
   const ctx = makeCtx(cubes);
