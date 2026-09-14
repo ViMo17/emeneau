@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Сравнение: clearanceZ vs clearanceY (диагностика, не пример правила)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #wrap { width:100%; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+  #row { display:flex; gap:24px; align-items:flex-start; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .col h3 { color:#E6E1D2; font-family:'Helvetica Neue',sans-serif; font-size:14px; margin:0; }
+  .anim { width:min(42vw,420px); height:min(40vh,300px); }
+  .anim canvas { display:block; width:100%; height:100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:700px; }
+  button { font-family:'Helvetica Neue',sans-serif; font-size:13px; padding:6px 14px;
+    border-radius:6px; border:1px solid rgba(230,225,210,.4); background:rgba(0,0,0,.25);
+    color:#E6E1D2; cursor:pointer; }
+  button:hover { background:rgba(230,225,210,.15); }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">ДИАГНОСТИЧЕСКАЯ страница, НЕ пример правила — сравнение двух
+  вариантов того, как кубик, вращающийся между двумя занятыми соседями
+  без зазора, избегает физического пересечения с ними. Слева — ТЕКУЩИЙ
+  путь (clearanceZ, выдвижение к камере), уже используется в rule2/
+  rule6/suhārt/rule12, визуально ранее подтверждён. Справа —
+  ЭКСПЕРИМЕНТАЛЬНАЯ альтернатива (clearanceY, подъём вверх на время
+  вращения), НЕ решённый путь, добавлена только для этого сравнения.
+  Оба используют одну и ту же операцию (k→g, TRANSFORM_KIND.vargaPair,
+  180°) на одной и той же раскладке (a-k-a, соседи вплотную). Кнопка
+  «Повторить» перезапускает оба сразу.</div>
+<div id="wrap">
+  <div id="row">
+    <div class="col"><h3>Слева: clearanceZ (текущий)</h3><div class="anim" id="left"></div></div>
+    <div class="col"><h3>Справа: clearanceY (эксперимент)</h3><div class="anim" id="right"></div></div>
+  </div>
+  <button id="replay">Повторить</button>
+</div>
+<script type="module">
+import { mountSlotExample, centeredStart, TRANSFORM_KIND } from './lib/slot-engine.js';
+
+const START = centeredStart(3);
+function makeData(variant) {
+  const transformOp = variant === 'z'
+    ? { type: 'transform', at: START + 1, toGlyph: 'g', start: 1200, ...TRANSFORM_KIND.vargaPair, clearance: 0, clearanceZ: -0.5, label: 'clearanceZ' }
+    : { type: 'transform', at: START + 1, toGlyph: 'g', start: 1200, ...TRANSFORM_KIND.vargaPair, clearance: 0, clearanceY: 0.9, label: 'clearanceY' };
+  return {
+    initial: [
+      { slot: START + 0, tr: 'a' },
+      { slot: START + 1, tr: 'k' },
+      { slot: START + 2, tr: 'a' },
+    ],
+    steps: [
+      { kind: 'rule', ruleNum: 99, start: 1200, end: 5700, activeSlots: [START + 1], color: 0xAFBFD4, primary: true },
+    ],
+    ops: [transformOp],
+  };
+}
+
+let leftInst = null, rightInst = null;
+function run() {
+  if (leftInst) leftInst.unmount();
+  if (rightInst) rightInst.unmount();
+  leftInst = mountSlotExample(document.getElementById('left'), makeData('z'));
+  rightInst = mountSlotExample(document.getElementById('right'), makeData('y'));
+}
+run();
+document.getElementById('replay').addEventListener('click', run);
+</script>
+</body>
+</html>
