@@ -136,7 +136,7 @@
       <span><span class="dot" style="background:var(--c-weak)"></span>слабая ступень</span>
       <span><span class="dot" style="background:var(--c-new)"></span>новый сегмент</span>
       <span><span class="dot" style="background:var(--c-ending)"></span>граница/окончание</span>
-      <span style="color:var(--ink-faint);">— подробнее в разделе 03 ниже</span>
+      <span style="color:var(--ink-faint);">— подробнее в разделе 04 ниже</span>
     </div>
     <div class="grid">
       <a class="card" href="app/test-slot-engine.html">
@@ -252,7 +252,19 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">03</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Слот-движок · в работе</h2></div>
+    <div class="cards">
+      <a class="card wide" href="app/test-slot-engine-rule12.html">
+        <div class="dot-row"><span class="dot" style="background:var(--c-vrddhi)"></span><span class="dot" style="background:var(--c-ending)"></span><span class="dot" style="background:var(--c-stem); opacity:.42"></span></div>
+        <div class="t">acchaitta <span class="dev">— правило 12</span></div>
+        <div class="d">chid- «рассекать» (корень) + augment a- (готовое «acchid-», геминация ch — правило 10) + sic-показатель аориста -s- + окончание 2 л. мн.ч. действ. -ta → acchaitta «вы рассекли». Whitney §233e/§882–883 (дословно: «ácchāittam, ácchāittām, ácchāitta»). Три события цепочкой, ни одного нового в движке: [Грамм.] вриддхи i→ai (Pāṇini 7.2.1) → [правило 31] cartva d→t (Pāṇini 8.4.55 khari ca) → [правило 12] s между двух смычных → 0 (Pāṇini 8.2.26 jhalo jhali) — окончание подъезжает и закрывает освободившийся слот, два t становятся геометрически смежными. Численно проверено (242/242 теста, полная симуляция таймлайна без NaN), ждёт визуальной проверки перед интеграцией в EXAMPLES[12].</div>
+        <span class="status plan">тестовый полигон</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Карта эффектов <span class="dev" style="font-size:16px;">कार्य</span></h2></div>
     <p class="lede" style="font-size:16px; margin-bottom:22px;">У Эмено правила даны единообразно, но за ними стоят разные операции Панини. Кодируем взаимодействие по двум независимым осям: цвет — тип затрагиваемого сегмента, движение — тип операции. Полный, построчно сверенный с Уитни/Панини реестр всех 71 правила — <code>docs/reference/interaction-registry.md</code> в репозитории; здесь — верхнеуровневая сводка по типам операций, не по номерам правил.</p>
 
     <div class="axes">
@@ -403,7 +415,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">04</span><h2>Эффекты</h2></div>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Эффекты</h2></div>
     <div class="grid">
       <a class="card" href="effects/rule-guna-agnayas.html">
         <div class="dot-row"><span class="dot" style="background:var(--c-stem)"></span><span class="dot" style="background:var(--c-guna)"></span><span class="dot" style="background:var(--c-new)"></span></div>
@@ -451,7 +463,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">05</span><h2>Материалы</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Материалы</h2></div>
     <div class="grid">
       <a class="card wide" href="reference/chalk-material-study.html">
         <div class="t">Меловой куб <span class="dev">— материаловедческий этюд</span></div>
@@ -461,7 +473,7 @@
   </section>
 
   <section>
-    <div class="sec-head"><span class="sec-num">06</span><h2>Инструменты разработки</h2></div>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Инструменты разработки</h2></div>
     <p class="lede" style="margin-bottom:16px;">Не витрина — рабочие полигоны и диагностика для дальнейшей разработки слот-движка. Ссылки раньше жили отдельной панелью внутри приложения, теперь собраны здесь.</p>
     <div class="grid">
       <a class="card" href="app/test-slot-engine-agnayas-generated.html" target="_blank">

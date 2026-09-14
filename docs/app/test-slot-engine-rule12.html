@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Проверка: слот-движок (правило 12, acchid-+s-ta)</title>
+<style>
+  html, body { height:100%; margin:0; background:#2A2D35; }
+  #stage-wrap { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+  #anim-container { width:min(96vw,900px); height:min(74vh,440px); }
+  #anim-container canvas { display: block; width: 100%; height: 100%; }
+  #note { position:fixed; top:10px; left:10px; font-family:'Helvetica Neue',sans-serif;
+    font-size:12px; color:rgba(230,225,210,.7); background:rgba(0,0,0,.3);
+    padding:6px 10px; border-radius:6px; z-index:10; max-width:660px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="note">Слот-движок — седьмой пример фазы автоматической постройки по
+  номерам правил. chid- «рассекать» (корень) + augment a- (готовое
+  «acchid-», геминация ch — правило 10) + sic-показатель аориста -s- +
+  окончание 2 л. мн.ч. действ. -ta → acchaitta «вы рассекли». Whitney
+  §233e/§882–883 (сверено дословно): «ácchāittam, ácchāittām, ácchāitta».
+  Pāṇini 7.2.1 (вриддхи перед siC в парасмайпаде), 8.4.55 khari ca
+  (cartva, d→t), 8.2.26 jhalo jhali (s между двух смычных → 0).
+  ТРИ события, ни одного нового в движке: B1 [Грамм.] вриддхи i→ai
+  (TRANSFORM_KIND.vrddhi, как rule42) → B3 [Правило 31] cartva d→t
+  (TRANSFORM_KIND.vargaPair, как suhārt) → B5 [Правило 12] s→∅ между
+  двумя смычными (elide, label:'lopa', как śādhi/rule55/rule9) →
+  approach окончания закрывает освободившийся слот (два t становятся
+  геометрически смежными — суть самого правила).
+  Данные — examples/rule12-acchaitta-slots.js.
+  Открывать через живой сайт (https://).</div>
+<div id="stage-wrap"><div id="anim-container"></div></div>
+<script type="module">
+import { mount } from './examples/rule12-acchaitta-slots.js';
+import { attachPauseDebug } from './test-pause-debug.js';
+attachPauseDebug(mount(document.getElementById('anim-container')));
+</script>
+</body>
+</html>
