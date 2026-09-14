@@ -103,24 +103,33 @@ function buildChalkMaterials(baseColor, seed, glyph) {
   });
 }
 
-// Материал с РАЗНЫМИ буквами на противолежащих торцевых гранях (idx4 —
-// текущий звук, idx5 — будущий) — для transform-поворотов ровно на
-// нечётное число полуоборотов (0.5, 1.5... TRANSFORM_KIND.vargaPair), где
-// к зрителю после разворота выходит ПРОТИВОЛЕЖАЩАЯ грань. В отличие от
-// buildChalkMaterials (та же буква на обеих гранях — годится, когда кубик
-// возвращается к СВОЕЙ ЖЕ грани после целого числа оборотов), здесь буква
-// нового звука должна быть НАНЕСЕНА ЗАРАНЕЕ, до начала вращения, а не
-// дорисована посреди пути — портировано из проверенного эталона
-// (docs/effects/rule-assimilation-varga-t-d.html, buildDentalVarga: там
-// же не regenMats на середине оборота, а сразу два глифа на одном
-// материале с самого начала).
-function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph) {
+// Материал с РАЗНЫМИ буквами на idx4 (текущий звук, фасад) и на ОДНОЙ
+// другой грани (будущий звук) — для transform-поворотов, где к зрителю
+// после разворота выходит НЕ своя же грань. backIdx — КАКАЯ именно (не
+// всегда противолежащая idx5): «5 граней кубика = 5 членов варги»
+// (фасад=1-й член, по часовой стрелке=2-й/придыхательный, ПРОТИВОЛЕЖАЩИЕ
+// грани=3-й/4-й звонкие члены, верх=5-й/носовой — зарезервированная
+// геометрическая конвенция, CLAUDE.md Часть 3). Отсюда ДВА разных случая
+// с ДВУМЯ разными целевыми гранями:
+//   - звонкость (1↔3, 2↔4, TRANSFORM_KIND.vargaPair) — 180°, backIdx=5
+//     (истинно противолежащая грань).
+//   - придых↔непридых (1↔2, 3↔4, TRANSFORM_KIND.aspirationPair) — 90°,
+//     backIdx=0 (соседняя грань «по часовой стрелке», НЕ противолежащая
+//     — численно проверено THREE.Quaternion, см. applyTransform).
+// В отличие от buildChalkMaterials (та же буква на idx4 И idx5 разом —
+// годится, только когда кубик возвращается к СВОЕЙ ЖЕ грани после целого
+// числа оборотов), здесь буква нового звука должна быть НАНЕСЕНА ЗАРАНЕЕ,
+// до начала вращения, а не дорисована посреди пути — 180°-вариант
+// портирован из проверенного эталона (docs/effects/rule-assimilation-
+// varga-t-d.html, buildDentalVarga: там же не regenMats на середине
+// оборота, а сразу два глифа на одном материале с самого начала).
+function buildOpposingFaceMaterials(baseColor, seed, frontGlyph, backGlyph, backIdx = 5) {
   const SZ = 256;
   const faces = [0,1,2,3,4,5];
   return faces.map((idx)=>{
     const cv = paintFlatFace(SZ, baseColor);
     if (idx === 4 && frontGlyph) paintGlyph(cv, frontGlyph);
-    if (idx === 5 && backGlyph) paintGlyph(cv, backGlyph);
+    if (idx === backIdx && backGlyph) paintGlyph(cv, backGlyph);
     const tex = new THREE.CanvasTexture(cv);
     tex.encoding = THREE.sRGBEncoding;
     return new THREE.MeshStandardMaterial({

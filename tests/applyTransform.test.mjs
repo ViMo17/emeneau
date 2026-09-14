@@ -106,6 +106,62 @@ test('applyTransform: категория vargaPair (k→g) — обе буквы
   assert.equal(op._done, undefined, 'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: _done не должен выставляться сразу по завершении вращения — есть ещё пауза-фиксация (holdDur)');
 });
 
+test('applyTransform: категория aspirationPair (ch→c, rule10 деаспирация) — обе буквы нанесены ДО начала вращения, 90° за 1800мс, БУДУЩАЯ буква на СОСЕДНЕЙ грани (idx0), не на противолежащей (idx5)', () => {
+  // Отличается от vargaPair ТОЛЬКО углом/целевой гранью (90°/idx0, не
+  // 180°/idx5) — численно проверено THREE.Quaternion в applyTransform,
+  // см. комментарий там. Длительность/тяжесть вращения — та же (1800мс,
+  // bounceH 0.16), обе категории читаются как одна и та же «парная
+  // замена внутри варги».
+  const cubes = { 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 3, toGlyph: 'c', start: 1000, ...TRANSFORM_KIND.aspirationPair };
+  const anticipateDur = 900; // дефолт
+  const dur = 1800; // дефолт для landsOnOppositeFace (0/5), НЕ spinTurns×MS_PER_360
+  const activeStart = 1000 + anticipateDur;
+
+  applyTransform(op, activeStart, ctx); // ровно момент конца паузы — старт активной фазы
+  assert.equal(cubes[3].mesh.material, cubes[3]._oppositeMats, 'на старте активной фазы — уже смонтирован набор с обеими буквами (та же механика, что vargaPair)');
+  assert.equal(cubes[3].tr, 'k', 'cube.tr ещё старый — regenMats откладывается до приземления');
+
+  applyTransform(op, activeStart + dur, ctx); // точно момент завершения вращения (90°)
+  assert.equal(cubes[3].tr, 'c', 'к моменту приземления regenMats уже применён');
+  assert.equal(cubes[3].mesh.material, cubes[3].matsMain, 'истинный цвет СРАЗУ по завершении, как и у vargaPair');
+  assert.equal(cubes[3].mesh.rotation.y, 0, 'поворот сброшен в 0 по завершении');
+  assert.equal(cubes[3]._oppositeMats, null, 'временный набор граней уничтожен после приземления');
+});
+
+test('applyTransform: aspirationPair — buildOpposingFaceMaterials красит БУДУЩУЮ букву на idx0 (соседняя грань), НЕ на idx5 (противолежащая, та зарезервирована за vargaPair)', () => {
+  // Инструментируем document.createElement('canvas') — тот же приём, что
+  // уже применён в tests/cubeUnification.test.mjs для matsBlankSignal.
+  const originalCreateElement = globalThis.document.createElement;
+  const created = [];
+  globalThis.document.createElement = function (tag) {
+    if (tag !== 'canvas') return originalCreateElement.call(this, tag);
+    const real = originalCreateElement.call(this, tag);
+    const rec = { idx: created.length, fillTextCalls: 0 };
+    created.push(rec);
+    const realCtx = real.getContext();
+    const originalFillText = realCtx.fillText.bind(realCtx);
+    realCtx.fillText = (...args) => { rec.fillTextCalls++; return originalFillText(...args); };
+    return real;
+  };
+  try {
+    const cubes = { 3: makeCube(3) };
+    const ctx = makeCtx(cubes);
+    const op = { type: 'transform', at: 3, toGlyph: 'c', start: 1000, ...TRANSFORM_KIND.aspirationPair };
+    const anticipateDur = 900;
+    const activeStart = 1000 + anticipateDur;
+    created.length = 0; // makeCube эагерно строит matsMain — не относится к этой проверке
+    applyTransform(op, activeStart, ctx); // строит _oppositeMats на старте активной фазы
+    assert.equal(created.length, 6, 'по одному холсту на каждую из 6 граней BoxGeometry');
+    assert.ok(created[4].fillTextCalls > 0, 'idx4 (фасад) несёт ТЕКУЩУЮ букву (k)');
+    assert.ok(created[0].fillTextCalls > 0, 'idx0 (соседняя) несёт БУДУЩУЮ букву (c) — квартерн-проверенная грань четвертьоборота');
+    assert.equal(created[5].fillTextCalls, 0, 'idx5 (противолежащая) — БЕЗ буквы, эта грань не используется при 90°');
+  } finally {
+    globalThis.document.createElement = originalCreateElement;
+  }
+});
+
 test('applyTransform: категория vrddhi (u→au) — 720°, активная фаза переключает материал на matsGold, не matsSignal', () => {
   const cubes = { 2: makeCube(2) };
   const ctx = makeCtx(cubes);

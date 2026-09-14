@@ -91,17 +91,27 @@ export function applyTransform(op, elapsed, ctx) {
     if (elapsed < op.start) return;
     if (op._done) return;
     const spinTurns = op.spinTurns ?? 1;
-    // Полуоборот (0.5, 1.5, 2.5...) — к зрителю в конце разворота выходит
-    // ПРОТИВОЛЕЖАЩАЯ грань кубика (TRANSFORM_KIND.vargaPair). Для этого
-    // случая буква нового звука наносится на противолежащую грань ЗАРАНЕЕ,
-    // до начала вращения (см. buildOpposingFaceMaterials в chalk-module.js)
-    // — без промежуточного «слепого» материала и без перерисовки на
-    // середине пути, когда грань ещё обращена к зрителю. Портировано из
-    // проверенного эталона (docs/effects/rule-assimilation-varga-t-d.html,
-    // buildDentalVarga) — там же и более медленный, «тяжёлый» оборот
-    // (1800мс на 180°, не по общей формуле spinTurns×MS_PER_360) и меньший
-    // подскок (0.16 вместо 0.3).
-    const landsOnOppositeFace = Math.round(spinTurns * 2) % 2 !== 0;
+    // Дробная часть оборота (0.25/0.5, TRANSFORM_KIND.aspirationPair/
+    // vargaPair) — к зрителю в конце разворота выходит ДРУГАЯ, заранее
+    // известная грань кубика, не своя же (idx4). Для этих случаев буква
+    // нового звука наносится ЗАРАНЕЕ, до начала вращения (см.
+    // buildOpposingFaceMaterials в chalk-module.js) — без промежуточного
+    // «слепого» материала и без перерисовки на середине пути, когда
+    // грань ещё обращена к зрителю. landingFaceIdx — null для целого
+    // числа оборотов (обычный reveal-механизм, буква меняется НА idx4
+    // посреди пути), 5 для полуоборота (ПРОТИВОЛЕЖАЩАЯ грань, звонкость,
+    // vargaPair — портировано из docs/effects/rule-assimilation-varga-
+    // t-d.html, buildDentalVarga), 0 для четвертьоборота (СОСЕДНЯЯ грань,
+    // придыхание, aspirationPair — численно проверено THREE.Quaternion:
+    // после поворота на -90° в направлении, которое здесь всегда
+    // используется, к зрителю выходит именно локальная +X (idx0), не
+    // idx1/idx5). И полу-, и четвертьоборот — тот же более медленный,
+    // «тяжёлый» темп (1800мс, не по общей формуле spinTurns×MS_PER_360)
+    // и меньший подскок (0.16 вместо 0.3) — обе категории читаются как
+    // одна и та же «парная замена внутри варги», просто разный угол/ось.
+    const quarterSteps = Math.round(Math.abs(spinTurns) * 4) % 4;
+    const landingFaceIdx = quarterSteps === 2 ? 5 : quarterSteps === 1 ? 0 : quarterSteps === 3 ? 1 : null;
+    const landsOnOppositeFace = landingFaceIdx !== null; // общий гейт для обоих случаев (0/5), имя сохранено — трогает много мест ниже
     // op.dur — теперь общее переопределение длительности вращения, не
     // только для landsOnOppositeFace (было раньше). Дефолт для обычного
     // оборота не меняется (spinTurns×MS_PER_360) — ни один существующий
@@ -213,11 +223,12 @@ export function applyTransform(op, elapsed, ctx) {
       op._began = true;
       if (landsOnOppositeFace) {
         // Оба глифа — сразу, ДО начала вращения: idx4 (лицевая) держит
-        // ТЕКУЩУЮ букву, idx5 (противолежащая) — БУДУЩУЮ. Никакой
-        // перерисовки на середине пути не требуется — «превращение»
-        // целиком получается из самой геометрии разворота.
+        // ТЕКУЩУЮ букву, landingFaceIdx (0 — соседняя, придыхание; 5 —
+        // противолежащая, звонкость) — БУДУЩУЮ. Никакой перерисовки на
+        // середине пути не требуется — «превращение» целиком получается
+        // из самой геометрии разворота.
         const newColor = op.toColor ?? colorFor(op.toGlyph);
-        cube._oppositeMats = buildOpposingFaceMaterials(cube.color, cube.seed + 5, cube.tr, op.toGlyph);
+        cube._oppositeMats = buildOpposingFaceMaterials(cube.color, cube.seed + 5, cube.tr, op.toGlyph, landingFaceIdx);
         cube.mesh.material = cube._oppositeMats;
         op._pendingColor = newColor; // нужен после приземления, см. ниже
       } else if (op.startBlank) {
