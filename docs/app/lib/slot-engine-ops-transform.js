@@ -196,7 +196,19 @@ export function applyTransform(op, elapsed, ctx) {
     // буквы, тот же цвет кубика, никакого намёка на гуну/вриддхи)
     // переключает это через общий параметр движка, не отдельным куском
     // кода внутри примера.
-    const signalMats = op.signal === 'blank' ? 'matsBlank' : op.signal === 'gold' ? 'matsGold' : 'matsSignal';
+    // РЕАЛЬНЫЙ НАЙДЕННЫЙ БАГ (живая проверка, rule11: «N появляется только
+    // после остановки, должно быть нанесено заранее»): signalMats раньше
+    // указывал на `matsBlank` для signal:'blank' — а тот, по своей ОСНОВНОЙ
+    // задаче (approach/merge blankAtProgress), ВСЕГДА безбуквенный
+    // (glyph:null), независимо от cube.tr. Из-за этого ни старая буква в
+    // начале вращения, ни новая — после reveal (rotatedDeg>=revealDeg,
+    // ниже) — не показывались вообще, до самого matsMain в конце. Затрагивало
+    // ЛЮБОЙ transform с signal:'blank' и БЕЗ landsOnOppositeFace
+    // (TRANSFORM_KIND.assimToNeighbor: rule11 m→n, taddhiraṇyam h→dh — та
+    // же категория). `matsBlankSignal` (slot-engine-cube.js) — тот же
+    // паттерн, что matsSignal/matsGold (глиф = живой cube.tr), просто без
+    // металлического тона — исправление ОБЩЕЕ для движка, не про один пример.
+    const signalMats = op.signal === 'blank' ? 'matsBlankSignal' : op.signal === 'gold' ? 'matsGold' : 'matsSignal';
     if (!op._began) {
       op._began = true;
       if (landsOnOppositeFace) {

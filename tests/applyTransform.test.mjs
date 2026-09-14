@@ -28,6 +28,7 @@ function makeCube(slot) {
     mesh,
     matsMain: 'matsMain',
     matsBlank: 'matsBlank',
+    matsBlankSignal: 'matsBlankSignal',
     matsSignal: 'matsSignal',
     matsGold: 'matsGold',
   };
@@ -136,7 +137,11 @@ test('applyTransform: op.dur переопределяет длительност
 
   applyTransform(op, activeStart + 3000, ctx); // точно момент кастомного приземления
   assert.equal(op._landed, true, 'на 3000мс (op.dur) — приземление наступило');
-  assert.equal(cubes[6].mesh.material, cubes[6].matsBlank, 'signal:blank — материал ЕЩЁ matsBlank по завершении (signalHoldDur), не истинный сразу');
+  // matsBlankSignal, НЕ matsBlank — тот всегда безбуквенный (используется
+  // approach/merge blankAtProgress), здесь нужен вариант С буквой (см.
+  // slot-engine-cube.js, найденный баг — rule11, «N появлялась только после
+  // остановки»).
+  assert.equal(cubes[6].mesh.material, cubes[6].matsBlankSignal, 'signal:blank — материал ЕЩЁ сигнальный (matsBlankSignal, с буквой) по завершении (signalHoldDur), не истинный сразу');
 
   applyTransform(op, activeStart + 3000 + 250, ctx); // signalHoldDur (дефолт 250) спустя посадку
   assert.equal(cubes[6].mesh.material, cubes[6].matsMain, 'по истечении signalHoldDur — истинный цвет по завершении');
@@ -177,6 +182,34 @@ test('applyTransform: гунация (1 оборот) — прямая заме�
   applyTransform(op, revealElapsed + 15, ctx);
   assert.equal(cubes[4].tr, 'e', 'через 15мс после 180° — уже новая буква, без промежуточной пустой фазы');
   assert.equal(cubes[4].mesh.material, cubes[4].matsSignal, 'материал сразу сигнальный с новым глифом, не временный пустой');
+});
+
+test('applyTransform: assimToNeighbor (signal:blank, rule11 m→n) — буква видна ВСЮ сигнальную фазу на matsBlankSignal, НЕ на безбуквенном matsBlank (найденный баг: «N появлялась только после остановки»)', () => {
+  const cubes = { 4: makeCube(4) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 4, toGlyph: 'n', start: 0, spinTurns: 1, signal: 'blank' };
+  const activeStart = 900;
+  const dur = 1 * MS_PER_360;
+  const revealT = tForDeg(1, 180);
+  const revealElapsed = activeStart + revealT * dur;
+
+  applyTransform(op, activeStart + 1, ctx); // самый первый кадр активной фазы
+  assert.equal(cubes[4].mesh.material, cubes[4].matsBlankSignal, 'старая буква видна сразу на сигнальной (с буквой) грани, не на безбуквенном matsBlank');
+  assert.notEqual(cubes[4].mesh.material, cubes[4].matsBlank, 'matsBlank (безбуквенный) здесь не используется вообще — это была причина бага');
+
+  applyTransform(op, revealElapsed - 15, ctx);
+  assert.equal(cubes[4].tr, 'k', 'за 15мс до 180° — ещё старая буква');
+  assert.equal(cubes[4].mesh.material, cubes[4].matsBlankSignal, 'всё это время грань несёт букву (старую), не пустая');
+
+  applyTransform(op, revealElapsed + 15, ctx);
+  assert.equal(cubes[4].tr, 'n', 'через 15мс после 180° — уже новая буква (n)');
+  // Примечание: mesh.material здесь — свежепересобранный matsBlankSignal
+  // (regenMats сбрасывает кеш перед reveal, реальный кубик лениво строит
+  // заново; фейковый makeCube этого теста getter'ов не эмулирует, поэтому
+  // после regenMats оба поля становятся undefined — сравнивать их между
+  // собой здесь бессмысленно, но что материал ИМЕННО matsBlankSignal, а не
+  // случайно застрявший matsBlank, уже проверено выше, ДО regenMats).
+  assert.equal(cubes[4].mesh.material, cubes[4].matsBlankSignal, 'новая буква нанесена СРАЗУ на matsBlankSignal, до приземления и до полной остановки вращения');
 });
 
 test('applyTransform: вриддхи (2 оборота) — буква гаснет в пустоту на позиции 3 (180°), результат — только на позиции 7 (540°)', () => {

@@ -127,6 +127,18 @@ export function makeCube(tr, seed) {
   defineMatsSlot(cube, 'matsSignal', c => buildMetallicMaterials('silver', c.seed + 3, c.tr));
   defineMatsSlot(cube, 'matsGold', c => buildMetallicMaterials('gold', c.seed + 4, c.tr));
   defineMatsSlot(cube, 'matsBlank', c => buildOneMatSet(c.color, c.seed + 1, null));
+  // matsBlankSignal — НЕ то же самое, что matsBlank: этот несёт БУКВУ
+  // (c.tr), тот же паттерн, что matsSignal/matsGold (свой цвет вместо
+  // металлического тона, но глиф читается точно так же живым cube.tr) —
+  // нужен ИСКЛЮЧИТЕЛЬНО для сигнальной фазы TRANSFORM_KIND.assimToNeighbor
+  // (signal:'blank', не landsOnOppositeFace). matsBlank НАРОЧНО всегда
+  // безбуквенный (glyph:null) — это единственно верное поведение для его
+  // настоящей задачи (approach/merge blankAtProgress: буква ДОЛЖНА исчезнуть
+  // насовсем до следующего реального события), но `applyTransform` ошибочно
+  // переиспользовал именно его для сигнальной фазы transform — из-за этого
+  // ни старая, ни новая буква не были видны всё вращение (см.
+  // slot-engine-ops-transform.js, signalMats).
+  defineMatsSlot(cube, 'matsBlankSignal', c => buildOneMatSet(c.color, c.seed + 6, c.tr));
   cube.matsMain = buildOneMatSet(color, seed, tr);
   cube.mesh = new THREE.Mesh(getCubeGeo(), cube.matsMain);
   cube.shadow = makeShadow();
@@ -146,6 +158,7 @@ export function regenMats(cube, newTr, newColor) {
   cube.color = color;
   cube.matsMain = buildOneMatSet(color, cube.seed, newTr);
   cube.matsBlank = undefined;
+  cube.matsBlankSignal = undefined;
   cube.matsReady = undefined;
   cube.matsSignal = undefined;
   cube.matsGold = undefined;

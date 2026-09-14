@@ -39,6 +39,16 @@ test('makeCube: обращение к matsSignal строит его ленив�
   assert.equal(cube.matsSignal, first, 'второе чтение — та же ссылка, не пересобирается заново');
 });
 
+test('makeCube: matsBlankSignal — отдельный от matsBlank набор (найденный баг — rule11: буква не была видна во время сигнальной фазы assimToNeighbor)', () => {
+  const cube = makeCube('k', 100);
+  assert.equal(cube._matsBlankSignal, undefined, 'matsBlankSignal тоже ленивый, не построен заранее');
+  const blankSignal = cube.matsBlankSignal;
+  const blank = cube.matsBlank;
+  assert.ok(Array.isArray(blankSignal), 'лениво построен как реальный массив материалов');
+  assert.notEqual(blankSignal, blank, 'matsBlankSignal (с буквой) — ОТДЕЛЬНЫЙ набор от matsBlank (всегда без буквы), не тот же объект');
+  assert.equal(cube.matsBlankSignal, blankSignal, 'повторное чтение — та же ссылка');
+});
+
 test('makeCube: два разных кубика используют ОДНУ И ТУ ЖЕ геометрию (Задача А — общая форма)', () => {
   const cubeA = makeCube('k', 100);
   const cubeB = makeCube('a', 999); // другой глиф, другой seed
@@ -90,4 +100,17 @@ test('regenMats: после пересборки лениво построенн
   assert.equal(cube.tr, 'g', 'cube.tr обновлён');
   assert.equal(cube._matsSignal, undefined, 'кеш сброшен — следующее чтение пересоберёт заново');
   assert.ok(Array.isArray(cube.matsSignal), 'повторное чтение снова лениво строит (уже для новой буквы)');
+});
+
+test('regenMats: старый (уже лениво построенный) matsBlankSignal тоже сбрасывается — новое чтение строит его под НОВУЮ букву', () => {
+  const cube = makeCube('k', 100);
+  const oldBlankSignal = cube.matsBlankSignal; // строим лениво ДО regenMats, для старой буквы
+  let disposedCount = 0;
+  oldBlankSignal.forEach(m => { const orig = m.dispose.bind(m); m.dispose = () => { disposedCount++; orig(); }; });
+
+  regenMats(cube, 'g', 0x123456);
+
+  assert.equal(disposedCount, 6, 'старый matsBlankSignal должен быть уничтожен при regenMats, как и matsSignal/matsGold');
+  assert.equal(cube._matsBlankSignal, undefined, 'кеш сброшен');
+  assert.notEqual(cube.matsBlankSignal, oldBlankSignal, 'следующее чтение строит новый набор, не старую ссылку');
 });

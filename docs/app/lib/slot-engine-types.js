@@ -308,10 +308,13 @@
  */
 
 /** Кубик слота — не класс, обычный объект (makeCube, slot-engine-cube.js).
- * matsBlank/matsReady/matsSignal/matsGold — ленивые (см. defineMatsSlot),
- * строятся только при первом реальном обращении. _fallDone/_pulseFace/
- * _pulsingMats — записываются apply*-функциями во время показа, не частью
- * makeCube.
+ * matsBlank/matsBlankSignal/matsReady/matsSignal/matsGold — ленивые (см.
+ * defineMatsSlot), строятся только при первом реальном обращении.
+ * matsBlank — ВСЕГДА безбуквенный (approach/merge blankAtProgress);
+ * matsBlankSignal — тот же цвет, но С буквой (живой cube.tr), для
+ * сигнальной фазы transform с signal:'blank' — не путать местами.
+ * _fallDone/_pulseFace/_pulsingMats — записываются apply*-функциями во
+ * время показа, не частью makeCube.
  * @typedef {Object} Cube
  * @property {string} tr
  * @property {number} color
@@ -321,6 +324,7 @@
  * @property {import('three').Mesh} shadow
  * @property {MatSet} matsMain
  * @property {MatSet} [matsBlank]
+ * @property {MatSet} [matsBlankSignal]
  * @property {MatSet} [matsReady]
  * @property {MatSet} [matsSignal]
  * @property {MatSet} [matsGold]
