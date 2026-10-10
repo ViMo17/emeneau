@@ -877,7 +877,8 @@ EXAMPLES[12] = [{
   // (без вриддхи, с отдельным шагом геминации) не засвидетельствована —
   // единственная реальная форма у Уитни §882–883 — acchaitta. Три шага —
   // в том же порядке, что и шаги 3D (examples/rule12-acchaitta-slots.js):
-  // грам. → 31 → 12. module подключается после визуального подтверждения.
+  // грам. → 31 → 12. 3D визуально подтверждён пользователем 2026-10-10.
+  module: './examples/rule12-acchaitta-slots.js',
   roleDemo: { steps: [
     { tag: 'грам.', type: 'lexical', source: 'i', result: 'ai',
       gunaCells: ['gc-weak-i', 'gc-vriddhi-i'], glossaryTerm: 'vṛddhi',
