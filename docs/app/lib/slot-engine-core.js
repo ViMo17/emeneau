@@ -126,6 +126,14 @@ export function slotX(i) { return (i - (N_SLOTS - 1) / 2) * SLOT; }
    (несколько слов подряд + зазоры между ними, span считается снаружи). */
 /** @param {number} span @returns {number} */
 export function centeredStart(span) { return Math.floor((N_SLOTS - span) / 2); }
+/** Центр слова по фактическим X его кубиков (середина между крайними) —
+ *  куда доводится камера на финальной волне (см. cameraPanX в mount).
+ *  Пустой список → 0 (камера не двигается).
+ * @param {number[]} xs @returns {number} */
+export function wordCenterX(xs) {
+  if (!xs.length) return 0;
+  return (Math.min(...xs) + Math.max(...xs)) / 2;
+}
 
 /* Утилита для автора данных — считает, с какого слота центрировать N букв,
    ПЕРЕД тем как вручную прописывать initial. Не используется в рантайме. */

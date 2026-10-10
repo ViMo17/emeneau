@@ -26,6 +26,14 @@ export function applyElide(op, elapsed, ctx) {
     // applyMerge) — здесь заранее вынесен за пределы веток, не внутрь них.
     if (!op._impactAt) {
       op._impactAt = elapsed;
+      // Стартовая X — ФАКТИЧЕСКАЯ позиция кубика в момент удара, не
+      // slotX(op.at). Найденный баг (rule12, живая проверка: «s въезжает в
+      // t и выезжает из неё»): -s- до лопы уже подъехало к корню через
+      // approach (ключ в cubes{} при этом не меняется) — погружение от
+      // номинального слота мгновенно отбрасывало его на слот вправо, прямо
+      // в подъехавшее окончание. Для кубика на своём слоте — то же самое
+      // значение, поведение прежних примеров не меняется.
+      op._baseX = cube.mesh.position.x;
       spawnPulseRing(frontAnchor(cube.mesh), 700, op.impactColor ?? GROUP_RGB, ctx);
     }
     const riseDur = op.riseDur ?? 1300; // тот же темп, что у split — общий язык, не изобретённый заново
@@ -36,7 +44,7 @@ export function applyElide(op, elapsed, ctx) {
     // саму вспышку в начале.
     if (op.label && !op._labelSpawned) {
       op._labelSpawned = true;
-      spawnLabelPill(op.label, op.at, false, riseDur + holdDur + fadeDur, ctx);
+      spawnLabelPill(op.label, op.at, false, riseDur + holdDur + fadeDur, ctx, undefined, undefined, op._baseX);
     }
     // НАЙДЕННЫЙ И ИСПРАВЛЕННЫЙ БАГ (предыдущая версия): перепутан ВЕРХНИЙ
     // КРАЙ отстойника с его ЦЕНТРОМ. FLOOR_Y (нижний край слотов, -0.55)
@@ -53,7 +61,7 @@ export function applyElide(op, elapsed, ctx) {
     // -1.0 — запас есть, но заметно меньше прежнего (было -0.654 на
     // y=-1.65) — глубже уже не стоит без повторной проверки.
     const holdOffset = op.holdOffset ?? { x: -0.45, y: -2.2, z: -0.4 };
-    const basePos = new THREE.Vector3(slotX(op.at), 0, 0);
+    const basePos = new THREE.Vector3(op._baseX ?? slotX(op.at), 0, 0);
     const holdPos = basePos.clone().add(new THREE.Vector3(holdOffset.x, holdOffset.y, holdOffset.z));
     const riseEnd = op.start + riseDur;
     const fadeStart = riseEnd + holdDur;

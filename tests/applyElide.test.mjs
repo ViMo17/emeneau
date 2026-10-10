@@ -246,3 +246,15 @@ test('applyElide: op.label — пилюля-подпись появляется 
   applyElide(op, 400, ctx);
   assert.equal(labelsCalls.filter(el => el.className === 'slot-label-pill').length, 1, 'повторные кадры не плодят новые пилюли');
 });
+
+test('applyElide: погружение начинается с ФАКТИЧЕСКОЙ позиции кубика, не с номинального слота (регрессия rule12 — s после approach)', () => {
+  const cubes = { 6: makeCube(6) };
+  const ctx = makeCtx(cubes);
+  const movedX = cubes[6].mesh.position.x - 1.2; // кубик уже подъехал на слот влево (approach), ключ остался 6
+  cubes[6].mesh.position.x = movedX;
+  const op = { type: 'elide', at: 6, start: 0 };
+  applyElide(op, 0, ctx);
+  applyElide(op, 1, ctx);
+  assert.ok(Math.abs(cubes[6].mesh.position.x - movedX) < 0.01,
+    'РЕГРЕССИЯ БЫ БЫЛА ЗДЕСЬ: кубик отскочил к slotX(6) вместо фактической позиции');
+});

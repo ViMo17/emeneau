@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import * as THREE from 'three';
-import { slotX, clamp01, easeFall, HALF_WORLD_W_MAX, computeFitFov } from './slot-engine-core.js';
+import { slotX, clamp01, easeFall, easeInOutCubic, HALF_WORLD_W_MAX, computeFitFov, wordCenterX } from './slot-engine-core.js';
 import { makeCube, updateShadow, isSharedResource } from './slot-engine-cube.js';
 import { computeWordGroups, resolveSlotRef } from './slot-engine-words.js';
 import { buildRuntimeSteps, stepIndexAt } from './slot-engine-steps.js';
@@ -328,6 +328,30 @@ export function mountSlotExample(container, data, opts = {}) {
   let paused = false;
   let pausedElapsed = 0; // валиден только пока paused===true
 
+  // ДОВОДКА КАМЕРЫ к центру итогового слова (живая проверка rule12: три
+  // раздельных блока занимают все 10 слотов, итоговое слово неизбежно
+  // смещено от центра кадра). С началом финальной волны settle камера
+  // плавно сдвигается по X к центру итоговых кубиков — сами кубики не
+  // двигаются, ложного «события сандхи» нет. Центр снимается с
+  // ФАКТИЧЕСКИХ позиций в момент старта settle (после approach кубики
+  // стоят не на своих номинальных слотах), сбрасывается при перемотке
+  // назад. ВКЛЮЧАЕТСЯ ДАННЫМИ примера (data.recenter:true), не для всех:
+  // у ряда уже визуально подтверждённых примеров итог смещён на 0.5–1 слот,
+  // и молча сдвигать их камеру — менять одобренную картинку вслепую.
+  const settleOp = data.recenter ? ops.find(op => op.type === 'settle') : undefined;
+  const PAN_DUR = 1000;
+  /** @type {number|null} */
+  let panTargetX = null;
+
+  /** @param {number} elapsed */
+  function cameraPanX(elapsed) {
+    if (!settleOp || elapsed < settleOp.start) { panTargetX = null; return 0; }
+    if (panTargetX === null) {
+      panTargetX = wordCenterX(settleOp.slots.map(s => cubes[s]).filter(Boolean).map(c => c.mesh.position.x));
+    }
+    return panTargetX * easeInOutCubic(clamp01((elapsed - settleOp.start) / PAN_DUR));
+  }
+
   /** @param {number} elapsed */
   function renderAtElapsed(elapsed) {
     Object.values(cubes).forEach(cube => {
@@ -353,6 +377,7 @@ export function mountSlotExample(container, data, opts = {}) {
     updateSteps(elapsed);
     Object.values(cubes).forEach(updateShadow);
     camera.position.copy(camBase);
+    camera.position.x += cameraPanX(elapsed);
     renderer.render(scene, camera);
   }
 

@@ -872,14 +872,20 @@ EXAMPLES[62] = [{
 
 /* ═══ Оставшиеся десять — цепочки на уже готовых типах ═══ */
 EXAMPLES[12] = [{
-  desc: 'acchid- + s-ta → acchitta «отрезал»',
+  desc: 'acchid- + s + ta → acchaitta «вы рассекли»',
+  // Исправлено (живая проверка 3D, 2026-10-10): прежняя форма «acchitta»
+  // (без вриддхи, с отдельным шагом геминации) не засвидетельствована —
+  // единственная реальная форма у Уитни §882–883 — acchaitta. Три шага —
+  // в том же порядке, что и шаги 3D (examples/rule12-acchaitta-slots.js):
+  // грам. → 31 → 12. module подключается после визуального подтверждения.
   roleDemo: { steps: [
-    { tag: '10', type: 'double', source: 'cha',
-      text: 'ch между гласными сначала удваивается — cch (та же логика, что в gacchati).' },
-    { tag: '31', type: 'voicing', source: 'da', trigger: 'sa', result: 'ta',
-      text: 'Звонкий d перед глухим s оглушается — t.' },
-    { tag: '12', type: 'elide', source: 'sa',
-      text: 'А сам s, оказавшись между двумя смычными (t и t), исчезает совсем без следа.' }
+    { tag: 'грам.', type: 'lexical', source: 'i', result: 'ai',
+      gunaCells: ['gc-weak-i', 'gc-vriddhi-i'], glossaryTerm: 'vṛddhi',
+      text: 'chid- «рассекать» → сигматический аорист: аугмент a- + корень (ch после гласного уже геминирован — правило 10, здесь взято готовым) + показатель аориста -s- (siC) + окончание 2 л. мн. ч. действ. -ta. Перед siC в парасмайпаде корневой гласный получает вриддхи — i → ai (Pāṇini 7.2.1 sici vṛddhiḥ parasmaipadeṣu). Грамматический процесс, не сандхи.' },
+    { tag: '31', type: 'voicing', source: 'da', trigger: 'sa', result: 'ta', glossaryTerm: ['cartva', 'varga'],
+      text: 'Корневой d перед глухим s оглушается в партнёра по зубной варге — t (правило 31, Pāṇini 8.4.55 khari ca).' },
+    { tag: '12', type: 'elide', source: 'sa', glossaryTerm: 'lopa',
+      text: 'Само правило 12: s, оказавшись между двумя смычными (t слева — результат cartva, t справа — начало окончания), выпадает без следа (Pāṇini 8.2.26 jhalo jhali). Итог: acchaitta — ср. Whitney §233e, §882–883, где выпадение s в активных формах названо очень редким.' }
   ] }
 }];
 EXAMPLES[19] = [{

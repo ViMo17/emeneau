@@ -5,7 +5,7 @@
 
 import { buildOpposingFaceMaterials, buildMetallicMaterials } from './chalk-module.js';
 import {
-  MS_PER_360, colorFor, clamp01, easeOutCubic, slotX,
+  MS_PER_360, CUBE_SIZE, colorFor, clamp01, easeOutCubic, easeInOutCubic, slotX,
 } from './slot-engine-core.js';
 import { regenMats, disposeMatSet } from './slot-engine-cube.js';
 import { frontAnchor, spawnPulseRing, spawnSparkleBurst, spawnLabelPill } from './slot-engine-ops-shared.js';
@@ -131,6 +131,19 @@ export function applyTransform(op, elapsed, ctx) {
     // (ключ не меняется от approach/merge — см. rule1, слияние a+au на
     // общем зазоре).
     const homeX = op.atX ?? slotX(op.at);
+    // liftH — ТРЁХФАЗНОЕ вращение для кубика, зажатого соседями вплотную:
+    // (1) подъём на liftH за liftDur БЕЗ вращения → (2) весь оборот в
+    // воздухе (dur, эталонный темп не меняется) → (3) опускание за liftDur
+    // уже БЕЗ вращения. Найдено живой проверкой rule12: при общем
+    // «колоколе» (bounceH/clearanceZ/clearanceY) подъём и вращение идут
+    // ОДНОВРЕМЕННО, а easeOutCubic вращается быстрее всего в самом начале,
+    // когда кубик ещё стоит на полу, — диагональные углы проходят сквозь
+    // соседей независимо от величины подъёма/выдвижения. Достаточная
+    // высота — та, при которой низ вращающегося кубика выше верха соседей
+    // (liftH > CUBE_SIZE). Дефолт 0 — прежняя одновременная схема, ни один
+    // существующий пример не меняется.
+    const liftH = op.liftH ?? 0;
+    const liftDur = liftH ? (op.liftDur ?? 600) : 0;
     const holdDur = op.holdDur ?? 700; // пауза-фиксация ПОСЛЕ посадки — общий дефолт, читает и label ниже, и блок приземления
     // signalHoldDur — сигнальный цвет (серебро/золото/нейтраль) держится
     // ЕЩЁ signalHoldDur ПОСЛЕ остановки вращения, прежде чем кубик
@@ -194,7 +207,10 @@ export function applyTransform(op, elapsed, ctx) {
       // есть пилюля другого события (merge на этом же кубике, см. rule1/
       // rule2) и обе должны читаться НА ОДНОЙ ЛИНИИ (одинаковый labelY),
       // разведёнными по горизонтали, а не друг над другом.
-      if (op.label) spawnLabelPill(op.label, op.at, true, dur, ctx, op.labelY, op.labelX, homeX);
+      // При liftH пилюля живёт весь подъём+оборот+опускание и висит над
+      // ПОДНЯТЫМ кубиком (иначе верх поднятого кубика проходит сквозь неё).
+      if (op.label) spawnLabelPill(op.label, op.at, true, dur + 2 * liftDur, ctx,
+        op.labelY ?? (liftH ? liftH + CUBE_SIZE * 1.6 : undefined), op.labelX, homeX);
     }
 
     // matsSignal (серебро) — не единственный вариант промежуточной фазы:
@@ -265,7 +281,10 @@ export function applyTransform(op, elapsed, ctx) {
         cube.mesh.material = cube[signalMats];
       }
     }
-    const t = clamp01((elapsed - activeStart) / dur);
+    const spinStart = activeStart + liftDur;
+    const t = clamp01((elapsed - spinStart) / dur);
+    // Доля опускания (фаза 3) — без liftH совпадает с моментом конца вращения.
+    const dropP = liftH ? clamp01((elapsed - spinStart - dur) / liftDur) : (t >= 1 ? 1 : 0);
     // ТОЛЬКО пока не приземлился — иначе НАЙДЕННЫЙ РЕАЛЬНЫЙ БАГ (поймано
     // численной симуляцией): t остаётся зажатым в 1 и на КАЖДОМ следующем
     // кадре формула ниже пересчитывает rotation.y заново — для целых
@@ -283,8 +302,14 @@ export function applyTransform(op, elapsed, ctx) {
       // ось), поднимая кубик заметно выше обычного подскока на время
       // активного вращения. Дефолт 0 — ни один существующий пример его не
       // передаёт, поведение не меняется.
-      cube.mesh.position.y = Math.sin(t * Math.PI) * (bounceH + (op.clearanceY ?? 0));
-      cube.mesh.position.x = homeX + Math.sin(t * Math.PI) * clearance;
+      if (liftH) {
+        const riseP = clamp01((elapsed - activeStart) / liftDur);
+        cube.mesh.position.y = liftH * (easeInOutCubic(riseP) - easeInOutCubic(dropP));
+        cube.mesh.position.x = homeX;
+      } else {
+        cube.mesh.position.y = Math.sin(t * Math.PI) * (bounceH + (op.clearanceY ?? 0));
+        cube.mesh.position.x = homeX + Math.sin(t * Math.PI) * clearance;
+      }
       // clearanceZ — выдвижение НА ЗРИТЕЛЯ (+Z) на время вращения, тот же
       // колокол sin(t·π), что и bounceH/clearance (0 в начале/конце, пик
       // на середине). НАЙДЕННЫЙ РЕАЛЬНЫЙ БАГ (rule2, живая проверка): при
@@ -310,9 +335,9 @@ export function applyTransform(op, elapsed, ctx) {
       // сопровождение», в 10-15 раз меньше, не главный сигнал события.
       if (op.signal === 'gold') {
         const sparkleGap = 280;
-        const idx = Math.floor((elapsed - activeStart) / sparkleGap);
+        const idx = Math.floor((elapsed - spinStart) / sparkleGap);
         const key = '_sparkle' + idx;
-        if (idx >= 0 && !op[key]) {
+        if (idx >= 0 && t < 1 && !op[key]) {
           op[key] = true;
           spawnSparkleBurst(frontAnchor(cube.mesh), ctx, 15);
         }
@@ -373,7 +398,7 @@ export function applyTransform(op, elapsed, ctx) {
       cube.mesh.material = cube[signalMats];
       if (op._blankSignalMats) { disposeMatSet(op._blankSignalMats); op._blankSignalMats = null; }
     }
-    if (t >= 1 && !op._landed) {
+    if (t >= 1 && dropP >= 1 && !op._landed) {
       op._landed = true;
       cube.mesh.rotation.y = 0;
       cube.mesh.position.y = 0;

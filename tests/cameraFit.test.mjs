@@ -105,3 +105,10 @@ test('computeFitFov с HALF_WORLD_W_MAX: короткий и длинный пр
     assert.equal(fovForShortExample, fovForLongExample);
   }
 });
+
+import { wordCenterX as _wordCenterX } from '../docs/app/lib/slot-engine.js';
+test('wordCenterX: середина между крайними кубиками; пустой список → 0 (камера на месте)', () => {
+  assert.equal(_wordCenterX([]), 0);
+  assert.ok(Math.abs(_wordCenterX([-5.4, -4.2, -3, -1.8, -0.6, 0.6, 1.8]) + 1.8) < 1e-9); // rule12: слоты 0..6
+  assert.equal(_wordCenterX([-0.6, 0.6]), 0);
+});

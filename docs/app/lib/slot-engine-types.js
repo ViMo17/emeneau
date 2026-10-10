@@ -128,6 +128,8 @@
  * @property {'silver'|'gold'|'blank'} [signal]
  * @property {number} [clearance] - боковое раскачивание (X), знак = направление к пустому месту
  * @property {number} [clearanceZ] - выдвижение на зрителя (+Z) во время вращения, тот же колокол sin(t·π), что и clearance/bounceH — нужно, когда сосед стоит ВПЛОТНУЮ (без зазора), чтобы диагональные углы вращающегося куба физически не проходили сквозь его текстуру; дефолт 0
+ * @property {number} [liftH] - трёхфазное вращение: подъём на liftH (без вращения) → весь оборот в воздухе → опускание; для кубика, зажатого соседями вплотную (liftH > CUBE_SIZE — низ выше верха соседей); дефолт 0 — прежняя одновременная схема
+ * @property {number} [liftDur] - длительность подъёма и опускания при liftH; дефолт 600
  * @property {number} [clearanceY] - ЭКСПЕРИМЕНТАЛЬНАЯ альтернатива clearanceZ (подъём вверх на время вращения, складывается с bounceH) — только для живого A/B сравнения, не решённый путь; дефолт 0
  * @property {number} [anticipateDur] - пауза-осознание до вращения
  * @property {number} [signalHoldDur] - сигнальный цвет (серебро/золото/нейтраль) держится ЕЩЁ это время после остановки вращения, прежде чем перекраситься в истинный цвет; дефолт 250
@@ -231,6 +233,7 @@
  * @property {string} [label] - текст плавающей пилюли-подписи ПОД кубиком (см. spawnLabelPill), например "Элизия"
  * @property {boolean} [_done]
  * @property {number} [_impactAt]
+ * @property {number} [_baseX] - фактическая X кубика в момент удара (стартовая точка погружения, не slotX(at))
  * @property {number} [_fadeStartedAt]
  * @property {boolean} [_labelSpawned]
  */
@@ -283,6 +286,7 @@
  * инлайновым комментариям в двух разных файлах.
  * @typedef {Object} ExampleData
  * @property {InitialItem[]} initial
+ * @property {boolean} [recenter] - на финальной волне settle довести камеру по X к центру итогового слова (кубики не двигаются); для примеров, где итог неизбежно смещён от центра кадра (rule12); дефолт false
  * @property {Step[]} [steps]
  * @property {SlotOp[]} [ops]
  * @property {number} [dimOpacity] - прозрачность притенённого кубика, дефолт 0.22

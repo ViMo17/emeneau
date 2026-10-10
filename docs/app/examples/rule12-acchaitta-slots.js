@@ -82,7 +82,10 @@
 // ГЕОМЕТРИЯ ВРАЩЕНИЯ: оба transform (B1 на i/ai, B3 на d/t) стоят между
 // двумя занятыми соседями без единого зазора (после прибытия показателя
 // -s-) — та же ситуация, что уже многократно встречалась (rule2/rule6/
-// suhārt): `clearance:0`, `clearanceZ:-0.5`.
+// suhārt). Живая проверка показала, что выдвижение к камере (clearanceZ)
+// не спасает — углы всё равно задевают соседей. Оба transform здесь —
+// трёхфазные (liftH: подъём → оборот в воздухе → опускание), каждый
+// длиннее прежнего на 2×liftDur (1200мс), таймлайн ниже сдвинут.
 //
 // РАСКЛАДКА И ЦЕНТРИРОВАНИЕ — сознательный компромисс. Три раздельных
 // блока требуют ДВУХ зазорных слотов (а не одного, как во второй
@@ -98,6 +101,11 @@
 import { mountSlotExample, TRANSFORM_KIND } from '../lib/slot-engine.js';
 
 const START = 0;
+// Высота трёхфазного вращения (transform.liftH): низ вращающегося кубика
+// (LIFT_H − CUBE_SIZE/2) выше верха соседей (CUBE_SIZE/2) при
+// LIFT_H > CUBE_SIZE (1.1) — запас 0.1. Оба transform этого примера
+// зажаты соседями вплотную, прежний clearanceZ не спасал (живая проверка).
+const LIFT_H = 1.2;
 //   START+0 = a  ⎫
 //   START+1 = c  │
 //   START+2 = ch ⎬ БЛОК 1 (неподвижный якорь): acchid- (готово, см. rule10)
@@ -110,6 +118,10 @@ const START = 0;
 //   START+8 = t  ⎫ БЛОК 3: личное окончание -ta (2 л. мн.ч. действ.),
 //   START+9 = a  ⎭ падает и движется САМ, ПОСЛЕ блока 2
 export const data = {
+  // Итоговое слово стоит в слотах 0..6 (см. «РАСКЛАДКА И ЦЕНТРИРОВАНИЕ»
+  // выше) — на финальной волне камера доводится к его центру (cameraPanX
+  // в slot-engine-mount.js), кубики при этом не двигаются.
+  recenter: true,
   initial: [
     { slot: START + 0, tr: 'a' },
     { slot: START + 1, tr: 'c' },
@@ -127,12 +139,12 @@ export const data = {
     // блока 2 — физическая причина) И сам transform. activeSlots — цель
     // (i/ai) и s (конкретная буква-причина, не окончание — вриддхи
     // вызвана именно siC, Pāṇini 7.2.1).
-    { kind: 'grammar', start: 3220, end: 13020, activeSlots: [START + 3, START + 6] },
+    { kind: 'grammar', start: 3220, end: 14220, activeSlots: [START + 3, START + 6] },
     // B3 — правило 31 (cartva), вспомогательное в этой цепочке.
-    { kind: 'rule', ruleNum: 31, start: 13020, end: 19270, activeSlots: [START + 4, START + 6], color: 0xAFBFD4, primary: false },
+    { kind: 'rule', ruleNum: 31, start: 14220, end: 21670, activeSlots: [START + 4, START + 6], color: 0xAFBFD4, primary: false },
     // B5 — правило 12 само, целевое правило этого экрана. Покрывает весь
     // двухотрезочный approach окончания (leg1 → пауза-реакция → leg2).
-    { kind: 'rule', ruleNum: 12, start: 19270, end: 27470, activeSlots: [START + 4, START + 6, START + 8], color: 0xAFBFD4, primary: true },
+    { kind: 'rule', ruleNum: 12, start: 21670, end: 29870, activeSlots: [START + 4, START + 6, START + 8], color: 0xAFBFD4, primary: true },
   ],
 
   ops: [
@@ -151,26 +163,26 @@ export const data = {
 
     // B1: i → ai, вриддхи. Пауза чистой пульсации перед реакцией — 2600мс
     // (тот же интервал, что и везде в проекте): 4570+2600=7170.
-    { type: 'transform', at: START + 3, toGlyph: 'ai', start: 7170, ...TRANSFORM_KIND.vrddhi, clearance: 0, clearanceZ: -0.5, label: 'vṛddhi' },
+    { type: 'transform', at: START + 3, toGlyph: 'ai', start: 7170, ...TRANSFORM_KIND.vrddhi, liftH: LIFT_H, label: 'vṛddhi' },
 
     // Причина B3: s (глухой), теперь физически соседняя буква, требует
     // оглушения предшествующего d (khar/cartva, Pāṇini 8.4.55). Старт —
-    // сразу по завершении B1 (op._done трансформа выше, 13020).
-    { type: 'influence', from: START + 6, to: START + 4, start: 13020 },
+    // сразу по завершении B1 (op._done трансформа выше: 7170+900+600+4000+600+250+700=14220).
+    { type: 'influence', from: START + 6, to: START + 4, start: 14220 },
 
-    // B3: d → t, cartva. Пауза — 2600мс (13020+2600=15620).
-    { type: 'transform', at: START + 4, toGlyph: 't', start: 15620, ...TRANSFORM_KIND.vargaPair, clearance: 0, clearanceZ: -0.5, label: 'cartva' },
+    // B3: d → t, cartva. Пауза — 2600мс (14220+2600=16820).
+    { type: 'transform', at: START + 4, toGlyph: 't', start: 16820, ...TRANSFORM_KIND.vargaPair, liftH: LIFT_H, label: 'cartva' },
 
     // ПРИБЛИЖЕНИЕ 2 (окончание -ta): ДВУХОТРЕЗОЧНЫЙ approach, ТА ЖЕ
     // техника, что в śādhi (midDistance/midHoldDur/leg2Dur). Старт —
-    // сразу по завершении B3 (19270). leg1 (approachDur=1150, дефолт)
+    // сразу по завершении B3 (16820+900+600+1800+600+250+700=21670). leg1 (approachDur=1150, дефолт)
     // подводит t (первую букву окончания) вплотную к s — landing на
-    // 19270+1150=20420. midHoldDur=5900 — РОВНО столько, сколько нужно
+    // 21670+1150=22820. midHoldDur=5900 — РОВНО столько, сколько нужно
     // для причины+лопы внутри паузы (см. ниже): 100(буфер)+2500
     // (ringHoldDur причины)+3200(elide)+100(буфер до leg2)=5900. leg2
     // (leg2Dur=1150, дефолт) довозит окончание на освободившееся место s.
     {
-      type: 'approach', movers: [START + 8, START + 9], target: START + 4, start: 19270,
+      type: 'approach', movers: [START + 8, START + 9], target: START + 4, start: 21670,
       midDistance: 2.0, midHoldDur: 5900, distance: 3.0, jitterAmp: 0,
     },
 
@@ -179,21 +191,21 @@ export const data = {
     // физически соседним по прибытии leg1 approach'а выше). Та же
     // формула двух источников одной цели, что и в rule10 (bud)/rule50/
     // rule61. ringHoldDur:2500 (явно, как в rule10). Старт — 100мс после
-    // приземления leg1 (20420+100=20520).
-    { type: 'influence', from: START + 4, to: START + 6, start: 20520, ringHoldDur: 2500 },
-    { type: 'influence', from: START + 8, to: START + 6, start: 20520, ringHoldDur: 2500 },
+    // приземления leg1 (22820+100=22920).
+    { type: 'influence', from: START + 4, to: START + 6, start: 22920, ringHoldDur: 2500 },
+    { type: 'influence', from: START + 8, to: START + 6, start: 22920, ringHoldDur: 2500 },
 
     // B5 (правило 12 само): s исчезает без остатка — полный `elide` (НЕ
     // quiet — это и есть всё содержание показываемого правила). Старт —
-    // когда ring гаснет (20520+2500=23020). Готово (cube.mesh удалён) на
-    // 23020+riseDur(1300)+holdDur(800)+fadeDur(1100)=26220 — 100мс до
-    // конца паузы approach'а (20420+5900=26320), leg2 стартует сразу
+    // когда ring гаснет (22920+2500=25420). Готово (cube.mesh удалён) на
+    // 25420+riseDur(1300)+holdDur(800)+fadeDur(1100)=28620 — 100мс до
+    // конца паузы approach'а (22820+5900=28720), leg2 стартует сразу
     // после, ничего не обрывает.
-    { type: 'elide', at: START + 6, start: 23020, label: 'lopa' },
+    { type: 'elide', at: START + 6, start: 25420, label: 'lopa' },
 
     // settle не прописан — считается автоматически, от step.end выше
     // (плотно, без запаса — совпадает с моментом завершения leg2,
-    // 20420+5900(midHoldDur)+1150(leg2Dur,дефолт)=27470).
+    // 22820+5900(midHoldDur)+1150(leg2Dur,дефолт)=29870).
   ],
 };
 

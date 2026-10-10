@@ -525,3 +525,23 @@ test('applyTransform: без op.clearanceZ — z всегда 0 (дефолт, �
   applyTransform(op, activeStart + dur * 0.5, ctx);
   assert.equal(cubes[5].mesh.position.z, 0, 'без clearanceZ — z не трогается вообще');
 });
+
+test('applyTransform liftH: подъём БЕЗ вращения → весь оборот на высоте liftH → опускание без вращения → посадка (регрессия rule12, углы задевали соседей)', () => {
+  const cubes = { 3: makeCube(3) };
+  const ctx = makeCtx(cubes);
+  const op = { type: 'transform', at: 3, toGlyph: 'g', start: 0, ...TRANSFORM_KIND.vargaPair, liftH: 1.2 };
+  const m = cubes[3].mesh;
+  const activeStart = 900, liftDur = 600, dur = 1800;
+  for (let t = 0; t <= activeStart + liftDur; t += 50) applyTransform(op, t, ctx);
+  assert.ok(Math.abs(m.rotation.y) < 1e-12, 'на подъёме кубик не вращается');
+  assert.ok(Math.abs(m.position.y - 1.2) < 1e-9, 'к началу оборота поднят ровно на liftH');
+  for (let t = activeStart + liftDur; t <= activeStart + liftDur + dur; t += 50) {
+    applyTransform(op, t, ctx);
+    assert.ok(Math.abs(m.position.y - 1.2) < 1e-9, 'весь оборот — на высоте liftH, не на полу');
+  }
+  applyTransform(op, activeStart + liftDur + dur + liftDur / 2, ctx);
+  assert.ok(m.position.y > 0 && m.position.y < 1.2, 'середина опускания');
+  assert.ok(!op._landed, 'посадка не раньше конца опускания');
+  applyTransform(op, activeStart + 2 * liftDur + dur, ctx);
+  assert.ok(op._landed && m.position.y === 0 && Math.abs(m.rotation.y) < 1e-12, 'посадка ровно в конце опускания');
+});
