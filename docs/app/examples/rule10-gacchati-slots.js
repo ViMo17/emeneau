@@ -17,7 +17,7 @@
 // allowed by the grammarians to stand in that form after a vowel, but is
 // to be doubled, becoming cch... According to Pāṇini, ch is doubled
 // within a word after either a long or a short vowel»; Эменó — та же
-// суть проще, «между двух гласных»). Точный номер сутры Панини для
+// суть проще; в книге — «в положении после гласной»). Точный номер сутры Панини для
 // ИМЕННО этого случая не найден при проверке (WebSearch, несколько
 // заходов) — открытый пункт, тот же класс, что уже был у правила 5.
 //
